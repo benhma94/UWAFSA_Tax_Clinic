@@ -12,6 +12,7 @@ const CONFIG = {
     CLIENT_INTAKE: 'Client Intake',
     CLIENT_ASSIGNMENT: 'Client Assignment',
     HELP_REQUESTS: 'Help Requests',
+    REVIEW_REQUESTS: 'Review Requests',
     TAX_RETURN_TRACKER: 'Tax Return Tracker',
     VOLUNTEER_LIST: 'Volunteer List',
     SIGNOUT: 'SignOut'
@@ -26,7 +27,8 @@ const CONFIG = {
       SITUATIONS: 3,
       NOTES: 4,
       CLIENT_ID: 5,
-      NEEDS_SENIOR_REVIEW: 6
+      NEEDS_SENIOR_REVIEW: 6,
+      IS_HIGH_PRIORITY: 7
     },
     CLIENT_ASSIGNMENT: {
       TIMESTAMP: 0,
@@ -35,6 +37,11 @@ const CONFIG = {
       COMPLETED: 3
     },
     HELP_REQUESTS: {
+      TIMESTAMP: 0,
+      VOLUNTEER: 1,
+      STATUS: 2
+    },
+    REVIEW_REQUESTS: {
       TIMESTAMP: 0,
       VOLUNTEER: 1,
       STATUS: 2
@@ -60,6 +67,13 @@ const CONFIG = {
     CLEARED: 'Cleared'
   },
   
+  // Review Request Status Values
+  REVIEW_STATUS: {
+    REQUESTED: 'Requested',
+    COMPLETED: 'Completed',
+    CANCELLED: 'Cancelled'
+  },
+  
   // Timezone
   TIMEZONE: 'America/New_York',
   
@@ -69,6 +83,8 @@ const CONFIG = {
     RECENT_ROWS_TO_CHECK: 500,
     // Number of recent help requests to check
     RECENT_HELP_REQUESTS_TO_CHECK: 200,
+    // Number of recent review requests to check
+    RECENT_REVIEW_REQUESTS_TO_CHECK: 200,
     // Cache TTL for mentor list (seconds)
     MENTOR_LIST_CACHE_TTL: 45,
     // Lock timeout for client ID generation (milliseconds)
