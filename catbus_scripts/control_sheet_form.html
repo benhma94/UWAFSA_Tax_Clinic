@@ -1546,29 +1546,73 @@
         return;
       }
 
-      console.log('Sending data to server:', { volunteer, client, clientType: typeof client, clientLength: client.length, rowsCount: rows.length, rows });
-      
+      // Validate reviewers against mentor list
       google.script.run
-        .withSuccessHandler(success => {
-          document.getElementById('spinner').style.display = 'none';
-          console.log('Server response:', success);
-          if (success === true) {
-            showMessage('Returns finalized successfully.', true);
-            loadDropdowns();
-            setTimeout(clearForm, 5000);
-          } else {
-            showError('Could not finalize. Server returned: ' + JSON.stringify(success));
-            console.error('Unexpected server response:', success);
+        .withSuccessHandler(mentorData => {
+          const reviewerOptions = mentorData.reviewers || [];
+          const seniorOptions = mentorData.seniors || [];
+          const allValidReviewers = new Set([...reviewerOptions, ...seniorOptions]);
+          
+          // Validate each row's reviewers
+          for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const rowNum = i + 1;
+            const tableRow = table.rows[rowNum];
+            
+            // Validate primary reviewer if provided
+            if (row.reviewer && row.reviewer.trim()) {
+              const reviewerName = row.reviewer.trim();
+              if (!allValidReviewers.has(reviewerName)) {
+                if (tableRow) tableRow.classList.add("error-highlight");
+                showError(`Row ${rowNum}: Reviewer "${reviewerName}" is not an on-shift mentor or senior mentor. Please select a valid reviewer from the dropdown.`);
+                document.getElementById('spinner').style.display = 'none';
+                return;
+              }
+            }
+            
+            // Validate secondary reviewer if provided
+            if (row.secondaryReviewer && row.secondaryReviewer.trim()) {
+              const secondaryReviewerName = row.secondaryReviewer.trim();
+              if (!seniorOptions.includes(secondaryReviewerName)) {
+                if (tableRow) tableRow.classList.add("error-highlight");
+                showError(`Row ${rowNum}: Secondary reviewer "${secondaryReviewerName}" is not an on-shift senior mentor. Please select a valid senior mentor from the dropdown.`);
+                document.getElementById('spinner').style.display = 'none';
+                return;
+              }
+            }
           }
+          
+          // All validations passed, proceed with finalization
+          console.log('Sending data to server:', { volunteer, client, clientType: typeof client, clientLength: client.length, rowsCount: rows.length, rows });
+          
+          google.script.run
+            .withSuccessHandler(success => {
+              document.getElementById('spinner').style.display = 'none';
+              console.log('Server response:', success);
+              if (success === true) {
+                showMessage('Returns finalized successfully.', true);
+                loadDropdowns();
+                setTimeout(clearForm, 5000);
+              } else {
+                showError('Could not finalize. Server returned: ' + JSON.stringify(success));
+                console.error('Unexpected server response:', success);
+              }
+            })
+            .withFailureHandler(error => {
+              document.getElementById('spinner').style.display = 'none';
+              const errorMsg = error.message || error.toString() || error;
+              showError('Error finalizing returns: ' + errorMsg);
+              console.error('Finalize error:', error);
+              console.error('Error details - Volunteer:', volunteer, 'Client:', client, 'Client type:', typeof client);
+            })
+            .finalizeReturnsAndStore(volunteer, client, rows);
         })
         .withFailureHandler(error => {
           document.getElementById('spinner').style.display = 'none';
-          const errorMsg = error.message || error.toString() || error;
-          showError('Error finalizing returns: ' + errorMsg);
-          console.error('Finalize error:', error);
-          console.error('Error details - Volunteer:', volunteer, 'Client:', client, 'Client type:', typeof client);
+          showError('Error validating reviewers: ' + (error.message || error));
+          console.error('Error getting mentor list:', error);
         })
-        .finalizeReturnsAndStore(volunteer, client, rows);
+        .getMentorList();
     }
 
     function closeModal() {

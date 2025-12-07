@@ -257,6 +257,12 @@ function finalizeReturnsAndStore(volunteer, client, rows) {
     // Batch validation: Collect all errors first, then fail with all errors at once
     const validationErrors = [];
     
+    // Get mentor list for reviewer validation
+    const mentorData = getMentorList();
+    const reviewerOptions = new Set(mentorData.reviewers || []);
+    const seniorOptions = new Set(mentorData.seniors || []);
+    const allValidReviewers = new Set([...reviewerOptions, ...seniorOptions]);
+    
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowNum = i + 1;
@@ -264,9 +270,24 @@ function finalizeReturnsAndStore(volunteer, client, rows) {
       if (!validateTaxYear(row.taxYear)) {
         validationErrors.push(`Row ${rowNum}: Invalid tax year "${row.taxYear}"`);
       }
-      // Reviewer not required at submission - will be set during review
       if (!row.taxYear) {
         validationErrors.push(`Row ${rowNum}: Tax year is required`);
+      }
+      
+      // Validate primary reviewer if provided
+      if (row.reviewer && row.reviewer.trim()) {
+        const reviewerName = row.reviewer.trim();
+        if (!allValidReviewers.has(reviewerName)) {
+          validationErrors.push(`Row ${rowNum}: Reviewer "${reviewerName}" is not an on-shift mentor or senior mentor`);
+        }
+      }
+      
+      // Validate secondary reviewer if provided
+      if (row.secondaryReviewer && row.secondaryReviewer.trim()) {
+        const secondaryReviewerName = row.secondaryReviewer.trim();
+        if (!seniorOptions.has(secondaryReviewerName)) {
+          validationErrors.push(`Row ${rowNum}: Secondary reviewer "${secondaryReviewerName}" is not an on-shift senior mentor`);
+        }
       }
     }
     
