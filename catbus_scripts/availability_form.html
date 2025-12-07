@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --accent-color: rgb(142, 0, 0);
+      --bg-color-light: #ffffff;
+      --text-color-light: #1a1a1a;
+      --input-bg-light: #f2f2f2;
+      --border-light: #ccc;
+      --bg-color-dark: #1e1e1e;
+      --text-color-dark: #f0f0f0;
+      --input-bg-dark: #2a2a2a;
+      --border-dark: #444;
+      --success-color: #27ae60;
+      --error-color: #e74c3c;
+    }
+
+    body.light {
+      background-color: var(--bg-color-light);
+      color: var(--text-color-light);
+    }
+
+    body.dark {
+      background-color: var(--bg-color-dark);
+      color: var(--text-color-dark);
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--accent-color);
+    }
+
+    .toggle-theme {
+      cursor: pointer;
+      font-size: 1.4em;
+      margin-left: 10px;
+    }
+
+    .form-section {
+      background: var(--input-bg-light);
+      padding: 25px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 2px solid var(--border-light);
+      transition: background 0.3s, border 0.3s;
+    }
+
+    body.light .form-section {
+      background-color: var(--input-bg-light);
+      border-color: var(--border-light);
+    }
+
+    body.dark .form-section {
+      background-color: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    label.required::after {
+      content: " *";
+      color: var(--error-color);
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid var(--border-light);
+      border-radius: 4px;
+      font-size: 14px;
+      transition: border 0.3s, background 0.3s;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+
+    body.light input[type="text"],
+    body.light input[type="email"],
+    body.light input[type="number"],
+    body.light select,
+    body.light textarea {
+      background-color: #ffffff;
+      border-color: var(--border-light);
+      color: var(--text-color-light);
+    }
+
+    body.dark input[type="text"],
+    body.dark input[type="email"],
+    body.dark input[type="number"],
+    body.dark select,
+    body.dark textarea {
+      background-color: #333;
+      border-color: var(--border-dark);
+      color: var(--text-color-dark);
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .checkbox-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .day-group {
+      margin-bottom: 25px;
+      padding: 15px;
+      border-radius: 6px;
+      background: rgba(142, 0, 0, 0.05);
+    }
+
+    .day-group h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      color: var(--accent-color);
+      font-size: 1.1em;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      width: auto;
+      margin-right: 8px;
+      cursor: pointer;
+    }
+
+    .checkbox-item label {
+      margin: 0;
+      font-weight: normal;
+      cursor: pointer;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.1s;
+      background-color: var(--accent-color);
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background-color: #a00000;
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    #messageBox {
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    #messageBox.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      display: block;
+    }
+
+    #messageBox.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      display: block;
+    }
+
+    .help-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    body.dark .help-text {
+      color: #aaa;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .footer-copyright {
+      position: fixed;
+      bottom: 10px;
+      right: 20px;
+      font-size: 11px;
+      opacity: 0.6;
+      transition: opacity 0.3s, color 0.3s;
+      z-index: 1000;
+      pointer-events: none;
+      max-width: 400px;
+      text-align: right;
+      line-height: 1.3;
+    }
+
+    body.light .footer-copyright {
+      color: var(--text-color-light);
+    }
+
+    body.dark .footer-copyright {
+      color: var(--text-color-dark);
+    }
+
+    .footer-copyright:hover {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body class="light">
+  <header>
+    <h1>📅 Volunteer Availability Form</h1>
+    <div>
+      <span class="toggle-theme" onclick="toggleTheme()">☀️</span>
+    </div>
+  </header>
+
+  <form id="availabilityForm" onsubmit="handleSubmit(event)">
+    <div class="form-section">
+      <h2>Personal Information</h2>
+      
+      <div class="form-group">
+        <label for="firstName" class="required">First Name:</label>
+        <input type="text" id="firstName" required>
+      </div>
+
+      <div class="form-group">
+        <label for="lastName" class="required">Last Name:</label>
+        <input type="text" id="lastName" required>
+      </div>
+
+      <div class="form-group">
+        <label for="email" class="required">Email:</label>
+        <input type="email" id="email" required>
+      </div>
+
+      <div class="form-group">
+        <label for="role" class="required">Role:</label>
+        <select id="role" required onchange="validateShifts()">
+          <option value="">Select a role...</option>
+          <option value="Mentor">Mentor</option>
+          <option value="Filer">Filer</option>
+          <option value="Frontline">Frontline</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Shift Preferences</h2>
+      
+      <div class="form-group">
+        <label for="numShifts" class="required">How many shifts would you like?</label>
+        <input type="number" id="numShifts" min="3" max="12" required onchange="validateShifts()">
+        <div class="help-text">Must be between 3 and 12. Filers must choose at least 3.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="consecutive">Would you prefer consecutive shifts?</label>
+        <select id="consecutive" required>
+          <option value="">Select...</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Availability</h2>
+      <p class="help-text" style="margin-bottom: 20px;">Please select all times you are available:</p>
+      
+      <div id="availabilityContainer">
+        <!-- Will be populated by JavaScript -->
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Additional Information</h2>
+      
+      <div class="form-group">
+        <label for="notes">Other notes:</label>
+        <textarea id="notes" placeholder="Any additional information or notes..."></textarea>
+      </div>
+    </div>
+
+    <button type="submit" id="submitBtn">Submit Availability</button>
+  </form>
+
+  <div id="messageBox"></div>
+
+<script>
+  const DAYS = ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
+  const TIME_SLOTS = [
+    { id: '9AM-1PM', label: '9AM-1PM' },
+    { id: '1PM-5PM', label: '1PM-5PM' },
+    { id: '5PM-9PM', label: '5PM-9PM' }
+  ];
+
+  function toggleTheme() {
+    const body = document.body;
+    const toggle = document.querySelector('.toggle-theme');
+    if (body.classList.contains('dark')) {
+      body.classList.replace('dark', 'light');
+      toggle.textContent = '☀️';
+    } else {
+      body.classList.replace('light', 'dark');
+      toggle.textContent = '🌙';
+    }
+  }
+
+  function showMessage(message, type = 'info') {
+    const messageBox = document.getElementById('messageBox');
+    messageBox.textContent = message;
+    messageBox.className = type;
+    messageBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    
+    if (type === 'success') {
+      setTimeout(() => {
+        messageBox.style.display = 'none';
+      }, 5000);
+    }
+  }
+
+  function validateShifts() {
+    const role = document.getElementById('role').value;
+    const numShifts = parseInt(document.getElementById('numShifts').value);
+    const numShiftsInput = document.getElementById('numShifts');
+    
+    if (role === 'Filer' && numShifts < 3) {
+      numShiftsInput.setCustomValidity('Filers must choose at least 3 shifts');
+      numShiftsInput.reportValidity();
+      return false;
+    } else {
+      numShiftsInput.setCustomValidity('');
+      return true;
+    }
+  }
+
+  function buildAvailabilityGrid() {
+    const container = document.getElementById('availabilityContainer');
+    container.innerHTML = '';
+
+    DAYS.forEach(day => {
+      const dayDiv = document.createElement('div');
+      dayDiv.className = 'day-group';
+      
+      const dayHeader = document.createElement('h3');
+      dayHeader.textContent = day;
+      dayDiv.appendChild(dayHeader);
+
+      const checkboxGroup = document.createElement('div');
+      checkboxGroup.className = 'checkbox-group';
+
+      TIME_SLOTS.forEach(timeSlot => {
+        const checkboxItem = document.createElement('div');
+        checkboxItem.className = 'checkbox-item';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `${day.replace(' ', '_')}_${timeSlot.id}`;
+        checkbox.name = 'availability';
+        checkbox.value = `${day} ${timeSlot.label}`;
+
+        const label = document.createElement('label');
+        label.htmlFor = checkbox.id;
+        label.textContent = timeSlot.label;
+        label.className = '';
+
+        checkboxItem.appendChild(checkbox);
+        checkboxItem.appendChild(label);
+        checkboxGroup.appendChild(checkboxItem);
+      });
+
+      dayDiv.appendChild(checkboxGroup);
+      container.appendChild(dayDiv);
+    });
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    // Validate shifts based on role
+    if (!validateShifts()) {
+      return;
+    }
+
+    // Check if at least one availability is selected
+    const checkboxes = document.querySelectorAll('input[name="availability"]:checked');
+    if (checkboxes.length === 0) {
+      showMessage('Please select at least one available time slot', 'error');
+      return;
+    }
+
+    // Collect form data
+    const availability = Array.from(checkboxes).map(cb => cb.value);
+
+    const formData = {
+      firstName: document.getElementById('firstName').value.trim(),
+      lastName: document.getElementById('lastName').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      role: document.getElementById('role').value,
+      numShifts: parseInt(document.getElementById('numShifts').value),
+      consecutive: document.getElementById('consecutive').value,
+      availability: availability,
+      notes: document.getElementById('notes').value.trim()
+    };
+
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="loading"></span> Submitting...';
+
+    google.script.run
+      .withSuccessHandler(result => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        
+        showMessage('Thank you! Your availability has been submitted successfully.', 'success');
+        
+        // Reset form
+        document.getElementById('availabilityForm').reset();
+        buildAvailabilityGrid();
+      })
+      .withFailureHandler(error => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        showMessage('Error submitting form: ' + (error.message || error), 'error');
+      })
+      .submitAvailabilityForm(formData);
+  }
+
+  // Initialize availability grid on page load
+  window.addEventListener('load', () => {
+    buildAvailabilityGrid();
+  });
+</script>
+<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+</body>
+</html>

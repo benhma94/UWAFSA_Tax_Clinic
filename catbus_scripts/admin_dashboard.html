@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --accent-color: rgb(142, 0, 0);
+      --bg-color-light: #ffffff;
+      --text-color-light: #1a1a1a;
+      --input-bg-light: #f2f2f2;
+      --border-light: #ccc;
+      --bg-color-dark: #1e1e1e;
+      --text-color-dark: #f0f0f0;
+      --input-bg-dark: #2a2a2a;
+      --border-dark: #444;
+    }
+
+    body.light {
+      background-color: var(--bg-color-light);
+      color: var(--text-color-light);
+    }
+
+    body.dark {
+      background-color: var(--bg-color-dark);
+      color: var(--text-color-dark);
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .request {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      color: white;
+      font-weight: bold;
+    }
+    .toggle-theme {
+      cursor: pointer;
+      font-size: 1.4em;
+      margin-left: 10px;
+    }
+    .request.active {
+      background-color: #f4b400;
+    }
+
+    .request.escalated {
+      background-color: #d93025;
+      animation: pulse 1.2s infinite;
+    }
+
+    .request.review {
+      background-color: #4285f4;
+    }
+
+    h3 {
+      margin-top: 30px;
+      margin-bottom: 15px;
+    }
+
+    h3:first-of-type {
+      margin-top: 0;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.03); opacity: 0.9; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .summary-box {
+      background: var(--input-bg-light);
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 30px;
+      color: var(--text-color-light);
+    }
+
+    canvas {
+      margin-top: 20px;
+      width: 100%;
+      max-width: 400px;  /* controls how wide the chart can go */
+      height: auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .return-item {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border: 2px solid var(--border-light);
+      transition: background 0.3s, border 0.3s;
+    }
+
+    body.light .return-item {
+      background-color: var(--input-bg-light);
+      border-color: var(--border-light);
+    }
+
+    body.dark .return-item {
+      background-color: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+
+    .return-info strong {
+      color: var(--accent-color);
+      font-size: 1.1em;
+    }
+
+    .footer-copyright {
+      position: fixed;
+      bottom: 10px;
+      right: 20px;
+      font-size: 11px;
+      opacity: 0.6;
+      transition: opacity 0.3s, color 0.3s;
+      z-index: 1000;
+      pointer-events: none;
+      max-width: 400px;
+      text-align: right;
+      line-height: 1.3;
+    }
+
+    body.light .footer-copyright {
+      color: var(--text-color-light);
+    }
+
+    body.dark .footer-copyright {
+      color: var(--text-color-dark);
+    }
+
+    .footer-copyright:hover {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body class="light">
+  <header>
+    <div>
+      <span class="toggle-theme" onclick="toggleTheme()">☀️</span>
+    </div>
+  </header>
+
+  <h3>🚨 AFSA Tax Clinic QQ Dashboard</h3>
+  <div id="container">Loading help requests...</div>
+
+  <h3>📋 Review Requests</h3>
+  <div id="reviewContainer">Loading review requests...</div>
+
+  <div class="summary-box">
+    <h3>📊 Return Completion Summary</h3>
+    <p>Total Completed: <strong id="totalCount">0</strong></p>
+    <p>Completed Today: <strong id="todayCount">0</strong></p>
+    <canvas id="completionChart" width = "400" height = "200"></canvas>
+  </div>
+
+
+  <div id="messageBox"></div>
+  <div id="errorBox"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  let lastRequestsSerialized = "";
+  let lastReviewRequestsSerialized = "";
+  let lastSummarySerialized = "";
+  let chartInstance = null;   // persist chart instead of recreating
+
+  function toggleTheme() {
+    const body = document.body;
+    const toggle = document.querySelector('.toggle-theme');
+    if (body.classList.contains('dark')) {
+      body.classList.replace('dark', 'light');
+      toggle.textContent = '☀️';
+    } else {
+      body.classList.replace('light', 'dark');
+      toggle.textContent = '🌙';
+    }
+  }
+
+  function render(requests) {
+    const serialized = JSON.stringify(requests);
+    if (serialized === lastRequestsSerialized) return;  // no changes → do nothing
+    lastRequestsSerialized = serialized;
+
+    const container = document.getElementById("container");
+    container.innerHTML = "";
+
+    if (requests.length === 0) {
+      container.innerHTML = "<p>No active or escalated help requests.</p>";
+      return;
+    }
+
+    for (const req of requests) {
+      const div = document.createElement("div");
+      div.className = `request ${req.status}`;
+      div.innerHTML = `
+        <div><strong>${req.volunteer}</strong></div>
+        <div>⏱️ ${req.minutesAgo} minutes ago</div>
+        <div>🕒 ${req.timestamp}</div>
+      `;
+      container.appendChild(div);
+    }
+  }
+
+  function renderReviewRequests(requests) {
+    const serialized = JSON.stringify(requests);
+    if (serialized === lastReviewRequestsSerialized) return;  // no changes → do nothing
+    lastReviewRequestsSerialized = serialized;
+
+    const container = document.getElementById("reviewContainer");
+    container.innerHTML = "";
+
+    if (requests.length === 0) {
+      container.innerHTML = "<p>No active review requests.</p>";
+      return;
+    }
+
+    for (const req of requests) {
+      const div = document.createElement("div");
+      div.className = `request review`;
+      div.innerHTML = `
+        <div><strong>${req.volunteer}</strong></div>
+        <div>⏱️ ${req.minutesAgo} minutes ago</div>
+        <div>🕒 ${req.timestamp}</div>
+      `;
+      container.appendChild(div);
+    }
+  }
+
+  function renderSummary(data) {
+    const serialized = JSON.stringify(data);
+    if (serialized === lastSummarySerialized) return; // unchanged → skip
+    lastSummarySerialized = serialized;
+
+    document.getElementById("totalCount").textContent = data.totalCompleted;
+    document.getElementById("todayCount").textContent = data.completedToday;
+
+    const labels = Object.keys(data.hourlyCounts).map(h => `${h}:00`);
+    const counts = Object.values(data.hourlyCounts);
+
+    const ctx = document.getElementById("completionChart").getContext("2d");
+
+    // If a chart exists, update it instead of creating a new one
+    if (chartInstance) {
+      chartInstance.data.labels = labels;
+      chartInstance.data.datasets[0].data = counts;
+      chartInstance.update();
+    } else {
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Returns Completed",
+            data: counts,
+            backgroundColor: '#8e0000'
+          }]
+        },
+        options: {
+          animation: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 1 }
+            }
+          }
+        }
+      });
+    }
+  }
+
+
+  function refresh() {
+    google.script.run.withSuccessHandler(render).getLiveHelpRequests();
+    google.script.run.withSuccessHandler(renderReviewRequests).getLiveReviewRequests();
+    google.script.run.withSuccessHandler(renderSummary).getReturnSummary();
+  }
+
+  // Initial load
+  window.addEventListener('load', refresh);
+
+  // 🔄 Auto-refresh every 10 seconds
+  setInterval(refresh, 10000);
+</script>
+<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+</body>
+</html>

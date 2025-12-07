@@ -343,9 +343,14 @@ function finalizeReturnsAndStore(volunteer, client, rows) {
       throw new Error('Tax Return Tracker sheet not found');
     }
     
+    // Extract just the volunteer's actual name (remove "Station X –" prefix if present)
+    const volunteerNameOnly = volunteer.includes('–') 
+      ? volunteer.split('–')[1].trim() 
+      : volunteer.trim();
+    
     const toAppend = rows.map(r => [
       new Date(),
-      sanitizeInput(volunteer, 100),
+      sanitizeInput(volunteerNameOnly, 100),
       sanitizeInput(clientID, 10),
       sanitizeInput(r.taxYear, 10),
       sanitizeInput(r.reviewer || '', 100), // Reviewer name
@@ -490,9 +495,15 @@ function cancelClientAndStore(volunteer, client, rows) {
     // Append to Tax Return Tracker with INCOMPLETE='Yes'
     // Format: TIMESTAMP, VOLUNTEER, CLIENT_ID, TAX_YEAR, REVIEWER, SECONDARY_REVIEWER, MARRIED, EFILE, PAPER, INCOMPLETE
     // Store cancellation reason in REVIEWER column as "CANCELLED: [reason]"
+    
+    // Extract just the volunteer's actual name (remove "Station X –" prefix if present)
+    const volunteerNameOnly = volunteer.includes('–') 
+      ? volunteer.split('–')[1].trim() 
+      : volunteer.trim();
+    
     const toAppend = rows.map(r => [
       new Date(),
-      sanitizeInput(volunteer, 100),
+      sanitizeInput(volunteerNameOnly, 100),
       sanitizeInput(clientID, 10),
       sanitizeInput(r.taxYear, 10),
       `CANCELLED: ${sanitizeInput(cancellationReason, 100)}`, // Store cancellation reason in Reviewer column

@@ -17,9 +17,9 @@ function getClientQueue() {
     const intakeLastRow = intakeSheet.getLastRow();
     const assignmentLastRow = assignmentSheet.getLastRow();
     
-    // Read only necessary columns: Timestamp (0) and Client ID (5)
+    // Read only necessary columns: Timestamp (0), Client ID (5), and Priority (7)
     const intakeData = intakeLastRow > 1 
-      ? intakeSheet.getRange(2, 1, intakeLastRow - 1, 7).getValues()
+      ? intakeSheet.getRange(2, 1, intakeLastRow - 1, 8).getValues()
       : [];
     
     // Build set of assigned client IDs - only read if there are assignments
@@ -39,11 +39,14 @@ function getClientQueue() {
     for (let i = 0; i < intakeData.length; i++) {
       const timestamp = intakeData[i][CONFIG.COLUMNS.CLIENT_INTAKE.TIMESTAMP];
       const clientId = intakeData[i][CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID]?.toString().trim();
+      const isHighPriority = intakeData[i][CONFIG.COLUMNS.CLIENT_INTAKE.IS_HIGH_PRIORITY] === true || 
+                            intakeData[i][CONFIG.COLUMNS.CLIENT_INTAKE.IS_HIGH_PRIORITY]?.toString().toLowerCase() === 'true';
       
       if (clientId && !assignedClientIds.has(clientId)) {
         queue.push({
           clientId,
           waitTime: formatElapsedTime(now - new Date(timestamp)),
+          isHighPriority: isHighPriority,
           row: i + 2 // +2 because we start from row 2 (1-indexed)
         });
       }
@@ -169,8 +172,9 @@ function getAvailableVolunteers() {
     const signOutLastRow = signOutSheet.getLastRow();
     const assignmentLastRow = assignmentSheet.getLastRow();
     
+    // Read columns: Timestamp (0), Name (1), Station (2), SessionId (3), Role (4) if exists
     const volunteerData = volunteerLastRow > 1
-      ? volunteerSheet.getRange(2, 1, volunteerLastRow - 1, 4).getValues()
+      ? volunteerSheet.getRange(2, 1, volunteerLastRow - 1, 5).getValues()
       : [];
     
     const signOutData = signOutLastRow > 1
@@ -206,9 +210,19 @@ function getAvailableVolunteers() {
       const name = volunteerData[i][1]?.toString().trim();
       const station = volunteerData[i][2]?.toString().trim();
       const sessionId = volunteerData[i][3]?.toString().trim();
+      const role = volunteerData[i][4]?.toString().trim().toLowerCase() || '';
       
       if (!name || !station || !sessionId) continue;
-      if (station === 'Mentor' || station === 'Receptionist') continue;
+      // Exclude mentors, senior mentors, and receptionists
+      // Check both station and role fields
+      const stationLower = station.toLowerCase();
+      if (stationLower === 'mentor' || 
+          stationLower === 'senior mentor' || 
+          stationLower.includes('senior') ||
+          stationLower === 'receptionist' ||
+          role === 'mentor' ||
+          role === 'senior mentor' ||
+          role.includes('senior')) continue;
       if (signInDate !== today) continue;
       
       // Check if signed out

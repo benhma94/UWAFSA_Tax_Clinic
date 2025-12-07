@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --accent-color: rgb(142, 0, 0);
+      --bg-color-light: #ffffff;
+      --text-color-light: #1a1a1a;
+      --input-bg-light: #f2f2f2;
+      --border-light: #ccc;
+      --bg-color-dark: #1e1e1e;
+      --text-color-dark: #f0f0f0;
+      --input-bg-dark: #2a2a2a;
+      --border-dark: #444;
+    }
+
+    body.light {
+      background-color: var(--bg-color-light);
+      color: var(--text-color-light);
+    }
+
+    body.dark {
+      background-color: var(--bg-color-dark);
+      color: var(--text-color-dark);
+    }
+
+    /* Fix for warning rows in dark mode */
+    body.dark .warning-wait {
+      background-color: #ffee99; /* brighter yellow */
+      color: #1a1a1a; /* dark text for readability */
+    }
+
+    /* Fix for danger rows in dark mode */
+    body.dark .danger-wait {
+      background-color: #ff6666; /* deeper red */
+      color: #ffffff; /* white text is still okay here */
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    header h3 {
+      font-family: Verdana, sans-serif;
+      color: var(--accent-color);
+      font-size: 1.5rem;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .form-wrapper {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+
+    th, td {
+      border: 1px solid var(--border-light);
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--accent-color);
+      color: white;
+    }
+
+    .assign-form {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    select, button {
+      padding: 8px;
+      border: 1px solid var(--border-light);
+      border-radius: 5px;
+    }
+
+    button {
+      background-color: var(--accent-color);
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background-color: #a00000;
+    }
+
+    .toggle-theme {
+      cursor: pointer;
+      font-size: 1.4em;
+    }
+    .warning-wait {
+      background-color: #fff3cd; /* yellow */
+    }
+
+    .danger-wait {
+      background-color: #ffcccc; /* red */
+    }
+
+    .pulse {
+      animation: pulseAnim 1.5s infinite;
+    }
+
+    @keyframes pulseAnim {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    .footer-copyright {
+      position: fixed;
+      bottom: 10px;
+      right: 20px;
+      font-size: 11px;
+      opacity: 0.6;
+      transition: opacity 0.3s, color 0.3s;
+      z-index: 1000;
+      pointer-events: none;
+      max-width: 400px;
+      text-align: right;
+      line-height: 1.3;
+    }
+
+    body.light .footer-copyright {
+      color: var(--text-color-light);
+    }
+
+    body.dark .footer-copyright {
+      color: var(--text-color-dark);
+    }
+
+    .footer-copyright:hover {
+      opacity: 0.8;
+    }
+
+  </style>
+  <script>
+  let clientQueue = [];
+  let volunteers = [];
+  let lastSerializedData = "";  // used to detect changes
+  let refreshInterval = null;
+  let isPageVisible = true;
+  let lastUpdateTime = null;
+
+  function toggleTheme() {
+    const body = document.body;
+    body.classList.toggle('dark');
+    body.classList.toggle('light');
+  }
+
+  function updateLastUpdatedTime() {
+    const timeElement = document.getElementById('lastUpdated');
+    if (timeElement) {
+      const now = new Date();
+      lastUpdateTime = now;
+      timeElement.textContent = `Last updated: ${now.toLocaleTimeString()}`;
+    }
+  }
+
+  function loadQueue() {
+    if (!isPageVisible) return; // Don't refresh if page is not visible
+    
+    google.script.run.withSuccessHandler(data => {
+      const serialized = JSON.stringify(data);
+
+      // Only re-render if data actually changed
+      if (serialized !== lastSerializedData) {
+        lastSerializedData = serialized;
+        clientQueue = data.clients;
+        volunteers = data.volunteers;
+        renderQueue();
+        populateVolunteerDropdown();
+        updateLastUpdatedTime();
+      } else {
+        // Still update timestamp even if data didn't change
+        updateLastUpdatedTime();
+      }
+    }).getQueueData();
+  }
+
+  function manualRefresh() {
+    loadQueue();
+  }
+
+  // Auto-refresh every 30 seconds
+  function startAutoRefresh() {
+    if (refreshInterval) clearInterval(refreshInterval);
+    refreshInterval = setInterval(loadQueue, 30000); // 30 seconds
+  }
+
+  // Pause refresh when page is not visible
+  document.addEventListener('visibilitychange', function() {
+    isPageVisible = !document.hidden;
+    if (isPageVisible) {
+      startAutoRefresh();
+      loadQueue(); // Refresh immediately when page becomes visible
+    } else {
+      if (refreshInterval) clearInterval(refreshInterval);
+    }
+  });
+
+  // Start auto-refresh on page load
+  startAutoRefresh();
+
+  function renderQueue() {
+    const tbody = document.getElementById('queueBody');
+    const queueCount = document.getElementById('queueCount');
+    tbody.innerHTML = '';
+
+    // Sort by priority first (High Priority first), then by wait time (longest first)
+    const sortedQueue = [...clientQueue].sort((a, b) => {
+      // Priority comparison: High Priority (true) comes before Normal (false)
+      const aPriority = a.isHighPriority === true;
+      const bPriority = b.isHighPriority === true;
+      if (aPriority !== bPriority) {
+        return bPriority ? 1 : -1; // High priority first
+      }
+      // If same priority, sort by wait time (longest first)
+      return parseWaitTimeToMinutes(b.waitTime) - parseWaitTimeToMinutes(a.waitTime);
+    });
+
+    sortedQueue.forEach(client => {
+      const row = document.createElement('tr');
+      const waitMins = parseWaitTimeToMinutes(client.waitTime);
+
+      if (waitMins >= 30) {
+        row.classList.add('danger-wait', 'pulse');
+      } else if (waitMins >= 15) {
+        row.classList.add('warning-wait');
+      }
+
+      // Add priority indicator
+      const priorityBadge = client.isHighPriority 
+        ? '<span style="background-color: #c0392b; color: white; padding: 2px 8px; border-radius: 3px; font-size: 0.85em; font-weight: bold; margin-right: 8px;">HIGH PRIORITY</span>' 
+        : '';
+
+      row.innerHTML = `
+        <td>${priorityBadge}${client.clientId}</td>
+        <td>${client.waitTime}</td>
+      `;
+      tbody.appendChild(row);
+    });
+
+    queueCount.textContent = `Total clients in queue: ${sortedQueue.length}`;
+  }
+
+  function populateVolunteerDropdown() {
+    const volunteerSelect = document.getElementById('volunteerSelect');
+    const clientSelect = document.getElementById('clientSelect');
+    volunteerSelect.innerHTML = '<option value="">Select Volunteer</option>';
+    clientSelect.innerHTML = '<option value="">Select Client</option>';
+
+    volunteers.forEach(name => {
+      volunteerSelect.innerHTML += `<option value="${name}">${name}</option>`;
+    });
+
+    clientQueue.forEach(c => {
+      clientSelect.innerHTML += `<option value="${c.clientId}">${c.clientId}</option>`;
+    });
+  }
+
+  function assignClient() {
+    const client = document.getElementById('clientSelect').value;
+    const volunteer = document.getElementById('volunteerSelect').value;
+    if (!client || !volunteer) return alert('Please select both a client and a volunteer.');
+
+    google.script.run.withSuccessHandler(() => {
+      const msg = `Client ${client} has been assigned to ${volunteer}.`;
+      document.getElementById('modalMessage').textContent = msg;
+      document.getElementById('confirmationModal').style.display = 'flex';
+    }).assignClientToVolunteer(client, volunteer);
+  }
+
+  function refreshAfterModal() {
+    document.getElementById('confirmationModal').style.display = 'none';
+    loadQueue();
+  }
+
+  function parseWaitTimeToMinutes(waitStr) {
+    const parts = waitStr.split(' ');
+    let total = 0;
+    for (const part of parts) {
+      if (part.endsWith('h')) total += parseInt(part) * 60;
+      if (part.endsWith('m')) total += parseInt(part);
+    }
+    return total;
+  }
+
+  window.onload = function() {
+    loadQueue();
+    updateLastUpdatedTime();
+  };
+</script>
+</head>
+<body class="light">
+  <header>
+    <h3>AFSA Tax Clinic Queue Dashboard</h3>
+    <span class="toggle-theme" onclick="toggleTheme()">☀️</span>
+  </header>
+
+  <div class="form-wrapper">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <h4 style="margin: 0;">Client Queue</h4>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <span id="lastUpdated" style="font-size: 0.9em; color: #666;"></span>
+        <button onclick="manualRefresh()" style="padding: 6px 12px; font-size: 0.9em;">🔄 Refresh</button>
+      </div>
+    </div>
+    <table>
+      <p id="queueCount" style="margin-top: -10px; margin-bottom: 10px; font-weight: bold;"></p>
+      <thead>
+        <tr>
+          <th>Client ID</th>
+          <th>Wait Time</th>
+        </tr>
+      </thead>
+      <tbody id="queueBody">
+        <!-- Filled by JS -->
+      </tbody>
+    </table>
+
+    <h4>Assign Client to Volunteer</h4>
+    <div class="assign-form">
+      <select id="clientSelect"></select>
+      <select id="volunteerSelect"></select>
+      <button onclick="assignClient()">Assign</button>
+    </div>
+  </div>
+  <div id="confirmationModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:white; color:#1a1a1a; padding:30px; border-radius:10px; max-width:400px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,0.3);">
+    <p id="modalMessage" style="font-size:1.1rem;">Client has been assigned to volunteer.</p>
+    <button onclick="refreshAfterModal()" style="margin-top:15px; padding:8px 20px; background-color:rgb(142, 0, 0); color:white; border:none; border-radius:5px; cursor:pointer;">OK</button>
+  </div>
+</div>
+<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+</body>
+</html>

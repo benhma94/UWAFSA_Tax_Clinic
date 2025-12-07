@@ -1,0 +1,2417 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --accent-color: rgb(142, 0, 0);
+      --bg-color-light: #ffffff;
+      --text-color-light: #1a1a1a;
+      --input-bg-light: #f2f2f2;
+      --border-light: #ccc;
+
+      --bg-color-dark: #1e1e1e;
+      --text-color-dark: #f0f0f0;
+      --input-bg-dark: #2a2a2a;
+      --border-dark: #444;
+    }
+
+    body.light {
+      background-color: var(--bg-color-light);
+      color: var(--text-color-light);
+    }
+
+    body.dark {
+      background-color: var(--bg-color-dark);
+      color: var(--text-color-dark);
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    header h3 {
+      font-family: Verdana, sans-serif;
+      color: var(--accent-color);
+      font-size: 1.5rem;
+      margin: 0;
+    }
+
+    header img {
+      height: 60px;
+    }
+
+    .toggle-theme {
+      cursor: pointer;
+      font-size: 1.4em;
+      margin-left: 10px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    label {
+      font-weight: 500;
+    }
+
+    input[list], select {
+      padding: 6px 10px;
+      border-radius: 5px;
+      width: 220px;
+      transition: background 0.3s, color 0.3s, border 0.3s;
+    }
+
+    body.light input[list], body.light select {
+      background-color: var(--input-bg-light);
+      color: var(--text-color-light);
+      border: 1px solid var(--border-light);
+    }
+
+    body.dark input[list], body.dark select {
+      background-color: var(--input-bg-dark);
+      color: var(--text-color-dark);
+      border: 1px solid var(--border-dark);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: left;
+    }
+
+    body.light th, body.light td {
+      border: 1px solid var(--border-light);
+    }
+
+    body.dark th, body.dark td {
+      border: 1px solid var(--border-dark);
+    }
+
+    th {
+      background-color: #444;
+      color: white;
+    }
+
+    .error-highlight {
+      background-color: #501919 !important;
+    }
+
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 500;
+      background-color: var(--accent-color);
+      color: white;
+      transition: background 0.2s;
+    }
+
+    button:disabled {
+      background-color: #888 !important;
+      cursor: not-allowed;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #a00000;
+    }
+
+    #messageBox, #errorBox {
+      display: none;
+      padding: 10px;
+      margin: 15px 0;
+      border-radius: 5px;
+    }
+
+    #messageBox {
+      background-color: #27ae60;
+      color: white;
+    }
+
+    #errorBox {
+      background-color: #c0392b;
+      color: white;
+    }
+
+    #confirmModal, #cancelClientModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    #confirmModal .modal-content, #cancelClientModal .modal-content {
+      background-color: #2e2e2e;
+      padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+      text-align: center;
+      color: white;
+      animation: slideIn 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    body.light #cancelClientModal .modal-content textarea {
+      background-color: var(--input-bg-light);
+      color: var(--text-color-light);
+      border: 1px solid var(--border-light);
+    }
+
+    body.dark #cancelClientModal .modal-content textarea {
+      background-color: var(--input-bg-dark);
+      color: var(--text-color-dark);
+      border: 1px solid var(--border-dark);
+    }
+
+    @keyframes fadeIn {
+      from { background-color: rgba(0, 0, 0, 0); }
+      to { background-color: rgba(0, 0, 0, 0.6); }
+    }
+
+    @keyframes slideIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    #spinner {
+      display: none;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .lds-ring {
+      display: inline-block;
+      position: relative;
+      width: 40px;
+      height: 40px;
+    }
+
+    .lds-ring div {
+      box-sizing: border-box;
+      display: block;
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      margin: 4px;
+      border: 4px solid white;
+      border-radius: 50%;
+      animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+      border-color: white transparent transparent transparent;
+    }
+
+    .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
+    .lds-ring div:nth-child(2) { animation-delay: -0.3s; }
+    .lds-ring div:nth-child(3) { animation-delay: -0.15s; }
+
+    @keyframes lds-ring {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    hr {
+      border: 1px solid #333;
+    }
+    #helpBtn {
+      background-color: #cccccc;  /* Neutral gray by default */
+      color: black;
+      padding: 8px 14px;
+      border-radius: 5px;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    #helpBtn:hover {
+      background-color: #b3b3b3;
+    }
+
+    #helpBtn.active {
+      background-color: #f39c12;  /* Bright amber for active state */
+      color: white;
+    }
+    
+    .call-review-btn, .return-corrections-btn, .approve-btn {
+      padding: 6px 12px;
+      font-size: 0.9em;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    
+    .call-review-btn {
+      background-color: #4285f4;
+      color: white;
+    }
+    
+    .call-review-btn:hover {
+      background-color: #357ae8;
+    }
+    
+    .return-corrections-btn {
+      background-color: #f39c12;
+      color: white;
+      margin-right: 5px;
+    }
+    
+    .return-corrections-btn:hover {
+      background-color: #e67e22;
+    }
+    
+    .approve-btn {
+      background-color: #27ae60;
+      color: white;
+    }
+    
+    .approve-btn:hover {
+      background-color: #229954;
+    }
+    
+    .review-actions {
+      display: flex;
+      gap: 5px;
+    }
+    
+    #notesContainer {
+      margin-bottom: 20px;
+    }
+
+    #notesContainer h3 {
+      margin-bottom: 10px;
+      color: var(--accent-color);
+      font-size: 1.2rem;
+    }
+
+    body.light #notesDisplay {
+      background-color: #f2f2f2;
+      color: #1a1a1a;
+      border: 1px solid var(--border-light);
+    }
+
+    body.dark #notesDisplay {
+      background-color: #2a2a2a;
+      color: #f0f0f0;
+      border: 1px solid var(--border-dark);
+    }
+
+    .reviewer-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .review-buttons {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+
+    .call-review-btn, .cancel-review-btn, .complete-review-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.2s;
+      font-size: 0.9em;
+    }
+
+    .call-review-btn {
+      background-color: var(--accent-color);
+      color: white;
+    }
+
+    .call-review-btn:hover {
+      background-color: #a00000;
+    }
+
+    .cancel-review-btn {
+      background-color: #888;
+      color: white;
+    }
+
+    .cancel-review-btn:hover {
+      background-color: #666;
+    }
+
+    .complete-review-btn {
+      background-color: #27ae60;
+      color: white;
+    }
+
+    .complete-review-btn:hover {
+      background-color: #229954;
+    }
+
+    /* Email Receipt Button Styles */
+    .email-receipt-btn {
+      display: none;
+      margin-top: 8px;
+      padding: 6px 12px;
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: background 0.2s;
+    }
+
+    .email-receipt-btn:hover {
+      background-color: #357ae8;
+    }
+
+    .email-receipt-btn.show {
+      display: inline-block;
+    }
+
+    .email-receipt-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .receipt-sent-indicator {
+      display: none;
+      color: #27ae60;
+      font-size: 0.9em;
+      font-weight: bold;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .receipt-sent-indicator.show {
+      display: inline-flex;
+    }
+
+    .receipt-sent-indicator span {
+      color: #27ae60;
+    }
+
+    /* Email Receipt Modal Styles */
+    #emailReceiptModal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      overflow: auto;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #emailReceiptModal.show {
+      display: flex;
+    }
+
+    #emailReceiptModal .modal-content {
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      animation: slideIn 0.3s ease-out;
+      position: relative;
+    }
+
+    body.dark #emailReceiptModal .modal-content {
+      background-color: var(--input-bg-dark);
+      color: var(--text-color-dark);
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .email-modal-header {
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--accent-color);
+    }
+
+    .email-modal-header h3 {
+      margin: 0;
+      color: var(--accent-color);
+    }
+
+    .email-modal-body {
+      margin-bottom: 20px;
+    }
+
+    .email-form-field {
+      margin-bottom: 15px;
+    }
+
+    .email-form-field label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      font-size: 0.95em;
+    }
+
+    .email-form-field input[type="email"],
+    .email-form-field input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+
+    body.light .email-form-field input {
+      background-color: var(--input-bg-light);
+      color: var(--text-color-light);
+      border: 1px solid var(--border-light);
+    }
+
+    body.dark .email-form-field input {
+      background-color: var(--input-bg-dark);
+      color: var(--text-color-dark);
+      border: 1px solid var(--border-dark);
+    }
+
+    .email-form-field input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    /* Number input styling with color coding */
+    .email-form-field input.number-input {
+      text-align: right;
+      font-family: monospace;
+    }
+
+    .email-form-field input.number-input.positive {
+      color: #27ae60;
+      font-weight: 500;
+    }
+
+    .email-form-field input.number-input.negative {
+      color: #c0392b;
+      font-weight: 500;
+    }
+
+    .email-form-field input.number-input:invalid {
+      border-color: #c0392b;
+    }
+
+    .number-input-hint {
+      font-size: 0.8em;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    body.dark .number-input-hint {
+      color: #aaa;
+    }
+
+    .email-modal-footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      padding-top: 15px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .email-close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 28px;
+      font-weight: bold;
+      color: #aaa;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+
+    .email-close-btn:hover {
+      color: var(--accent-color);
+    }
+
+    /* File Upload Styles */
+    .file-upload-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .file-upload-area {
+      border: 2px dashed var(--border-light);
+      border-radius: 5px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background-color: #fafafa;
+    }
+
+    body.dark .file-upload-area {
+      background-color: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+
+    .file-upload-area:hover {
+      border-color: var(--accent-color);
+    }
+
+    body.light .file-upload-area:hover {
+      background-color: #f0f0f0;
+    }
+
+    body.dark .file-upload-area:hover {
+      background-color: #333;
+    }
+
+    .file-upload-area.drag-over {
+      border-color: var(--accent-color);
+    }
+
+    body.light .file-upload-area.drag-over {
+      background-color: #ffe0e0;
+    }
+
+    body.dark .file-upload-area.drag-over {
+      background-color: #4a2a2a;
+    }
+
+    .file-upload-area p {
+      margin: 5px 0;
+      color: #666;
+    }
+
+    body.dark .file-upload-area p {
+      color: #aaa;
+    }
+
+    .file-upload-area .browse-link {
+      color: var(--accent-color);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    #fileInputEmail {
+      display: none;
+    }
+
+    .file-list {
+      margin-top: 15px;
+    }
+
+    .file-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      margin-bottom: 8px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+
+    body.dark .file-item {
+      background-color: var(--input-bg-dark);
+    }
+
+    .file-item .file-name {
+      flex: 1;
+      margin-right: 10px;
+      word-break: break-all;
+    }
+
+    .file-item .file-size {
+      color: #666;
+      margin-right: 10px;
+      font-size: 0.85em;
+    }
+
+    body.dark .file-item .file-size {
+      color: #aaa;
+    }
+
+    .file-item .remove-file {
+      background-color: #c0392b;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 0.85em;
+    }
+
+    .file-item .remove-file:hover {
+      background-color: #a93226;
+    }
+
+    .file-limit-warning {
+      color: #c0392b;
+      font-size: 0.85em;
+      margin-top: 5px;
+    }
+
+    .email-status-message {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 5px;
+      display: none;
+    }
+
+    .email-status-message.show {
+      display: block;
+    }
+
+    .email-status-message.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .email-status-message.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    /* Reminder Dialog Styles */
+    #reminderModal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      overflow: auto;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #reminderModal.show {
+      display: flex;
+    }
+
+    #reminderModal .modal-content {
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      max-width: 550px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      animation: slideIn 0.3s ease-out;
+      position: relative;
+    }
+
+    body.dark #reminderModal .modal-content {
+      background-color: var(--input-bg-dark);
+      color: var(--text-color-dark);
+    }
+
+    .reminder-modal-header {
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--accent-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .reminder-modal-header h3 {
+      margin: 0;
+      color: var(--accent-color);
+    }
+
+    .reminder-close-btn {
+      background: none;
+      border: none;
+      font-size: 28px;
+      font-weight: bold;
+      color: #999;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .reminder-close-btn:hover {
+      color: var(--accent-color);
+    }
+
+    .reminder-modal-body {
+      margin-bottom: 20px;
+    }
+
+    .reminder-message {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+    }
+
+    body.dark .reminder-message {
+      background-color: #3d3419;
+      border-left-color: #ffc107;
+    }
+
+    .reminder-message h4 {
+      margin: 0 0 10px 0;
+      color: #856404;
+      font-size: 1.1em;
+    }
+
+    body.dark .reminder-message h4 {
+      color: #ffc107;
+    }
+
+    .reminder-message p {
+      margin: 5px 0;
+      line-height: 1.6;
+      color: #856404;
+    }
+
+    body.dark .reminder-message p {
+      color: #e0d3a8;
+    }
+
+    .reminder-message ul {
+      margin: 10px 0 0 20px;
+      padding: 0;
+      color: #856404;
+    }
+
+    body.dark .reminder-message ul {
+      color: #e0d3a8;
+    }
+
+    .reminder-message li {
+      margin: 5px 0;
+      line-height: 1.5;
+    }
+
+    .reminder-message a {
+      color: #856404;
+      text-decoration: underline;
+      font-weight: 500;
+    }
+
+    .reminder-message a:hover {
+      color: #5a4202;
+      text-decoration: underline;
+    }
+
+    body.dark .reminder-message a {
+      color: #ffc107;
+      text-decoration: underline;
+    }
+
+    body.dark .reminder-message a:hover {
+      color: #ffd54f;
+      text-decoration: underline;
+    }
+
+    .reminder-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    body.dark .reminder-modal-footer {
+      border-top-color: var(--border-dark);
+    }
+
+    /* Footer Copyright */
+    .footer-copyright {
+      position: fixed;
+      bottom: 10px;
+      right: 20px;
+      font-size: 11px;
+      opacity: 0.6;
+      transition: opacity 0.3s, color 0.3s;
+      z-index: 1000;
+      pointer-events: none;
+      max-width: 400px;
+      text-align: right;
+      line-height: 1.3;
+    }
+
+    body.light .footer-copyright {
+      color: var(--text-color-light);
+    }
+
+    body.dark .footer-copyright {
+      color: var(--text-color-dark);
+    }
+
+    .footer-copyright:hover {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body class="light" onload="loadDropdowns()">
+  <header>
+    <h3>AFSA Tax Clinic Control Sheet</h3>
+    <div>
+      <span class="toggle-theme" onclick="toggleTheme()">☀️</span>
+    </div>
+  </header>
+
+  <div class="form-row">
+    <div>
+      <label for="volunteer">Volunteer:</label><br>
+      <input id="volunteer" list="volunteerList" placeholder="Start typing volunteer name" oninput="updateClients(); checkFormReady();">
+      <datalist id="volunteerList"></datalist>
+    </div>
+    <div>
+      <label for="client">Assigned Client:</label><br>
+      <select id="client" onchange="checkFormReady();">
+        <option value="">Select Client</option>
+      </select>
+    </div>
+    <div style="align-self: end; margin-top: 20px;">
+      <button id="helpBtn" onclick="toggleHelpRequest()">📞 Quick Question!</button>
+      <button id="escalateBtn" onclick="escalateHelpRequest()" style="display: none;">🚨 Escalate to Senior Mentor</button>
+    </div>
+  </div>
+  <hr>
+
+  <div id="notesContainer" style="display: none; margin-bottom: 20px;">
+    <h3 style="margin-bottom: 10px;">Front Desk Notes:</h3>
+    <div id="notesDisplay" style="padding: 12px; border-radius: 5px; font-style: italic; min-height: 40px;"></div>
+  </div>
+
+  <h3>Tax Year Details</h3>
+  <table id="taxYearTable">
+    <tr>
+      <th>Tax Year</th>
+      <th>Reviewer</th>
+      <th>Married/Common-Law</th>
+      <th>Filing Status</th>
+      <th>Remove</th>
+    </tr>
+  </table>
+
+  <br>
+  <button onclick="addTaxYearRow()">Add Additional Tax Year</button>
+  <br><br>
+
+  <div id="messageBox"></div>
+  <div id="errorBox"></div>
+  <div id="spinner"><div class="lds-ring"><div></div><div></div><div></div><div></div></div></div>
+
+  <button id="finalizeBtn" onclick="finalizeReturns()" disabled>Finalize Returns</button>
+  <br><br>
+  <button id="cancelClientBtn" onclick="openCancelClientModal()" disabled style="background-color: #c0392b;">Cancel Client</button>
+
+  <!-- Finalize Modal -->
+  <div id="confirmModal">
+    <div class="modal-content">
+      <p>Are you sure you'd like to finalize?<br>Have all returns been finalized/EFILEd at this point?</p>
+      <button onclick="proceedFinalize()">Yes, finalize</button>
+      <button onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Cancel Client Modal -->
+  <div id="cancelClientModal">
+    <div class="modal-content" style="width: 400px; max-width: 90vw;">
+      <h3 style="margin-top: 0; color: #c0392b;">Cancel Client</h3>
+      <p>Do you really want to cancel this client? Please indicate the reason below:</p>
+      <div style="text-align: left; margin: 20px 0;">
+        <label style="display: block; margin: 10px 0; cursor: pointer;">
+          <input type="radio" name="cancelReason" value="Client is not eligible for services" style="margin-right: 8px;">
+          Client is not eligible for services
+        </label>
+        <label style="display: block; margin: 10px 0; cursor: pointer;">
+          <input type="radio" name="cancelReason" value="Client does not have all documentation" style="margin-right: 8px;">
+          Client does not have all documentation
+        </label>
+        <label style="display: block; margin: 10px 0; cursor: pointer;">
+          <input type="radio" name="cancelReason" value="Other" id="cancelReasonOther" style="margin-right: 8px;">
+          Other:
+        </label>
+        <textarea id="cancelReasonOtherText" placeholder="Please provide details..." 
+                  style="width: 100%; min-height: 60px; padding: 8px; margin-top: 5px; border-radius: 5px; 
+                         display: none; font-family: inherit; resize: vertical;"
+                  disabled></textarea>
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+        <button onclick="proceedCancelClient()" style="background-color: #c0392b;">Confirm</button>
+        <button onclick="closeCancelModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email Receipt Modal -->
+  <div id="emailReceiptModal">
+    <div class="modal-content">
+      <button class="email-close-btn" onclick="closeEmailReceiptDialog()">&times;</button>
+      
+      <div class="email-modal-header">
+        <h3>Email Receipt to Client</h3>
+      </div>
+      
+      <div class="email-modal-body">
+        <form id="emailReceiptForm">
+          <div class="email-form-field">
+            <label for="clientEmailReceipt">Client Email <span style="color: red;">*</span></label>
+            <input type="email" id="clientEmailReceipt" required placeholder="client@example.com">
+          </div>
+          
+          <div class="email-form-field">
+            <label for="refundBalanceReceipt">Refund/Balance Owing</label>
+            <input type="text" id="refundBalanceReceipt" class="number-input" placeholder="Enter amount (e.g., 1,500.00 or -200.00)" oninput="formatAccountingNumber(this, 'refundBalance')" onblur="validateAndFormatRefundBalance(this)">
+            <div class="number-input-hint">Positive = Refund (green), Negative = Balance Owing (red)</div>
+          </div>
+          
+          <div class="email-form-field">
+            <label for="gstHstReceipt">Total GST/HST Credit</label>
+            <input type="text" id="gstHstReceipt" class="number-input" placeholder="Enter amount (e.g., 150.00)" oninput="formatAccountingNumber(this, 'gstHst')" onblur="finalizeAccountingFormat(this)">
+            <div class="number-input-hint">Enter as number (e.g., 150.00)</div>
+          </div>
+          
+          <div class="email-form-field">
+            <label for="onBenReceipt">Total ON-BEN Credit</label>
+            <input type="text" id="onBenReceipt" class="number-input" placeholder="Enter amount (e.g., 75.00)" oninput="formatAccountingNumber(this, 'onBen')" onblur="finalizeAccountingFormat(this)">
+            <div class="number-input-hint">Enter as number (e.g., 75.00)</div>
+          </div>
+          
+          <div class="email-form-field">
+            <label for="otherReceipt">Other Amounts</label>
+            <input type="text" id="otherReceipt" class="number-input" placeholder="Enter amount (e.g., 150.00)" oninput="formatAccountingNumber(this, 'other')" onblur="finalizeAccountingFormat(this)">
+            <div class="number-input-hint">Enter as number (e.g., 150.00)</div>
+          </div>
+          
+          <div class="email-form-field">
+            <label for="notesReceipt">Notes</label>
+            <textarea id="notesReceipt" placeholder="Additional notes or information" rows="3" style="width: 100%; padding: 8px; border: 1px solid var(--border-light); border-radius: 4px; font-size: 1em; box-sizing: border-box; font-family: inherit; resize: vertical;"></textarea>
+          </div>
+          
+          <div class="email-form-field">
+            <label for="ufilePasswordReceipt">UFILE Password <span style="color: red;">*</span></label>
+            <input type="text" id="ufilePasswordReceipt" required placeholder="Enter UFILE password">
+          </div>
+          
+          <div class="email-form-field" id="efileConfirmationField" style="display: none;">
+            <label for="efileConfirmationReceipt">E-File Confirmation Number</label>
+            <input type="text" id="efileConfirmationReceipt" placeholder="Enter E-File confirmation number">
+          </div>
+        </form>
+
+        <!-- File Upload Section -->
+        <div class="file-upload-section">
+          <label style="display: block; margin-bottom: 10px; font-weight: bold;">Attachments <span style="color: red;">*</span></label>
+          <div class="file-upload-area" id="fileUploadAreaEmail" onclick="document.getElementById('fileInputEmail').click()">
+            <p>📎 Drag and drop files here or <span class="browse-link">click to browse</span></p>
+            <p style="font-size: 0.85em; margin-top: 5px;">25 MB per file, 25 MB total per email</p>
+          </div>
+          <input type="file" id="fileInputEmail" multiple onchange="handleFileSelectEmail(event)">
+          
+          <div id="fileListEmail" class="file-list"></div>
+          <div id="fileLimitWarningEmail" class="file-limit-warning" style="display: none;"></div>
+        </div>
+      </div>
+      
+      <div id="emailReceiptStatusMessage" class="email-status-message"></div>
+      
+      <div class="email-modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeEmailReceiptDialog()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="sendReceiptEmail()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reminder Modal -->
+  <div id="reminderModal">
+    <div class="modal-content">
+      <div class="reminder-modal-header">
+        <h3>📋 Filing Reminders</h3>
+        <button class="reminder-close-btn" onclick="closeReminderDialog()">&times;</button>
+      </div>
+      
+      <div class="reminder-modal-body" id="reminderModalBody">
+        <!-- Reminder messages will be inserted here -->
+      </div>
+      
+      <div class="reminder-modal-footer">
+        <button type="button" class="btn btn-primary" onclick="closeReminderDialog()">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <script defer>
+    let volunteerMap = {};
+    let rowCount = 1;
+    let currentClientData = null; // Store current client intake data
+    let selectedFilesEmail = []; // Store files for email attachment
+    let currentEmailRowId = null; // Store current row ID for email receipt
+    let currentEmailRowCount = null; // Store current row count for email receipt
+
+    function toggleTheme() {
+      const body = document.body;
+      const toggle = document.querySelector('.toggle-theme');
+      if (body.classList.contains('dark')) {
+        body.classList.replace('dark', 'light');
+        toggle.textContent = '☀️';
+      } else {
+        body.classList.replace('light', 'dark');
+        toggle.textContent = '🌙';
+      }
+    }
+
+    function checkFormReady() {
+      const volunteer = document.getElementById('volunteer').value.trim();
+      const client = document.getElementById('client').value.trim();
+      const finalizeBtn = document.getElementById('finalizeBtn');
+      const cancelClientBtn = document.getElementById('cancelClientBtn');
+      if (finalizeBtn) {
+        finalizeBtn.disabled = !(volunteer && client);
+      }
+      if (cancelClientBtn) {
+        cancelClientBtn.disabled = !(volunteer && client);
+      }
+    }
+
+    function loadDropdowns() {
+      google.script.run.withSuccessHandler(data => {
+        volunteerMap = data;
+        const datalist = document.getElementById('volunteerList');
+        datalist.innerHTML = ''; // Clear existing
+        Object.keys(volunteerMap).sort().forEach(name => {
+          const option = document.createElement('option');
+          option.value = name;
+          datalist.appendChild(option);
+        });
+        checkFormReady();
+      }).getVolunteersAndClients();
+      setInterval(pollHelpStatus, 10000);
+      setInterval(pollReviewRequestStatus, 10000);
+      document.getElementById('volunteer').focus();
+    }
+
+    function updateClients() {
+      const volunteer = document.getElementById('volunteer').value;
+      const clientSelect = document.getElementById('client');
+      clientSelect.innerHTML = '<option value="">Select Client</option>';
+
+      if (volunteerMap[volunteer]) {
+        volunteerMap[volunteer].forEach(client => {
+          const option = document.createElement('option');
+          option.value = client;
+          option.textContent = client;
+          clientSelect.appendChild(option);
+        });
+      }
+
+      // Clear tax year table and client data
+      const table = document.getElementById('taxYearTable');
+      while (table.rows.length > 1) table.deleteRow(1);
+      rowCount = 1;
+      currentClientData = null; // Clear stored client data
+    }
+
+    document.getElementById('client').addEventListener('change', function () {
+      checkFormReady(); // Update button state
+      const clientID = this.value;
+      if (!clientID) {
+        document.getElementById('notesContainer').style.display = 'none';
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(data => {
+          currentClientData = data; // Store client data for addTaxYearRow
+          preloadTaxYearRows(data);
+          if (data && data.notes) {
+            document.getElementById('notesDisplay').textContent = data.notes;
+            document.getElementById('notesContainer').style.display = 'block';
+          } else {
+            document.getElementById('notesDisplay').textContent = '';
+            document.getElementById('notesContainer').style.display = 'none';
+          }
+          
+          // Show reminder dialogs based on client situations
+          showReminderDialogs(data);
+        })
+        .withFailureHandler(error => {
+          console.error('Error loading client info:', error);
+          showError('Error loading client information: ' + (error.message || error));
+        })
+        .getClientIntakeInfo(clientID);
+    });
+
+
+    function addTaxYearRow() {
+      // Get client data if available, otherwise use defaults
+      const isMarried = currentClientData?.situations?.includes("Married/Common-Law") || false;
+      const needsSeniorReview = currentClientData?.needsSeniorReview === true;
+      
+      google.script.run.withSuccessHandler(data => {
+        const reviewerOptions = data.reviewers;
+        const seniorOptions = data.seniors;
+
+        const table = document.getElementById('taxYearTable');
+        const row = table.insertRow();
+        const rowId = `row_${rowCount}`;
+        row.setAttribute('data-row-id', rowId);
+        
+        const taxYearOptions = Array.from({ length: 16 }, (_, i) => (2025 - i).toString());
+
+        row.innerHTML = `
+          <td>
+            <select name="taxYear">
+              ${taxYearOptions.map(y => `<option value="${y}" ${y === '2024' ? 'selected' : ''}>${y}</option>`).join('')}
+            </select>
+          </td>
+          <td id="reviewerCell${rowId}">
+            <div id="reviewInitial${rowId}">
+              <button type="button" class="call-review-btn" onclick="callForReview('${rowId}')">📋 Call for Review</button>
+            </div>
+            <div id="reviewInput${rowId}" style="display: none;">
+              <input list="reviewerList${rowId}" name="reviewer" placeholder="Start typing reviewer" oninput="checkReviewerAndEnableFilingStatus('${rowId}', '${rowCount}')">
+              <datalist id="reviewerList${rowId}">
+                ${reviewerOptions.map(r => `<option value="${r}">`).join('')}
+              </datalist>
+              ${needsSeniorReview ? `
+                <br>
+                <input list="reviewerList${rowId}_secondary" name="secondaryReviewer" placeholder="Start typing Senior reviewer">
+                <datalist id="reviewerList${rowId}_secondary">
+                  ${seniorOptions.map(r => `<option value="${r}">`).join('')}
+                </datalist>
+              ` : ''}
+            </div>
+            <div id="reviewActions${rowId}" style="display: none;">
+              <div class="review-actions">
+                <button type="button" class="return-corrections-btn" onclick="returnForCorrections('${rowId}')">↩ Return for Corrections</button>
+                <button type="button" class="approve-btn" onclick="approveReturn('${rowId}')">✓ Approve</button>
+              </div>
+            </div>
+          </td>
+          <td><input type="checkbox" name="married" ${isMarried ? "checked" : ""}></td>
+          <td>
+            <div>
+              <label><input type="radio" name="filingStatus${rowCount}" value="efile" onchange="handleFilingStatusChange('${rowId}', '${rowCount}')"> EFILE</label>
+              <label><input type="radio" name="filingStatus${rowCount}" value="paper" onchange="handleFilingStatusChange('${rowId}', '${rowCount}')"> Paper</label>
+              <label><input type="radio" name="filingStatus${rowCount}" value="incomplete" onchange="handleFilingStatusChange('${rowId}', '${rowCount}')"> Incomplete</label>
+            </div>
+            <div class="email-receipt-container">
+              <button type="button" id="emailReceiptBtn${rowId}" class="email-receipt-btn" onclick="openEmailReceiptDialog('${rowId}', '${rowCount}')">📧 Email Receipt?</button>
+              <div id="receiptSentIndicator${rowId}" class="receipt-sent-indicator">
+                <span>✓</span> Receipt sent
+              </div>
+            </div>
+          </td>
+          <td><button onclick="removeRow(this)">Remove</button></td>
+        `;
+        const currentRowCount = rowCount;
+        rowCount++;
+        
+        // Set up event listener for reviewer input and check initial state
+        setTimeout(() => {
+          const reviewerInput = row.querySelector('input[name="reviewer"]');
+          if (reviewerInput) {
+            reviewerInput.addEventListener('input', function() {
+              checkReviewerAndEnableFilingStatus(rowId, currentRowCount);
+            });
+            // Check initial state in case reviewer is already filled
+            checkReviewerAndEnableFilingStatus(rowId, currentRowCount);
+          }
+        }, 0);
+      }).getMentorList();
+    }
+
+    function pollHelpStatus() {
+      const volunteer = document.getElementById('volunteer').value;
+      if (!volunteer) return;
+
+      google.script.run.withSuccessHandler(status => {
+        const helpBtn = document.getElementById('helpBtn');
+        const escalateBtn = document.getElementById('escalateBtn');
+
+        if (status === "active" || status === "escalated") {
+          helpActive = true;
+          helpBtn.textContent = '✅ Cancel Call';
+          helpBtn.classList.add('active');
+          escalateBtn.style.display = 'inline-block';
+          escalateBtn.disabled = (status === "escalated");
+        } else {
+          helpActive = false;
+          helpBtn.textContent = '📞 Quick Question!';
+          helpBtn.classList.remove('active');
+          escalateBtn.style.display = 'none';
+        }
+      }).getHelpStatus(volunteer);
+    }
+
+    // Poll every 10 seconds
+
+    // Review functions
+    function callForReview(rowId) {
+      const volunteer = document.getElementById('volunteer').value.trim();
+      
+      if (!volunteer) {
+        showError('Please select a volunteer first.');
+        return;
+      }
+      
+      // Extract volunteer name only (remove station prefix if present)
+      const volunteerNameOnly = volunteer.includes('–') 
+        ? volunteer.split('–')[1].trim() 
+        : volunteer.trim();
+      
+      // Send review request to admin dashboard
+      google.script.run
+        .withSuccessHandler(() => {
+          // Hide the initial button, show the review actions
+          const reviewInitial = document.getElementById(`reviewInitial${rowId}`);
+          const reviewActions = document.getElementById(`reviewActions${rowId}`);
+          
+          if (reviewInitial) reviewInitial.style.display = 'none';
+          if (reviewActions) reviewActions.style.display = 'block';
+          showMessage('Review request sent to admin dashboard.');
+        })
+        .withFailureHandler(error => {
+          showError('Error sending review request: ' + (error.message || error));
+        })
+        .sendReviewRequest(volunteerNameOnly);
+    }
+    
+    function returnForCorrections(rowId) {
+      const volunteer = document.getElementById('volunteer').value.trim();
+      
+      if (!volunteer) {
+        showError('Please select a volunteer first.');
+        return;
+      }
+      
+      // Extract volunteer name only (remove station prefix if present)
+      const volunteerNameOnly = volunteer.includes('–') 
+        ? volunteer.split('–')[1].trim() 
+        : volunteer.trim();
+      
+      // Cancel review request to remove notification from admin dashboard
+      google.script.run
+        .withSuccessHandler(() => {
+          // Hide review actions and input, show initial button
+          const reviewInitial = document.getElementById(`reviewInitial${rowId}`);
+          const reviewActions = document.getElementById(`reviewActions${rowId}`);
+          const reviewInput = document.getElementById(`reviewInput${rowId}`);
+          
+          if (reviewInitial) reviewInitial.style.display = 'block';
+          if (reviewActions) reviewActions.style.display = 'none';
+          if (reviewInput) {
+            reviewInput.style.display = 'none';
+            const reviewerInput = reviewInput.querySelector('input[name="reviewer"]');
+            if (reviewerInput) {
+              reviewerInput.value = '';
+              reviewerInput.required = false;
+              reviewerInput.style.border = '';
+              reviewerInput.placeholder = 'Start typing reviewer';
+            }
+          }
+          
+          showMessage('Return marked for corrections. Review request cancelled.');
+        })
+        .withFailureHandler(error => {
+          showError('Error cancelling review request: ' + (error.message || error));
+        })
+        .cancelReviewRequest(volunteerNameOnly);
+    }
+    
+    function checkReviewerAndEnableFilingStatus(rowId, rowCount) {
+      const row = document.querySelector(`[data-row-id="${rowId}"]`);
+      if (!row) return;
+      
+      const reviewerInput = row.querySelector('input[name="reviewer"]');
+      const reviewerValue = reviewerInput ? reviewerInput.value.trim() : '';
+      
+      // Find all filing status radio buttons in this row
+      // They all have names starting with "filingStatus" followed by a number
+      const filingStatusRadios = row.querySelectorAll('input[type="radio"][name^="filingStatus"]');
+      
+      // Enable/disable filing status buttons based on whether reviewer is filled
+      filingStatusRadios.forEach(radio => {
+        radio.disabled = !reviewerValue;
+      });
+    }
+
+    function approveReturn(rowId) {
+      const volunteer = document.getElementById('volunteer').value.trim();
+      
+      if (!volunteer) {
+        showError('Please select a volunteer first.');
+        return;
+      }
+      
+      // Extract volunteer name only (remove station prefix if present)
+      const volunteerNameOnly = volunteer.includes('–') 
+        ? volunteer.split('–')[1].trim() 
+        : volunteer.trim();
+      
+      // Cancel review request to remove notification from admin dashboard
+      google.script.run
+        .withSuccessHandler(() => {
+          // Hide review actions, show reviewer input
+          const reviewActions = document.getElementById(`reviewActions${rowId}`);
+          const reviewInput = document.getElementById(`reviewInput${rowId}`);
+          
+          if (reviewActions) reviewActions.style.display = 'none';
+          if (reviewInput) {
+            reviewInput.style.display = 'block';
+            const reviewerInput = reviewInput.querySelector('input[name="reviewer"]');
+            if (reviewerInput) {
+              reviewerInput.required = true;
+              reviewerInput.style.border = '2px solid #27ae60';
+              reviewerInput.focus();
+              reviewerInput.placeholder = 'Select reviewer (required for approval)';
+              
+              // Add event listener to check reviewer and enable filing status
+              reviewerInput.addEventListener('input', function() {
+                checkReviewerAndEnableFilingStatus(rowId, rowCount);
+              });
+            }
+          }
+          
+          showMessage('Return approved. Please select a reviewer from the dropdown to complete.');
+        })
+        .withFailureHandler(error => {
+          showError('Error cancelling review request: ' + (error.message || error));
+        })
+        .cancelReviewRequest(volunteerNameOnly);
+    }
+
+    function finalizeReturns() {
+      try {
+        console.log('finalizeReturns called');
+        const volunteer = document.getElementById('volunteer').value.trim();
+        const client = document.getElementById('client').value.trim();
+        console.log('Volunteer:', volunteer, 'Client:', client);
+        
+        if (!volunteer || !client) {
+          showError('Please select both a volunteer and a client.');
+          return;
+        }
+        
+        const modal = document.getElementById('confirmModal');
+        if (modal) {
+          console.log('Showing modal');
+          modal.style.display = 'flex';
+        } else {
+          showError('Modal not found. Please refresh the page.');
+          console.error('confirmModal element not found');
+        }
+      } catch (error) {
+        showError('Error opening confirmation: ' + error.message);
+        console.error('finalizeReturns error:', error);
+      }
+    }
+    
+    // Make function globally accessible
+    window.finalizeReturns = finalizeReturns;
+
+    function proceedFinalize() {
+      closeModal();
+      document.getElementById('spinner').style.display = 'block';
+
+      const volunteer = document.getElementById('volunteer').value.trim();
+      const client = document.getElementById('client').value.trim();
+      
+      console.log('Finalizing - Volunteer:', volunteer, 'Client:', client, 'Client type:', typeof client, 'Client length:', client.length);
+      
+      if (!volunteer || !client) {
+        showError('Please select both a volunteer and a client.');
+        document.getElementById('spinner').style.display = 'none';
+        return;
+      }
+      
+      // Validate client ID format client-side (A001 format: one letter + 3 digits)
+      const clientIdPattern = /^[A-Z]\d{3}$/;
+      if (!clientIdPattern.test(client)) {
+        showError(`Invalid client ID format: "${client}". Expected format: A001 (one letter followed by 3 digits).`);
+        document.getElementById('spinner').style.display = 'none';
+        console.error('Client ID validation failed:', client);
+        return;
+      }
+      
+      const rows = [];
+      const taxYears = new Set();
+      const table = document.getElementById('taxYearTable');
+
+      for (let i = 1; i < table.rows.length; i++) {
+        const row = table.rows[i];
+        row.classList.remove("error-highlight");
+
+        const taxYear = row.querySelector('select[name="taxYear"]')?.value;
+        const reviewer = row.querySelector('input[name="reviewer"]')?.value.trim();
+        const secondaryReviewer = row.querySelector('input[name="secondaryReviewer"]')?.value.trim() || "";
+        const married = row.querySelector('input[name="married"]')?.checked || false;
+        
+        // Find the filing status by searching for any checked radio in this row
+        const statusGroup = row.querySelectorAll('input[type="radio"]');
+        let selectedStatus = "";
+        statusGroup.forEach(r => { 
+          if (r.checked) {
+            selectedStatus = r.value;
+          }
+        });
+
+        if (!taxYear) {
+          row.classList.add("error-highlight");
+          showError(`Row ${i}: Tax year is required.`);
+          document.getElementById('spinner').style.display = 'none';
+          return;
+        }
+        
+        // Reviewer is optional - will be set during review
+        
+        if (!selectedStatus) {
+          row.classList.add("error-highlight");
+          showError(`Row ${i}: Filing status (EFILE/Paper/Incomplete) is required.`);
+          document.getElementById('spinner').style.display = 'none';
+          return;
+        }
+        
+        if (taxYears.has(taxYear)) {
+          row.classList.add("error-highlight");
+          showError(`Row ${i}: Duplicate tax year ${taxYear}. Each tax year can only be finalized once.`);
+          document.getElementById('spinner').style.display = 'none';
+          return;
+        }
+
+        taxYears.add(taxYear);
+        const rowData = {
+          taxYear: taxYear.trim(),
+          reviewer: reviewer.trim(),
+          secondaryReviewer: secondaryReviewer.trim(),
+          married: married,
+          efile: selectedStatus === "efile",
+          paper: selectedStatus === "paper",
+          incomplete: selectedStatus === "incomplete"
+        };
+        rows.push(rowData);
+        console.log(`Row ${i} data:`, rowData);
+      }
+      
+      if (rows.length === 0) {
+        showError('No tax year rows to finalize. Please add at least one tax year.');
+        document.getElementById('spinner').style.display = 'none';
+        return;
+      }
+
+      console.log('Sending data to server:', { volunteer, client, clientType: typeof client, clientLength: client.length, rowsCount: rows.length, rows });
+      
+      google.script.run
+        .withSuccessHandler(success => {
+          document.getElementById('spinner').style.display = 'none';
+          console.log('Server response:', success);
+          if (success === true) {
+            showMessage('Returns finalized successfully.', true);
+            loadDropdowns();
+            setTimeout(clearForm, 5000);
+          } else {
+            showError('Could not finalize. Server returned: ' + JSON.stringify(success));
+            console.error('Unexpected server response:', success);
+          }
+        })
+        .withFailureHandler(error => {
+          document.getElementById('spinner').style.display = 'none';
+          const errorMsg = error.message || error.toString() || error;
+          showError('Error finalizing returns: ' + errorMsg);
+          console.error('Finalize error:', error);
+          console.error('Error details - Volunteer:', volunteer, 'Client:', client, 'Client type:', typeof client);
+        })
+        .finalizeReturnsAndStore(volunteer, client, rows);
+    }
+
+    function closeModal() {
+      document.getElementById('confirmModal').style.display = 'none';
+    }
+
+    function openCancelClientModal() {
+      const volunteer = document.getElementById('volunteer').value.trim();
+      const client = document.getElementById('client').value.trim();
+      
+      if (!volunteer || !client) {
+        showError('Please select both a volunteer and a client.');
+        return;
+      }
+      
+      // Reset form
+      document.querySelectorAll('input[name="cancelReason"]').forEach(radio => {
+        radio.checked = false;
+      });
+      document.getElementById('cancelReasonOtherText').value = '';
+      document.getElementById('cancelReasonOtherText').style.display = 'none';
+      document.getElementById('cancelReasonOtherText').disabled = true;
+      
+      // Show modal
+      document.getElementById('cancelClientModal').style.display = 'flex';
+      
+      // Add event listeners for radio buttons
+      document.querySelectorAll('input[name="cancelReason"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+          const otherText = document.getElementById('cancelReasonOtherText');
+          if (this.value === 'Other') {
+            otherText.style.display = 'block';
+            otherText.disabled = false;
+            otherText.focus();
+          } else {
+            otherText.style.display = 'none';
+            otherText.disabled = true;
+            otherText.value = '';
+          }
+        });
+      });
+    }
+
+    function closeCancelModal() {
+      document.getElementById('cancelClientModal').style.display = 'none';
+    }
+
+    function proceedCancelClient() {
+      const volunteer = document.getElementById('volunteer').value.trim();
+      const client = document.getElementById('client').value.trim();
+      
+      if (!volunteer || !client) {
+        showError('Please select both a volunteer and a client.');
+        closeCancelModal();
+        return;
+      }
+      
+      // Get selected reason
+      const selectedReason = document.querySelector('input[name="cancelReason"]:checked');
+      if (!selectedReason) {
+        showError('Please select a reason for cancellation.');
+        return;
+      }
+      
+      let reason = selectedReason.value;
+      if (reason === 'Other') {
+        const otherText = document.getElementById('cancelReasonOtherText').value.trim();
+        if (!otherText) {
+          showError('Please provide details for "Other" reason.');
+          return;
+        }
+        reason = `Other: ${otherText}`;
+      }
+      
+      // Get tax year data from the table
+      const table = document.getElementById('taxYearTable');
+      const rows = [];
+      
+      for (let i = 1; i < table.rows.length; i++) {
+        const row = table.rows[i];
+        const taxYear = row.querySelector('select[name="taxYear"]')?.value;
+        const reviewer = row.querySelector('input[name="reviewer"]')?.value.trim() || '';
+        const secondaryReviewer = row.querySelector('input[name="secondaryReviewer"]')?.value.trim() || "";
+        const married = row.querySelector('input[name="married"]')?.checked || false;
+        
+        if (taxYear) {
+          rows.push({
+            taxYear: taxYear.trim(),
+            reviewer: reviewer,
+            secondaryReviewer: secondaryReviewer,
+            married: married,
+            reason: reason
+          });
+        }
+      }
+      
+      if (rows.length === 0) {
+        // If no tax years in table, create a default entry
+        rows.push({
+          taxYear: new Date().getFullYear().toString(),
+          reviewer: '',
+          secondaryReviewer: '',
+          married: false,
+          reason: reason
+        });
+      }
+      
+      closeCancelModal();
+      document.getElementById('spinner').style.display = 'block';
+      
+      console.log('Cancelling client:', { volunteer, client, rows, reason });
+      
+      google.script.run
+        .withSuccessHandler(success => {
+          document.getElementById('spinner').style.display = 'none';
+          console.log('Cancel response:', success);
+          if (success === true) {
+            showMessage('Client cancelled successfully. Returns marked as incomplete.', true);
+            loadDropdowns();
+            setTimeout(clearForm, 3000);
+          } else {
+            showError('Could not cancel client. Server returned: ' + JSON.stringify(success));
+            console.error('Unexpected server response:', success);
+          }
+        })
+        .withFailureHandler(error => {
+          document.getElementById('spinner').style.display = 'none';
+          const errorMsg = error.message || error.toString() || error;
+          showError('Error cancelling client: ' + errorMsg);
+          console.error('Cancel error:', error);
+        })
+        .cancelClientAndStore(volunteer, client, rows);
+    }
+
+    function showError(message) {
+      const box = document.getElementById('errorBox');
+      box.textContent = message;
+      box.style.display = 'block';
+      setTimeout(() => box.style.display = 'none', 5000);
+    }
+
+    function showMessage(message, success = false) {
+      const box = document.getElementById('messageBox');
+      box.textContent = message;
+      box.style.backgroundColor = success ? '#27ae60' : '#c0392b';
+      box.style.display = 'block';
+      setTimeout(() => box.style.display = 'none', 5000);
+    }
+
+    function clearForm() {
+      document.getElementById('volunteer').value = '';
+      document.getElementById('client').innerHTML = '<option value="">Select Client</option>';
+      const table = document.getElementById('taxYearTable');
+      while (table.rows.length > 1) table.deleteRow(1);
+      rowCount = 1;
+      currentClientData = null; // Clear stored client data
+    }
+
+    function removeRow(button) {
+      const row = button.closest('tr');
+      row.remove();
+    }
+
+    let helpActive = false;
+    function toggleHelpRequest() {
+      const volunteer = document.getElementById('volunteer').value;
+      const helpBtn = document.getElementById('helpBtn');
+      const escalateBtn = document.getElementById('escalateBtn');
+
+      if (!volunteer) {
+        showError('Please select a volunteer before calling for help.');
+        return;
+      }
+
+      helpActive = !helpActive;
+
+      if (helpActive) {
+        google.script.run.withSuccessHandler(() => {
+          showMessage('Help request sent.');
+          helpBtn.textContent = '✅ Cancel Call';
+          helpBtn.classList.add('active');
+          escalateBtn.style.display = 'inline-block';  // Show escalate button
+          escalateBtn.disabled = false; // Enable it
+        }).sendHelpRequest(volunteer);
+      } else {
+        google.script.run.withSuccessHandler(() => {
+          showMessage('Help request cleared.');
+          helpBtn.textContent = '📞 Call for Help';
+          helpBtn.classList.remove('active');
+          escalateBtn.style.display = 'none';          // Hide on cancel
+        }).clearHelpRequest(volunteer);
+      }
+    }
+    function escalateHelpRequest() {
+      const volunteer = document.getElementById('volunteer').value;
+      const escalateBtn = document.getElementById('escalateBtn');
+
+      if (!volunteer) {
+        showError('Please select a volunteer before escalating.');
+        return;
+      }
+
+      google.script.run.withSuccessHandler(() => {
+        showMessage(`Help request escalated for ${volunteer}.`);
+        escalateBtn.disabled = true;
+      }).escalateHelpRequest(volunteer);
+    }
+    function preloadTaxYearRows(data) {
+      if (!data || !data.filingYears || data.filingYears.length === 0) return;
+
+      // Reset current rows
+      const table = document.getElementById('taxYearTable');
+      while (table.rows.length > 1) table.deleteRow(1);
+      rowCount = 1;
+
+      const isMarried = data.situations?.includes("Married/Common-Law");
+      const needsSeniorReview = data?.needsSeniorReview === true;
+      const filingYears = data.filingYears || [];
+      
+      // Fetch mentor list and create rows
+      google.script.run.withSuccessHandler(mentorData => {
+        const reviewerOptions = mentorData.reviewers;
+        const seniorOptions = mentorData.seniors;
+        const taxYearOptions = Array.from({ length: 16 }, (_, i) => (2025 - i).toString());
+
+        // Create one row for each filing year from intake form
+        filingYears.forEach(taxYear => {
+          const row = table.insertRow();
+          const rowId = `row_${rowCount}`;
+          row.setAttribute('data-row-id', rowId);
+          
+          row.innerHTML = `
+            <td>
+              <select name="taxYear">
+                ${taxYearOptions.map(y => `<option value="${y}" ${y === taxYear.trim() ? 'selected' : ''}>${y}</option>`).join('')}
+              </select>
+            </td>
+            <td id="reviewerCell${rowId}">
+              <div id="reviewInitial${rowId}">
+                <button type="button" class="call-review-btn" onclick="callForReview('${rowId}')">📋 Call for Review</button>
+              </div>
+              <div id="reviewInput${rowId}" style="display: none;">
+                <input list="reviewerList${rowId}" name="reviewer" placeholder="Start typing reviewer" oninput="checkReviewerAndEnableFilingStatus('${rowId}', '${rowCount}')">
+                <datalist id="reviewerList${rowId}">
+                  ${reviewerOptions.map(r => `<option value="${r}">`).join('')}
+                </datalist>
+                ${needsSeniorReview ? `
+                  <br>
+                  <input list="reviewerList${rowId}_secondary" name="secondaryReviewer" placeholder="Start typing Senior reviewer">
+                  <datalist id="reviewerList${rowId}_secondary">
+                    ${seniorOptions.map(r => `<option value="${r}">`).join('')}
+                  </datalist>
+                ` : ''}
+              </div>
+              <div id="reviewActions${rowId}" style="display: none;">
+                <div class="review-actions">
+                  <button type="button" class="return-corrections-btn" onclick="returnForCorrections('${rowId}')">↩ Return for Corrections</button>
+                  <button type="button" class="approve-btn" onclick="approveReturn('${rowId}')">✓ Approve</button>
+                </div>
+              </div>
+            </td>
+            <td><input type="checkbox" name="married" ${isMarried ? "checked" : ""}></td>
+            <td>
+              <div>
+                <label><input type="radio" name="filingStatus${rowCount}" value="efile" onchange="handleFilingStatusChange('${rowId}', '${rowCount}')"> EFILE</label>
+                <label><input type="radio" name="filingStatus${rowCount}" value="paper" onchange="handleFilingStatusChange('${rowId}', '${rowCount}')"> Paper</label>
+                <label><input type="radio" name="filingStatus${rowCount}" value="incomplete" onchange="handleFilingStatusChange('${rowId}', '${rowCount}')"> Incomplete</label>
+              </div>
+              <div class="email-receipt-container">
+                <button type="button" id="emailReceiptBtn${rowId}" class="email-receipt-btn" onclick="openEmailReceiptDialog('${rowId}', '${rowCount}')">📧 Email Receipt?</button>
+                <div id="receiptSentIndicator${rowId}" class="receipt-sent-indicator">
+                  <span>✓</span> Receipt sent
+                </div>
+              </div>
+            </td>
+            <td><button onclick="removeRow(this)">Remove</button></td>
+          `;
+          rowCount++;
+        });
+      }).getMentorList();
+    }
+
+    // Email Receipt Functions
+    function handleFilingStatusChange(rowId, rowCount) {
+      const row = document.querySelector(`[data-row-id="${rowId}"]`);
+      if (!row) return;
+      
+      // Check if reviewer is present before allowing filing status change
+      const reviewerInput = row.querySelector('input[name="reviewer"]');
+      const reviewerValue = reviewerInput ? reviewerInput.value.trim() : '';
+      
+      const efileRadio = row.querySelector(`input[name="filingStatus${rowCount}"][value="efile"]`);
+      const paperRadio = row.querySelector(`input[name="filingStatus${rowCount}"][value="paper"]`);
+      const incompleteRadio = row.querySelector(`input[name="filingStatus${rowCount}"][value="incomplete"]`);
+      
+      // Check which radio button is currently checked
+      const checkedRadio = efileRadio && efileRadio.checked ? efileRadio : 
+                          (paperRadio && paperRadio.checked ? paperRadio : 
+                          (incompleteRadio && incompleteRadio.checked ? incompleteRadio : null));
+      
+      // If a filing status is selected but no reviewer, revert it
+      if (checkedRadio && !reviewerValue) {
+        // Uncheck the selected radio button
+        checkedRadio.checked = false;
+        showError('Return must be reviewed before filing');
+        return;
+      }
+      
+      const emailBtn = document.getElementById(`emailReceiptBtn${rowId}`);
+      
+      if (!emailBtn) return;
+      
+      // Show button if EFILE or Paper is selected
+      if (efileRadio && efileRadio.checked || paperRadio && paperRadio.checked) {
+        emailBtn.classList.add('show');
+      } else {
+        emailBtn.classList.remove('show');
+      }
+    }
+
+    function openEmailReceiptDialog(rowId, rowCount) {
+      currentEmailRowId = rowId;
+      currentEmailRowCount = rowCount;
+      
+      // Get the selected filing status and tax year for this row
+      const row = document.querySelector(`[data-row-id="${rowId}"]`);
+      const selectedRadio = row.querySelector(`input[name="filingStatus${rowCount}"]:checked`);
+      const filingStatus = selectedRadio ? selectedRadio.value : 'efile';
+      const taxYear = row.querySelector('select[name="taxYear"]')?.value || '';
+      
+      const modal = document.getElementById('emailReceiptModal');
+      modal.classList.add('show');
+      modal.setAttribute('data-filing-status', filingStatus);
+      modal.setAttribute('data-tax-year', taxYear);
+      
+      // Reset form
+      document.getElementById('emailReceiptForm').reset();
+      document.getElementById('emailReceiptStatusMessage').classList.remove('show');
+      
+      // Show/hide E-File Confirmation Number field based on filing status
+      const efileConfirmationField = document.getElementById('efileConfirmationField');
+      const efileConfirmationInput = document.getElementById('efileConfirmationReceipt');
+      if (filingStatus === 'efile') {
+        efileConfirmationField.style.display = 'block';
+      } else {
+        efileConfirmationField.style.display = 'none';
+        if (efileConfirmationInput) {
+          efileConfirmationInput.value = '';
+        }
+      }
+      
+      // Clear files
+      selectedFilesEmail = [];
+      updateFileListEmail();
+    }
+
+    function closeEmailReceiptDialog() {
+      const modal = document.getElementById('emailReceiptModal');
+      modal.classList.remove('show');
+      
+      // Clear files when closing
+      selectedFilesEmail = [];
+      updateFileListEmail();
+      currentEmailRowId = null;
+      currentEmailRowCount = null;
+    }
+
+    // File handling functions for email receipt
+    function handleFileSelectEmail(event) {
+      const files = Array.from(event.target.files);
+      addFilesEmail(files);
+      event.target.value = '';
+    }
+
+    function addFilesEmail(files) {
+      const MAX_SIZE_MB = 25;
+      const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+
+      files.forEach(file => {
+        const currentTotalSize = selectedFilesEmail.reduce((sum, f) => sum + f.size, 0);
+        if (currentTotalSize + file.size > MAX_SIZE_BYTES) {
+          showFileWarningEmail(`Total file size exceeds ${MAX_SIZE_MB} MB limit.`);
+          return;
+        }
+
+        if (file.size > MAX_SIZE_BYTES) {
+          showFileWarningEmail(`File "${file.name}" is too large. Maximum ${MAX_SIZE_MB} MB per file.`);
+          return;
+        }
+
+        selectedFilesEmail.push(file);
+      });
+
+      updateFileListEmail();
+      hideFileWarningEmail();
+    }
+
+    function removeFileEmail(index) {
+      selectedFilesEmail.splice(index, 1);
+      updateFileListEmail();
+      hideFileWarningEmail();
+    }
+
+    function updateFileListEmail() {
+      const fileListDiv = document.getElementById('fileListEmail');
+      fileListDiv.innerHTML = '';
+
+      selectedFilesEmail.forEach((file, index) => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        
+        const fileSize = formatFileSizeEmail(file.size);
+        
+        fileItem.innerHTML = `
+          <span class="file-name">${file.name}</span>
+          <span class="file-size">${fileSize}</span>
+          <button type="button" class="remove-file" onclick="removeFileEmail(${index})">Remove</button>
+        `;
+        
+        fileListDiv.appendChild(fileItem);
+      });
+
+      const uploadArea = document.getElementById('fileUploadAreaEmail');
+      uploadArea.querySelector('p').innerHTML = `📎 Drag and drop files here or <span class="browse-link">click to browse</span>`;
+      uploadArea.style.pointerEvents = 'auto';
+      uploadArea.style.opacity = '1';
+    }
+
+    function formatFileSizeEmail(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    function showFileWarningEmail(message) {
+      const warningDiv = document.getElementById('fileLimitWarningEmail');
+      warningDiv.textContent = message;
+      warningDiv.style.display = 'block';
+      setTimeout(() => {
+        hideFileWarningEmail();
+      }, 5000);
+    }
+
+    function hideFileWarningEmail() {
+      document.getElementById('fileLimitWarningEmail').style.display = 'none';
+    }
+
+    // Number formatting and validation functions
+    function parseAccountingNumber(formattedString) {
+      if (!formattedString) return null;
+      // Remove all non-numeric characters except minus sign and decimal point
+      const cleaned = formattedString.replace(/[^0-9.-]/g, '');
+      const num = parseFloat(cleaned);
+      return isNaN(num) ? null : num;
+    }
+
+    function formatAsAccounting(number) {
+      if (number === null || number === undefined || isNaN(number)) return '';
+      const isNegative = number < 0;
+      const absNumber = Math.abs(number);
+      const formatted = absNumber.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return (isNegative ? '-' : '') + '$' + formatted;
+    }
+
+    function formatAsAccountingPositive(number) {
+      if (number === null || number === undefined || isNaN(number) || number < 0) return '';
+      const formatted = number.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return '$' + formatted;
+    }
+
+    function formatAccountingNumber(input, fieldType) {
+      const rawValue = input.value;
+      if (!rawValue) {
+        input.classList.remove('positive', 'negative');
+        return;
+      }
+
+      // Allow user to type freely, but format on blur
+      const num = parseAccountingNumber(rawValue);
+      if (num !== null) {
+        // Apply color coding in real-time
+        if (fieldType === 'refundBalance') {
+          input.classList.remove('positive', 'negative');
+          if (num > 0) {
+            input.classList.add('positive');
+          } else if (num < 0) {
+            input.classList.add('negative');
+          }
+        } else {
+          // For other fields, only allow positive
+          if (num < 0) {
+            input.classList.add('negative');
+          } else {
+            input.classList.remove('negative');
+          }
+        }
+      }
+    }
+
+    function validateAndFormatRefundBalance(input) {
+      const rawValue = input.value.trim();
+      if (!rawValue) {
+        input.classList.remove('positive', 'negative');
+        input.value = '';
+        return;
+      }
+
+      const num = parseAccountingNumber(rawValue);
+      if (num === null || isNaN(num)) {
+        input.value = '';
+        input.classList.remove('positive', 'negative');
+        return;
+      }
+
+      // Format as accounting
+      input.value = formatAsAccounting(num);
+      
+      // Apply color coding
+      input.classList.remove('positive', 'negative');
+      if (num > 0) {
+        input.classList.add('positive');
+      } else if (num < 0) {
+        input.classList.add('negative');
+      }
+    }
+
+    function finalizeAccountingFormat(input) {
+      const rawValue = input.value.trim();
+      if (!rawValue) {
+        input.value = '';
+        return;
+      }
+
+      const num = parseAccountingNumber(rawValue);
+      if (num === null || isNaN(num) || num < 0) {
+        input.value = '';
+        input.classList.remove('negative');
+        return;
+      }
+
+      // Format as accounting (only positive)
+      input.value = formatAsAccounting(num);
+      input.classList.remove('negative');
+    }
+
+    function sendReceiptEmail() {
+      const emailForm = document.getElementById('emailReceiptForm');
+      
+      if (!emailForm.checkValidity()) {
+        emailForm.reportValidity();
+        return;
+      }
+
+      const modal = document.getElementById('emailReceiptModal');
+      const filingStatus = modal.getAttribute('data-filing-status') || 'efile';
+      const taxYear = modal.getAttribute('data-tax-year') || '';
+
+      // Extract and format numbers
+      const refundBalanceRaw = document.getElementById('refundBalanceReceipt').value.trim();
+      const refundBalanceNum = refundBalanceRaw ? parseAccountingNumber(refundBalanceRaw) : null;
+      
+      const gstHstRaw = document.getElementById('gstHstReceipt').value.trim();
+      const gstHstNum = gstHstRaw ? parseAccountingNumber(gstHstRaw) : null;
+      
+      const onBenRaw = document.getElementById('onBenReceipt').value.trim();
+      const onBenNum = onBenRaw ? parseAccountingNumber(onBenRaw) : null;
+      
+      const otherRaw = document.getElementById('otherReceipt').value.trim();
+      const otherNum = otherRaw ? parseAccountingNumber(otherRaw) : null;
+
+      // Format refund/balance - determine label based on sign
+      let refundBalance = null;
+      let refundLabel = null;
+      if (refundBalanceNum !== null && !isNaN(refundBalanceNum) && refundBalanceNum !== 0) {
+        const absValue = Math.abs(refundBalanceNum);
+        const formatted = formatAsAccountingPositive(absValue);
+        if (refundBalanceNum > 0) {
+          refundLabel = 'Refund';
+          refundBalance = formatted;
+        } else if (refundBalanceNum < 0) {
+          refundLabel = 'Balance Owing';
+          refundBalance = formatted;
+        }
+      }
+
+      // Calculate total sum of all numeric amounts
+      let totalAmount = 0;
+      if (refundBalanceNum !== null && !isNaN(refundBalanceNum)) {
+        totalAmount += refundBalanceNum;
+      }
+      if (gstHstNum !== null && !isNaN(gstHstNum) && gstHstNum >= 0) {
+        totalAmount += gstHstNum;
+      }
+      if (onBenNum !== null && !isNaN(onBenNum) && onBenNum >= 0) {
+        totalAmount += onBenNum;
+      }
+      if (otherNum !== null && !isNaN(otherNum) && otherNum >= 0) {
+        totalAmount += otherNum;
+      }
+
+      const emailData = {
+        clientEmail: document.getElementById('clientEmailReceipt').value.trim(),
+        refundBalance: refundBalance,
+        refundLabel: refundLabel,
+        gstHst: gstHstNum !== null && !isNaN(gstHstNum) && gstHstNum >= 0 ? formatAsAccountingPositive(gstHstNum) : '',
+        onBen: onBenNum !== null && !isNaN(onBenNum) && onBenNum >= 0 ? formatAsAccountingPositive(onBenNum) : '',
+        other: otherNum !== null && !isNaN(otherNum) && otherNum >= 0 ? formatAsAccountingPositive(otherNum) : '',
+        notes: document.getElementById('notesReceipt').value.trim(),
+        totalAmount: totalAmount,
+        ufilePassword: document.getElementById('ufilePasswordReceipt').value.trim(),
+        efileConfirmation: filingStatus === 'efile' ? document.getElementById('efileConfirmationReceipt').value.trim() : ''
+      };
+
+      // Validate that at least one file is attached
+      if (selectedFilesEmail.length === 0) {
+        showEmailStatus('At least one attachment is required.', 'error');
+        return;
+      }
+
+      const sendBtn = event.target;
+      const originalText = sendBtn.textContent;
+      sendBtn.textContent = 'Sending...';
+      sendBtn.disabled = true;
+
+      convertFilesToBase64Email(selectedFilesEmail).then(fileDataArray => {
+        sendEmailWithAttachmentsControlSheet(emailData, filingStatus, taxYear, fileDataArray, sendBtn, originalText);
+      }).catch(error => {
+        showEmailStatus('Error processing files: ' + error.message, 'error');
+        sendBtn.textContent = originalText;
+        sendBtn.disabled = false;
+      });
+    }
+
+    function convertFilesToBase64Email(files) {
+      const promises = Array.from(files).map(file => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve({
+              name: file.name,
+              data: base64,
+              mimeType: file.type || 'application/octet-stream'
+            });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      });
+      return Promise.all(promises);
+    }
+
+    function sendEmailWithAttachmentsControlSheet(emailData, filingStatus, taxYear, fileDataArray, sendBtn, originalText) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showEmailStatus('Email sent successfully to ' + result.recipient + (fileDataArray.length > 0 ? ' with ' + fileDataArray.length + ' attachment(s)' : ''), 'success');
+          sendBtn.textContent = originalText;
+          sendBtn.disabled = false;
+          
+          // Show receipt sent indicator for this row
+          if (currentEmailRowId) {
+            const indicator = document.getElementById(`receiptSentIndicator${currentEmailRowId}`);
+            if (indicator) {
+              indicator.classList.add('show');
+            }
+          }
+          
+          setTimeout(() => {
+            closeEmailReceiptDialog();
+          }, 2000);
+        })
+        .withFailureHandler(function(error) {
+          showEmailStatus('Error sending email: ' + error.message, 'error');
+          sendBtn.textContent = originalText;
+          sendBtn.disabled = false;
+        })
+        .sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray);
+    }
+
+    function showEmailStatus(message, type) {
+      const statusDiv = document.getElementById('emailReceiptStatusMessage');
+      statusDiv.textContent = message;
+      statusDiv.className = 'email-status-message show ' + type;
+      
+      setTimeout(() => {
+        statusDiv.classList.remove('show');
+      }, 5000);
+    }
+
+    // Drag and drop for email receipt files
+    document.addEventListener('DOMContentLoaded', function() {
+      const fileUploadArea = document.getElementById('fileUploadAreaEmail');
+      if (!fileUploadArea) return;
+
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        fileUploadArea.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }, false);
+      });
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        fileUploadArea.addEventListener(eventName, () => {
+          fileUploadArea.classList.add('drag-over');
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        fileUploadArea.addEventListener(eventName, () => {
+          fileUploadArea.classList.remove('drag-over');
+        }, false);
+      });
+
+      fileUploadArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = Array.from(dt.files);
+        addFilesEmail(files);
+      }, false);
+    });
+
+    // Close email modal when clicking outside or pressing Escape
+    window.addEventListener('click', function(event) {
+      const modal = document.getElementById('emailReceiptModal');
+      if (event.target === modal) {
+        closeEmailReceiptDialog();
+      }
+    });
+
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        const modal = document.getElementById('emailReceiptModal');
+        if (modal && modal.classList.contains('show')) {
+          closeEmailReceiptDialog();
+        }
+      }
+    });
+
+    // Reminder Dialog Functions
+    function showReminderDialogs(clientData) {
+      if (!clientData || !clientData.situations || clientData.situations.length === 0) {
+        return; // No reminders if no situations
+      }
+
+      const reminders = [];
+      const situations = clientData.situations || [];
+
+      // Define reminder messages for each situation
+      const reminderMessages = {
+        'Student': {
+          title: 'Student Reminder',
+          message: 'This client is a student. Please ensure you input:',
+          items: [
+            'T2202/T2202A (Tuition and Education Amounts Certificate) DO NOT FORGET MONTHS',
+            'Insurance premiums (including UHIP)'
+          ]
+        },
+        'Employed': {
+          title: 'Employed Reminder',
+          message: 'This client has employment income. Please ensure you input:',
+          items: [
+            'T4 slips'
+          ]
+        },
+        'Children': {
+          title: 'Children Reminder',
+          message: 'This client has children. This return requires senior review. Please ensure you input:',
+          items: [
+            'Dependent information (names, SINs, dates of birth)',
+            'Child care expense receipts',
+          ]
+        },
+        'Newcomer': {
+          title: 'Newcomer Reminder',
+          message: 'This client is a newcomer to Canada.Please ensure you input:',
+          items: [
+            'Date of entry to Canada on the immigrant form',
+            'World income information (if required)',
+            'Assist in filling out RC151'
+          ]
+        },
+        'International Student': {
+          title: 'International Student Reminder',
+          message: 'This client is an international student. Please ensure you input:',
+          items: [
+            'UHIP (University Health Insurance Plan) premiums',
+            'Verify mailing address goes to a non-dormitory address, if a trusted individual is not available, advise them to fill out a request at <a href="https://uwaterloo.ca/international-experience/form/mailing-request" target="_blank">https://uwaterloo.ca/international-experience/form/mailing-request</a> and use that address instead. If they are not able to do this, advise them to contact the International Experience Office to request a change of address.'
+          ]
+        }
+      };
+
+      // Collect reminders for applicable situations
+      situations.forEach(situation => {
+        if (reminderMessages[situation]) {
+          reminders.push(reminderMessages[situation]);
+        }
+      });
+
+      // Show reminder dialog if there are any reminders
+      if (reminders.length > 0) {
+        displayReminderDialog(reminders);
+      }
+    }
+
+    function displayReminderDialog(reminders) {
+      const modalBody = document.getElementById('reminderModalBody');
+      modalBody.innerHTML = ''; // Clear any existing content
+
+      // Create reminder messages for each situation
+      reminders.forEach((reminder, index) => {
+        const reminderDiv = document.createElement('div');
+        reminderDiv.className = 'reminder-message';
+        
+        const title = document.createElement('h4');
+        title.textContent = reminder.title;
+        
+        const message = document.createElement('p');
+        message.textContent = reminder.message;
+        
+        const list = document.createElement('ul');
+        reminder.items.forEach(item => {
+          const listItem = document.createElement('li');
+          listItem.innerHTML = item; // Use innerHTML to allow HTML links
+          list.appendChild(listItem);
+        });
+        
+        reminderDiv.appendChild(title);
+        reminderDiv.appendChild(message);
+        reminderDiv.appendChild(list);
+        modalBody.appendChild(reminderDiv);
+      });
+
+      // Show the modal
+      const modal = document.getElementById('reminderModal');
+      modal.classList.add('show');
+    }
+
+    function closeReminderDialog() {
+      const modal = document.getElementById('reminderModal');
+      modal.classList.remove('show');
+    }
+  </script>
+<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+</body>
+</html>

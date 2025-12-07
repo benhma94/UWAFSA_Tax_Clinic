@@ -23,6 +23,19 @@ function doGet(e) {
       return doGetControlSheet();
     case 'admin':
       return doGetAdminDashboard();
+    case 'schedule':
+      return doGetVolunteerScheduleViewer();
+    case 'assignment':
+      return doGetScheduleDashboard();
+    case 'scheduleviewer':
+    case 'scheduleview':
+      return doGetVolunteerScheduleViewer(); // Keep for backwards compatibility
+    case 'availability':
+    case 'availabilityform':
+      return doGetAvailabilityForm();
+    case 'signin':
+    case 'signinout':
+      return doGetVolunteerSignInOut();
     default:
       return doGetClientIntake(); // Default fallback to intake
   }

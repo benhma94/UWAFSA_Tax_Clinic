@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --accent-color: rgb(142, 0, 0);
+      --bg-color-light: #ffffff;
+      --text-color-light: #1a1a1a;
+      --input-bg-light: #f2f2f2;
+      --border-light: #ccc;
+      --bg-color-dark: #1e1e1e;
+      --text-color-dark: #f0f0f0;
+      --input-bg-dark: #2a2a2a;
+      --border-dark: #444;
+      --success-color: #27ae60;
+    }
+
+    body.light {
+      background-color: var(--bg-color-light);
+      color: var(--text-color-light);
+    }
+
+    body.dark {
+      background-color: var(--bg-color-dark);
+      color: var(--text-color-dark);
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--accent-color);
+    }
+
+    .toggle-theme {
+      cursor: pointer;
+      font-size: 1.4em;
+      margin-left: 10px;
+    }
+
+    .form-section {
+      background: var(--input-bg-light);
+      padding: 25px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border: 2px solid var(--border-light);
+      transition: background 0.3s, border 0.3s;
+    }
+
+    body.light .form-section {
+      background-color: var(--input-bg-light);
+      border-color: var(--border-light);
+    }
+
+    body.dark .form-section {
+      background-color: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    input[type="text"],
+    select,
+    button {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid var(--border-light);
+      border-radius: 4px;
+      font-size: 14px;
+      transition: border 0.3s, background 0.3s;
+      box-sizing: border-box;
+    }
+
+    body.light input[type="text"],
+    body.light select {
+      background-color: #ffffff;
+      border-color: var(--border-light);
+      color: var(--text-color-light);
+    }
+
+    body.dark input[type="text"],
+    body.dark select {
+      background-color: #333;
+      border-color: var(--border-dark);
+      color: var(--text-color-dark);
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    button {
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #a00000;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .results-section {
+      margin-top: 20px;
+    }
+
+    .schedule-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    .schedule-table th,
+    .schedule-table td {
+      padding: 12px;
+      text-align: left;
+      border: 1px solid var(--border-light);
+    }
+
+    body.dark .schedule-table th,
+    body.dark .schedule-table td {
+      border-color: var(--border-dark);
+    }
+
+    .schedule-table th {
+      background-color: var(--accent-color);
+      color: white;
+      font-weight: bold;
+    }
+
+    .schedule-table tr:nth-child(even) {
+      background-color: var(--input-bg-light);
+    }
+
+    body.dark .schedule-table tr:nth-child(even) {
+      background-color: var(--input-bg-dark);
+    }
+
+    .shift-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin: 2px;
+      background-color: rgba(142, 0, 0, 0.1);
+      color: var(--accent-color);
+    }
+
+    .no-results {
+      padding: 20px;
+      text-align: center;
+      color: #666;
+    }
+
+    body.dark .no-results {
+      color: #aaa;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid var(--accent-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .day-header {
+      font-weight: bold;
+      color: var(--accent-color);
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+
+    .volunteer-item {
+      padding: 8px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body.light .volunteer-item {
+      background: var(--input-bg-light);
+      color: var(--text-color-light);
+    }
+
+    body.dark .volunteer-item {
+      background: var(--input-bg-dark);
+      color: var(--text-color-dark);
+    }
+
+    .empty-slot {
+      padding: 8px;
+      transition: color 0.3s;
+    }
+
+    body.light .empty-slot {
+      color: #666;
+    }
+
+    body.dark .empty-slot {
+      color: #aaa;
+    }
+
+    .footer-copyright {
+      position: fixed;
+      bottom: 10px;
+      right: 20px;
+      font-size: 11px;
+      opacity: 0.6;
+      transition: opacity 0.3s, color 0.3s;
+      z-index: 1000;
+      pointer-events: none;
+      max-width: 400px;
+      text-align: right;
+      line-height: 1.3;
+    }
+
+    body.light .footer-copyright {
+      color: var(--text-color-light);
+    }
+
+    body.dark .footer-copyright {
+      color: var(--text-color-dark);
+    }
+
+    .footer-copyright:hover {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body class="light">
+  <header>
+    <h1>📅 Volunteer Schedule Viewer</h1>
+    <div>
+      <span class="toggle-theme" onclick="toggleTheme()">☀️</span>
+    </div>
+  </header>
+
+  <div class="form-section">
+    <h2>Search by Name</h2>
+    <div class="form-group">
+      <label for="searchName">Search for your name:</label>
+      <div style="display: flex; gap: 10px;">
+        <input type="text" id="searchName" placeholder="Enter your first or last name" style="flex: 1;">
+        <button type="button" onclick="searchByName()" style="width: auto; min-width: 100px;">Search</button>
+      </div>
+    </div>
+    
+    <div id="nameResults" class="results-section" style="display: none;">
+      <h3 id="nameResultsHeader">Your Assigned Shifts</h3>
+      <div id="nameResultsContent"></div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h2>View Schedule by Day</h2>
+    <div class="form-group">
+      <label for="selectDay">Select a day:</label>
+      <select id="selectDay" onchange="viewDaySchedule()">
+        <option value="">Select a day...</option>
+        <option value="Day 1">Day 1</option>
+        <option value="Day 2">Day 2</option>
+        <option value="Day 3">Day 3</option>
+        <option value="Day 4">Day 4</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="filterRole">Filter by Role (Optional):</label>
+      <select id="filterRole" onchange="viewDaySchedule()">
+        <option value="">All Roles</option>
+        <option value="Mentor">Mentor</option>
+        <option value="Frontline">Frontline</option>
+        <option value="Filer">Filer</option>
+      </select>
+      <div class="help-text">Leave as "All Roles" to see everyone scheduled</div>
+    </div>
+    
+    <div id="dayResults" class="results-section" style="display: none;">
+      <h3 id="dayResultsHeader"></h3>
+      <div id="dayResultsContent"></div>
+    </div>
+  </div>
+
+<script>
+  function toggleTheme() {
+    const body = document.body;
+    const toggle = document.querySelector('.toggle-theme');
+    if (body.classList.contains('dark')) {
+      body.classList.replace('dark', 'light');
+      toggle.textContent = '☀️';
+    } else {
+      body.classList.replace('light', 'dark');
+      toggle.textContent = '🌙';
+    }
+  }
+
+  function searchByName() {
+    const searchTerm = document.getElementById('searchName').value.trim().toLowerCase();
+    
+    if (!searchTerm) {
+      alert('Please enter a name to search');
+      return;
+    }
+
+    const nameResults = document.getElementById('nameResults');
+    const nameResultsContent = document.getElementById('nameResultsContent');
+    nameResults.style.display = 'block';
+    nameResultsContent.innerHTML = '<div class="loading"></div> Loading...';
+
+    google.script.run
+      .withSuccessHandler(result => {
+        displayNameResults(result, searchTerm);
+      })
+      .withFailureHandler(error => {
+        nameResultsContent.innerHTML = `<div class="no-results">Error loading schedule: ${error.message || error}</div>`;
+      })
+      .getVolunteerScheduleByName(searchTerm);
+  }
+
+  function displayNameResults(result, searchTerm) {
+    const nameResultsContent = document.getElementById('nameResultsContent');
+    const nameResultsHeader = document.getElementById('nameResultsHeader');
+    
+    if (!result || !result.shifts || result.shifts.length === 0) {
+      nameResultsHeader.textContent = 'Search Results';
+      nameResultsContent.innerHTML = `<div class="no-results">No scheduled shifts found for "${searchTerm}"</div>`;
+      return;
+    }
+
+    // Display volunteer name prominently
+    nameResultsHeader.textContent = `Assigned Shifts for: ${result.volunteerName || searchTerm}`;
+
+    let html = `
+      <table class="schedule-table">
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    result.shifts.forEach(shift => {
+      html += `
+        <tr>
+          <td>${shift.day}</td>
+          <td>${shift.time}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+        </tbody>
+      </table>
+      <p style="margin-top: 15px;"><strong>Total Shifts: ${result.shifts.length}</strong></p>
+    `;
+
+    nameResultsContent.innerHTML = html;
+  }
+
+  function viewDaySchedule() {
+    const selectedDay = document.getElementById('selectDay').value;
+    const filterRole = document.getElementById('filterRole').value;
+    
+    if (!selectedDay) {
+      document.getElementById('dayResults').style.display = 'none';
+      return;
+    }
+
+    const dayResults = document.getElementById('dayResults');
+    const dayResultsHeader = document.getElementById('dayResultsHeader');
+    const dayResultsContent = document.getElementById('dayResultsContent');
+    
+    dayResults.style.display = 'block';
+    let headerText = `Schedule for ${selectedDay}`;
+    if (filterRole) {
+      headerText += ` - ${filterRole} only`;
+    }
+    dayResultsHeader.textContent = headerText;
+    dayResultsContent.innerHTML = '<div class="loading"></div> Loading...';
+
+    google.script.run
+      .withSuccessHandler(result => {
+        displayDayResults(result, selectedDay, filterRole);
+      })
+      .withFailureHandler(error => {
+        dayResultsContent.innerHTML = `<div class="no-results">Error loading schedule: ${error.message || error}</div>`;
+      })
+      .getVolunteerScheduleByDay(selectedDay, filterRole);
+  }
+
+  function displayDayResults(result, day, filterRole) {
+    const dayResultsContent = document.getElementById('dayResultsContent');
+    
+    if (!result || !result.schedule || Object.keys(result.schedule).length === 0) {
+      let message = `No volunteers scheduled for ${day}`;
+      if (filterRole) {
+        message += ` with role ${filterRole}`;
+      }
+      dayResultsContent.innerHTML = `<div class="no-results">${message}</div>`;
+      return;
+    }
+
+    // Build volunteer role map from result
+    const volunteerRoles = result.volunteerRoles || {};
+
+    // Initialize all time slots with empty arrays (will be populated from schedule)
+    const timeSlots = {
+      '9AM-1PM': [],
+      '1PM-5PM': [],
+      '5PM-9PM': []
+    };
+
+    // Populate time slots from schedule data
+    Object.keys(result.schedule).forEach(timeSlotKey => {
+      let volunteers = result.schedule[timeSlotKey] || [];
+      
+      // Filter by role if specified
+      if (filterRole && filterRole.trim() && volunteers.length > 0) {
+        volunteers = volunteers.filter(volunteer => {
+          const role = volunteerRoles[volunteer];
+          return role === filterRole.trim();
+        });
+      }
+      
+      // Extract time from key like "Day 1 9AM-1PM" or just use the key directly
+      let timeLabel = null;
+      if (timeSlotKey.includes('9AM-1PM')) {
+        timeLabel = '9AM-1PM';
+      } else if (timeSlotKey.includes('1PM-5PM')) {
+        timeLabel = '1PM-5PM';
+      } else if (timeSlotKey.includes('5PM-9PM')) {
+        timeLabel = '5PM-9PM';
+      }
+      
+      // Update the time slot with filtered volunteers
+      if (timeLabel && timeSlots[timeLabel] !== undefined) {
+        timeSlots[timeLabel] = volunteers;
+      }
+    });
+
+    let html = '';
+
+    Object.keys(timeSlots).forEach(timeSlot => {
+      const volunteerCount = timeSlots[timeSlot].length;
+      html += `<div class="day-header">${timeSlot} <span style="font-weight: normal; opacity: 0.8;">(${volunteerCount} ${volunteerCount === 1 ? 'volunteer' : 'volunteers'})</span></div>`;
+      
+      if (volunteerCount > 0) {
+        html += '<ul style="list-style: none; padding-left: 0;">';
+        timeSlots[timeSlot].forEach(volunteer => {
+          const role = volunteerRoles[volunteer] || 'N/A';
+          html += `<li class="volunteer-item">
+            <strong>${volunteer}</strong> <span style="opacity: 0.7; font-size: 0.9em;">(${role})</span>
+          </li>`;
+        });
+        html += '</ul>';
+      } else {
+        html += '<div class="empty-slot" style="font-style: italic;">No volunteers scheduled</div>';
+      }
+    });
+
+    if (!html) {
+      let message = `No volunteers scheduled for ${day}`;
+      if (filterRole) {
+        message += ` with role ${filterRole}`;
+      }
+      html = `<div class="no-results">${message}</div>`;
+    }
+
+    dayResultsContent.innerHTML = html;
+  }
+
+  // Allow Enter key to trigger search
+  document.getElementById('searchName').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      searchByName();
+    }
+  });
+</script>
+<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+</body>
+</html>

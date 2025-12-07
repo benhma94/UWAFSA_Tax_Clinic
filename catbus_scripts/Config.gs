@@ -15,7 +15,9 @@ const CONFIG = {
     REVIEW_REQUESTS: 'Review Requests',
     TAX_RETURN_TRACKER: 'Tax Return Tracker',
     VOLUNTEER_LIST: 'Volunteer List',
-    SIGNOUT: 'SignOut'
+    SIGNOUT: 'SignOut',
+    SCHEDULE_AVAILABILITY: 'Schedule Availability', // Form responses for volunteer availability
+    SCHEDULE_OUTPUT: 'Schedule Output' // Generated schedule
   },
   
   // Column Mappings (0-indexed)
@@ -57,7 +59,24 @@ const CONFIG = {
       EFILE: 7,
       PAPER: 8,
       INCOMPLETE: 9
+    },
+    VOLUNTEER_LIST: {
+      TIMESTAMP: 0,
+      NAME: 1,
+      STATION: 2,
+      SESSION_ID: 3
+    },
+    SIGNOUT: {
+      TIMESTAMP: 0,
+      VOLUNTEER_INFO: 1,
+      SESSION_ID: 2
     }
+  },
+  
+  // Sign-In/Out Configuration
+  SIGN_IN_OUT: {
+    STATION_COUNT: 150, // Number of stations (1-150)
+    EXCEPTION_STATIONS: ['Mentor', 'Senior Mentor', 'Receptionist'] // Stations always available
   },
   
   // Help Request Status Values

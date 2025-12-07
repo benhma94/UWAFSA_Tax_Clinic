@@ -85,7 +85,8 @@ function storeMainFormData(formData) {
         formData.situations.join(', '),
         formData.notes || '',
         clientID,
-        formData.needsSeniorReview || false
+        formData.needsSeniorReview || false,
+        formData.isHighPriority || false
       ]);
       
       logAudit('Client Intake Created', `Client ID: ${clientID}`, Session.getActiveUser().getEmail());

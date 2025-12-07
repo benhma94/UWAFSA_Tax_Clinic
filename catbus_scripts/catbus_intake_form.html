@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --accent-color: rgb(142, 0, 0);
+      --bg-color-light: #ffffff;
+      --text-color-light: #1a1a1a;
+      --input-bg-light: #f2f2f2;
+      --border-light: #ccc;
+      --bg-color-dark: #1e1e1e;
+      --text-color-dark: #f0f0f0;
+      --input-bg-dark: #2a2a2a;
+      --border-dark: #444;
+    }
+
+    body.light {
+      background-color: var(--bg-color-light);
+      color: var(--text-color-light);
+    }
+
+    body.dark {
+      background-color: var(--bg-color-dark);
+      color: var(--text-color-dark);
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    header h3 {
+      font-family: Verdana, sans-serif;
+      color: var(--accent-color);
+      font-size: 1.5rem;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    header img {
+      height: 60px;
+    }
+
+    .toggle-theme {
+      cursor: pointer;
+      font-size: 1.4em;
+      margin-left: auto;
+    }
+
+    .form-wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .radio-horizontal {
+      display: flex;
+      gap: 20px;
+    }
+
+    label {
+      font-weight: 500;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    input[type="radio"] {
+      margin-right: 6px;
+    }
+
+    body.light input, body.light textarea {
+      background-color: var(--input-bg-light);
+      color: var(--text-color-light);
+      border-color: var(--border-light);
+    }
+
+    body.dark input, body.dark textarea {
+      background-color: var(--input-bg-dark);
+      color: var(--text-color-dark);
+      border-color: var(--border-dark);
+    }
+
+    .checkbox-horizontal {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    #mainForm { display: none; text-align: left; }
+    #ineligibleMsg { display: none; color: red; margin-top: 20px; font-weight: bold; text-align: left; }
+    #incomeLimitGroup, #conditionalQuestions { display: none; }
+
+    #notes {
+      width: 700px;
+      max-width: 100%;
+    }
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 500;
+      background-color: var(--accent-color);
+      color: white;
+      transition: background 0.2s;
+      display: block;
+      margin: 20px auto;
+    }
+
+    button:hover {
+      background-color: #a00000;
+    }
+
+    table.income-table {
+      margin-top: 10px;
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    table.income-table, .income-table th, .income-table td {
+      border: 1px solid #999;
+    }
+
+    .income-table th, .income-table td {
+      padding: 6px;
+      text-align: left;
+    }
+
+    .income-table caption {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .filing-error {
+      border: 2px solid red;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    #receptionHelpBtn {
+      background-color: #cccccc;  /* Neutral gray by default */
+      color: black;
+      padding: 8px 14px;
+      border-radius: 5px;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    #receptionHelpBtn:hover {
+      background-color: #b3b3b3;
+    }
+
+    #receptionHelpBtn.active {
+      background-color: #f39c12;  /* Bright amber when active */
+      color: white;
+    }
+
+    #receptionEscalateBtn {
+      background-color: #e74c3c;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 5px;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      margin-left: 10px;
+    }
+
+    #receptionEscalateBtn:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+
+    #receptionHelpArea {
+      margin-top: 30px;
+      text-align: center;
+    }
+    .tooltip {
+      display: inline-block;
+      position: relative;
+      cursor: pointer;
+      margin-left: 6px;
+      color: var(--accent-color);
+      font-weight: bold;
+    }
+
+    .tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 5px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      font-size: 0.85em;
+      transition: opacity 0.2s ease;
+      z-index: 10;
+    }
+
+    .tooltip:hover::after {
+      opacity: 1;
+    }
+
+    .footer-copyright {
+      position: fixed;
+      bottom: 10px;
+      right: 20px;
+      font-size: 11px;
+      opacity: 0.6;
+      transition: opacity 0.3s, color 0.3s;
+      z-index: 1000;
+      pointer-events: none;
+      max-width: 400px;
+      text-align: right;
+      line-height: 1.3;
+    }
+
+    body.light .footer-copyright {
+      color: var(--text-color-light);
+    }
+
+    body.dark .footer-copyright {
+      color: var(--text-color-dark);
+    }
+
+    .footer-copyright:hover {
+      opacity: 0.8;
+    }
+  </style>
+  <script>
+    function toggleIncomeQuestion() {
+      const tuition = document.querySelector('input[name="tuition"]:checked');
+      const group = document.getElementById('incomeLimitGroup');
+      group.style.display = tuition && tuition.value === 'No' ? 'block' : 'none';
+    }
+
+    function checkEligibility() {
+      const tuition = document.querySelector('input[name="tuition"]:checked')?.value;
+      const income = document.querySelector('input[name="incomeLimit"]:checked')?.value;
+      const docs = document.querySelector('input[name="documentsReady"]:checked')?.value;
+      const present = document.querySelector('input[name="allPresent"]:checked')?.value;
+      const selfEmp = document.querySelector('input[name="selfEmployment"]:checked')?.value;
+      const bankrupt = document.querySelector('input[name="bankruptcyOrDeceased"]:checked')?.value;
+      const rental = document.querySelector('input[name="rentalOrGains"]:checked')?.value;
+      const foreign = document.querySelector('input[name="foreignProperty"]:checked')?.value;
+
+      const showCond = tuition === 'Yes' || (tuition === 'No' && income === 'No');
+      document.getElementById('conditionalQuestions').style.display = showCond ? 'block' : 'none';
+
+      const isIneligible = (
+        (tuition === 'No' && income === 'Yes') ||
+        docs === 'No' ||
+        present === 'No' ||
+        selfEmp === 'Yes' ||
+        bankrupt === 'Yes' ||
+        rental === 'Yes' ||
+        foreign === 'Yes'
+      );
+
+      document.getElementById('mainForm').style.display = !isIneligible && docs && present && selfEmp && bankrupt && rental && foreign ? 'block' : 'none';
+      document.getElementById('ineligibleMsg').style.display = isIneligible ? 'block' : 'none';
+    }
+
+    function resetForm() {
+      document.getElementById('eligibilityForm').reset();
+      document.getElementById('mainForm').style.display = 'none';
+      document.getElementById('ineligibleMsg').style.display = 'none';
+      document.getElementById('incomeLimitGroup').style.display = 'none';
+      document.getElementById('conditionalQuestions').style.display = 'none';
+      // Reset International Student checkbox
+      document.getElementById('internationalStudentCheckbox').checked = false;
+      document.getElementById('internationalStudentLabel').style.display = 'none';
+    }
+
+    function toggleInternationalStudent() {
+      const studentCheckbox = document.getElementById('studentCheckbox');
+      const internationalStudentLabel = document.getElementById('internationalStudentLabel');
+      const internationalStudentCheckbox = document.getElementById('internationalStudentCheckbox');
+      
+      if (studentCheckbox.checked) {
+        internationalStudentLabel.style.display = 'inline-block';
+      } else {
+        internationalStudentLabel.style.display = 'none';
+        internationalStudentCheckbox.checked = false; // Uncheck if Student is unchecked
+      }
+    }
+
+    function submitMainForm() {
+      const filingYearCheckboxes = document.querySelectorAll('input[name="filingYears"]:checked');
+      const errorBox = document.getElementById('filingYearsError');
+
+      // Validation: At least one filing year must be checked
+      if (filingYearCheckboxes.length === 0) {
+        errorBox.style.display = 'block';
+        return;
+      } else {
+        errorBox.style.display = 'none';
+      }
+
+      const formData = {
+        householdsize: document.getElementById('householdsize').value,
+        filingYears: [...filingYearCheckboxes].map(cb => cb.value),
+        situations: [...document.querySelectorAll('input[name="situations"]:checked')].map(cb => cb.value),
+        notes: document.getElementById('notes').value,
+        needsSeniorReview: document.getElementById('needsSeniorReview').checked,
+        isHighPriority: document.getElementById('isHighPriority').checked
+      };
+
+      google.script.run
+        .withSuccessHandler(clientID => {
+          document.getElementById('clientIDDisplay').textContent = clientID;
+          showModal();
+        })
+        .storeMainFormData(formData);
+    }
+    function showModal() {
+      const modal = document.getElementById('confirmationModal');
+      modal.style.display = 'flex'; // force flex display
+    }
+
+    function closeModal() {
+      document.getElementById('confirmationModal').style.display = 'none';
+      document.getElementById('eligibilityForm').reset();
+      document.getElementById('mainForm').reset();
+
+      // Reset UI state
+      document.getElementById('mainForm').style.display = 'none';
+      document.getElementById('ineligibleMsg').style.display = 'none';
+      document.getElementById('incomeLimitGroup').style.display = 'none';
+      document.getElementById('conditionalQuestions').style.display = 'none';
+    }
+    function toggleTheme() {
+      const body = document.body;
+      const themeIcon = document.querySelector('.toggle-theme');
+
+      if (body.classList.contains('light')) {
+        body.classList.remove('light');
+        body.classList.add('dark');
+        themeIcon.textContent = '🌙';
+      } else {
+        body.classList.remove('dark');
+        body.classList.add('light');
+        themeIcon.textContent = '☀️';
+      }
+    }
+    let receptionHelpActive = false;
+
+    function toggleReceptionHelp() {
+      const helpBtn = document.getElementById('receptionHelpBtn');
+      const escalateBtn = document.getElementById('receptionEscalateBtn');
+      const volunteer = "Reception";
+
+      receptionHelpActive = !receptionHelpActive;
+
+      if (receptionHelpActive) {
+        google.script.run.withSuccessHandler(() => {
+          helpBtn.textContent = '✅ Cancel Call';
+          helpBtn.classList.add('active');
+          escalateBtn.style.display = 'inline-block';
+          escalateBtn.disabled = false;
+        }).sendHelpRequest(volunteer);
+      } else {
+        google.script.run.withSuccessHandler(() => {
+          helpBtn.textContent = '📞 Call for Help';
+          helpBtn.classList.remove('active');
+          escalateBtn.style.display = 'none';
+        }).clearHelpRequest(volunteer);
+      }
+    }
+
+    function escalateReceptionHelp() {
+      const volunteer = "Reception";
+      const escalateBtn = document.getElementById('receptionEscalateBtn');
+
+      google.script.run.withSuccessHandler(() => {
+        escalateBtn.disabled = true;
+      }).escalateHelpRequest(volunteer);
+    }
+  </script>
+</head>
+<body class="light">
+  <header>
+    <h3>AFSA Tax Clinic Client Intake Form</h3>
+    <div>
+      <span class="toggle-theme" onclick="toggleTheme()">☀️</span>
+    </div>
+  </header>
+
+  <div class="form-wrapper">
+    <form id="eligibilityForm" oninput="checkEligibility()">
+      <div class="form-group">
+        <label>Are you claiming tuition credits (T2202)<span class="tooltip" data-tooltip="Tuition credits can be either accrued from current year or prior year carryforward.">?</span></label>
+        <div class="radio-horizontal">
+          <label><input type="radio" name="tuition" value="Yes" onchange="toggleIncomeQuestion()"> Yes</label>
+          <label><input type="radio" name="tuition" value="No" onchange="toggleIncomeQuestion()"> No</label>
+        </div>
+      </div>
+      <div class="form-group" id="incomeLimitGroup">
+        <label>Do you have income in excess of our limits<span class="tooltip" data-tooltip="This is a hard limit - no exceptions. For income limit not to apply, must claim tuition credits. If client is unsure, ask for their slips">?</span></label>
+        <table class="income-table">
+          <caption>Income Limits</caption>
+          <tr><th>Taxpayer Status</th><th>Family Income</th></tr>
+          <tr><td>Individual</td><td>$35,000</td></tr>
+          <tr><td>Couple</td><td>$45,000</td></tr>
+          <tr><td>Each additional dependant</td><td>+$2,500</td></tr>
+          <tr><td>Interest income over $1,000</td><td>Ineligible</td></tr>
+        </table>
+        <small>*For each additional dependant you have, add $2,500 to the maximum family income.</small><br><br>
+        <div class="radio-horizontal">
+          <label><input type="radio" name="incomeLimit" value="Yes"> Yes</label>
+          <label><input type="radio" name="incomeLimit" value="No"> No</label>
+        </div>
+      </div>
+      <div id="conditionalQuestions">
+        <div class="form-group">
+          <label>Do you have all your documents available now<span class="tooltip" data-tooltip="Digital documentation is fine. Rent receipts do not need to be present at the moment, but client must know exact amount and be able to get receipts in the future">?</span></label>
+          <div class="radio-horizontal">
+            <label><input type="radio" name="documentsReady" value="Yes"> Yes</label>
+            <label><input type="radio" name="documentsReady" value="No"> No</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Are all clients filing a return present here today<span class="tooltip" data-tooltip="We do need a signature from all filing individuals to finalize the return. If the individual is not present, representative must be able to show 1) Power of Attorney or 2)the missing peron's ID + they video call in on finalization">?</span></label>
+          <div class="radio-horizontal">
+            <label><input type="radio" name="allPresent" value="Yes"> Yes</label>
+            <label><input type="radio" name="allPresent" value="No"> No</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Do you have self-employment income or crypto transactions<span class="tooltip" data-tooltip="Self-employment includes Door-Dash/Uber Eats. Holding or buying crypto is fine, but not if they sold during the year">?</span></label>
+          <div class="radio-horizontal">
+            <label><input type="radio" name="selfEmployment" value="Yes"> Yes</label>
+            <label><input type="radio" name="selfEmployment" value="No"> No</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Are you filing for bankruptcy or for a deceased person<span class="tooltip" data-tooltip="Our software doesn't do terminal returns (nor are the volunteers trained to do this)">?</span></label>
+          <div class="radio-horizontal">
+            <label><input type="radio" name="bankruptcyOrDeceased" value="Yes"> Yes</label>
+            <label><input type="radio" name="bankruptcyOrDeceased" value="No"> No</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label> Do you have rental income or capital gains<span class="tooltip" data-tooltip="Rental income does not include subletting - subletting for a profit is illegal in Ontario.">?</span></label>
+          <div class="radio-horizontal">
+            <label><input type="radio" name="rentalOrGains" value="Yes"> Yes</label>
+            <label><input type="radio" name="rentalOrGains" value="No"> No</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label> Do you have foreign property over $100K<span class="tooltip" data-tooltip="Rental properties or foreign stock portfolios. Personal homes do not count">?</span></label>
+          <div class="radio-horizontal">
+            <label><input type="radio" name="foreignProperty" value="Yes"> Yes</label>
+            <label><input type="radio" name="foreignProperty" value="No"> No</label>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <div id="ineligibleMsg">Unfortunately, this client does not meet our eligibility requirements. <button onclick="resetForm()">Reset</button></div>
+
+    <form id="mainForm" onsubmit="submitMainForm(); return false;">
+      <p>Client is eligible for services, please complete the below inputs.</p>
+    
+        <div class="form-group">
+          <label for="householdsize"> How many tax-filing individuals are we filing for?</label>
+          <input type="Number" id="householdsize" name="householdsize" min="1" required>
+        </div>
+
+        <div class="form-group">
+          <label>Which tax years do we need to complete?</label>
+          <div class="checkbox-horizontal">
+            <label><input type="checkbox" name="filingYears" value="2025"> 2025</label>
+            <label><input type="checkbox" name="filingYears" value="2024"> 2024</label>
+            <label><input type="checkbox" name="filingYears" value="2023"> 2023</label>
+            <label><input type="checkbox" name="filingYears" value="2022"> 2022</label>
+            <label><input type="checkbox" name="filingYears" value="2021"> 2021</label>
+            <label><input type="checkbox" name="filingYears" value="2020"> 2020</label>
+            <label><input type="checkbox" name="filingYears" value="2019"> 2019</label>
+            <label><input type="checkbox" name="filingYears" value="2018"> 2018</label>
+            <label><input type="checkbox" name="filingYears" value="2017"> 2017</label>
+          </div>
+          <div id="filingYearsError" style="color: red; margin-top: 5px; display: none;">
+            Please select at least one tax year.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Which situations are applicable? (Select all that apply)</label>
+          <div class="checkbox-horizontal">
+            <span style="display: flex; align-items: center; gap: 8px;">
+              <label>
+                <input type="checkbox" name="situations" value="Student" id="studentCheckbox" onchange="toggleInternationalStudent()"> Student
+              </label>
+              <label id="internationalStudentLabel" style="display: none;">
+                <input type="checkbox" name="situations" value="International Student" id="internationalStudentCheckbox"> International Student
+              </label>
+            </span>
+            <label><input type="checkbox" name="situations" value="Employed"> Employed</label>
+            <label><input type="checkbox" name="situations" value="Married/Common-Law"> Married/Common-Law</label>
+            <label><input type="checkbox" name="situations" value="Newcomer"> Newcomer</label>
+            <label><input type="checkbox" name="situations" value="Children"> Children</label>
+          </div>
+        </div>
+        <br>
+        <div class="form-group">
+          <label>Please briefly identify the documents that client has and complete the checklist.<span class="tooltip" data-tooltip="Refer to the checklist and provided guide for samples of documents">?</span></label>
+        </div>
+        <br>
+        <div class="form-group">
+          <label for="notes">Additional Notes (optional):</label>
+          <textarea id="notes" name="notes" rows="3"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label><input type="checkbox" id="needsSeniorReview" name="needsSeniorReview"> Flag for senior review (please indicate in notes why this is the case)<span class="tooltip" data-tooltip="Couples/families are complex situations. Newcomers/immigrants are not necessarily complex situations unless they are U.S. Citizens. Use judgement accordingly based on provided guidance - panic/confusions/unpreparedness of the client does not warrant senior review.">?</span></label>
+        </div>
+
+        <div class="form-group">
+          <label><input type="checkbox" id="isHighPriority" name="isHighPriority"> High Priority Client</label>
+          <p style="font-size: 0.9em; color: #666; margin-top: 5px;">Check this box if the client should be prioritized in the queue (e.g., appointment, time-sensitive deadline, special circumstances).</p>
+        </div>
+
+      <button type="submit">Submit</button>
+    </form>
+    <div id="receptionHelpArea" style="text-align: center; margin-top: 30px;">
+      <button id="receptionHelpBtn" onclick="toggleReceptionHelp()">📞 Call for Help</button>
+      <button id="receptionEscalateBtn" onclick="escalateReceptionHelp()" style="display: none;">🚨 Escalate to Senior Mentor</button>
+    </div>
+  </div>
+
+  <div id="confirmationModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; padding:30px 40px; border-radius:8px; text-align:center; max-width:300px; margin:auto;">
+      <h3 style="margin-bottom:20px;">Client submitted. Please note the Client ID and direct Client to next stage</h3>
+      <p style="margin-bottom:20px;">Client ID: <strong id="clientIDDisplay"></strong></p>
+      <button onclick="closeModal()" style="padding:8px 16px; background-color:#8e0000; color:white; border:none; border-radius:5px; cursor:pointer;">Reset Form</button>
+    </div>
+  </div>
+<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+</body>
+</html>

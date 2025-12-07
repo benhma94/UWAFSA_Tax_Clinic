@@ -28,7 +28,10 @@ function sendReviewRequest(volunteer) {
       
       // Check from most recent backwards for existing requested review
       for (let i = data.length - 1; i >= 0; i--) {
-        if (data[i][0] === volunteer && data[i][1] === CONFIG.REVIEW_STATUS.REQUESTED) {
+        const v = data[i][0]?.toString().trim();
+        const status = data[i][1]?.toString().trim().toLowerCase();
+        
+        if (v === volunteer && status === CONFIG.REVIEW_STATUS.REQUESTED.toLowerCase()) {
           // Already has active request
           return true;
         }
