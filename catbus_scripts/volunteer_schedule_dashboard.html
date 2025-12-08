@@ -447,9 +447,9 @@
 
     // Initialize all time slots with empty arrays (will be populated from schedule)
     const timeSlots = {
-      '9AM-1PM': [],
-      '1PM-5PM': [],
-      '5PM-9PM': []
+      '9:30-1:15': [],
+      '1:00-4:45': [],
+      '4:30-8:30': []
     };
 
     // Populate time slots from schedule data
@@ -464,14 +464,14 @@
         });
       }
       
-      // Extract time from key like "Day 1 9AM-1PM" or just use the key directly
+      // Extract time from key like "Day 1 9:30-1:15" or just use the key directly
       let timeLabel = null;
-      if (timeSlotKey.includes('9AM-1PM')) {
-        timeLabel = '9AM-1PM';
-      } else if (timeSlotKey.includes('1PM-5PM')) {
-        timeLabel = '1PM-5PM';
-      } else if (timeSlotKey.includes('5PM-9PM')) {
-        timeLabel = '5PM-9PM';
+      if (timeSlotKey.includes('9:30-1:15')) {
+        timeLabel = '9:30-1:15';
+      } else if (timeSlotKey.includes('1:00-4:45')) {
+        timeLabel = '1:00-4:45';
+      } else if (timeSlotKey.includes('4:30-8:30')) {
+        timeLabel = '4:30-8:30';
       }
       
       // Update the time slot with filtered volunteers

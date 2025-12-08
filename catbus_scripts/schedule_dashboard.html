@@ -338,10 +338,10 @@
     <div class="form-group">
       <label>Day Labels (4 days):</label>
       <div class="day-labels-group">
-        <input type="text" id="day1" placeholder="Day 1" value="Day 1">
-        <input type="text" id="day2" placeholder="Day 2" value="Day 2">
-        <input type="text" id="day3" placeholder="Day 3" value="Day 3">
-        <input type="text" id="day4" placeholder="Day 4" value="Day 4">
+        <input type="text" id="day1" placeholder="Day 1" value="Saturday March 21">
+        <input type="text" id="day2" placeholder="Day 2" value="Sunday March 22">
+        <input type="text" id="day3" placeholder="Day 3" value="Saturday March 28">
+        <input type="text" id="day4" placeholder="Day 4" value="Sunday March 29">
       </div>
       <div class="help-text">Custom labels for the 4 days (e.g., Saturday, Sunday, Monday, Tuesday)</div>
     </div>
@@ -388,10 +388,10 @@
     const minVolunteers = parseInt(document.getElementById('minVolunteers').value) || 1;
     const maxVolunteers = parseInt(document.getElementById('maxVolunteers').value) || 999;
     const prioritizeConsecutive = true; // Always prioritize consecutive shifts
-    const day1 = document.getElementById('day1').value.trim() || 'Day 1';
-    const day2 = document.getElementById('day2').value.trim() || 'Day 2';
-    const day3 = document.getElementById('day3').value.trim() || 'Day 3';
-    const day4 = document.getElementById('day4').value.trim() || 'Day 4';
+    const day1 = document.getElementById('day1').value.trim() || 'Saturday March 21';
+    const day2 = document.getElementById('day2').value.trim() || 'Sunday March 22';
+    const day3 = document.getElementById('day3').value.trim() || 'Saturday March 28';
+    const day4 = document.getElementById('day4').value.trim() || 'Sunday March 29';
 
     // Validation
     if (!outputSheet) {

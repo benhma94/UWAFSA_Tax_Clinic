@@ -14,26 +14,26 @@
 
 /**
  * Shift structure:
- * - 4 days, each with 3 shifts (9AM-1PM, 1PM-5PM, 5PM-9PM)
+ * - 4 days, each with 3 shifts (9:30-1:15, 1:00-4:45, 4:30-8:30)
  * - Total: 12 shifts
- * - Shift IDs: D1A (9AM-1PM), D1B (1PM-5PM), D1C (5PM-9PM), etc.
+ * - Shift IDs: D1A (9:30-1:15), D1B (1:00-4:45), D1C (4:30-8:30), etc.
  */
 
 const SHIFT_NAMES = [
-  'Day 1 9AM-1PM', 'Day 1 1PM-5PM', 'Day 1 5PM-9PM',
-  'Day 2 9AM-1PM', 'Day 2 1PM-5PM', 'Day 2 5PM-9PM',
-  'Day 3 9AM-1PM', 'Day 3 1PM-5PM', 'Day 3 5PM-9PM',
-  'Day 4 9AM-1PM', 'Day 4 1PM-5PM', 'Day 4 5PM-9PM'
+  'Day 1 9:30-1:15', 'Day 1 1:00-4:45', 'Day 1 4:30-8:30',
+  'Day 2 9:30-1:15', 'Day 2 1:00-4:45', 'Day 2 4:30-8:30',
+  'Day 3 9:30-1:15', 'Day 3 1:00-4:45', 'Day 3 4:30-8:30',
+  'Day 4 9:30-1:15', 'Day 4 1:00-4:45', 'Day 4 4:30-8:30'
 ];
 
 const SHIFT_IDS = ['D1A', 'D1B', 'D1C', 'D2A', 'D2B', 'D2C', 'D3A', 'D3B', 'D3C', 'D4A', 'D4B', 'D4C'];
 
 // Map availability string formats to shift IDs
 const AVAILABILITY_TO_SHIFT_MAP = {
-  'Day 1 9AM-1PM': 'D1A', 'Day 1 1PM-5PM': 'D1B', 'Day 1 5PM-9PM': 'D1C',
-  'Day 2 9AM-1PM': 'D2A', 'Day 2 1PM-5PM': 'D2B', 'Day 2 5PM-9PM': 'D2C',
-  'Day 3 9AM-1PM': 'D3A', 'Day 3 1PM-5PM': 'D3B', 'Day 3 5PM-9PM': 'D3C',
-  'Day 4 9AM-1PM': 'D4A', 'Day 4 1PM-5PM': 'D4B', 'Day 4 5PM-9PM': 'D4C'
+  'Day 1 9:30-1:15': 'D1A', 'Day 1 1:00-4:45': 'D1B', 'Day 1 4:30-8:30': 'D1C',
+  'Day 2 9:30-1:15': 'D2A', 'Day 2 1:00-4:45': 'D2B', 'Day 2 4:30-8:30': 'D2C',
+  'Day 3 9:30-1:15': 'D3A', 'Day 3 1:00-4:45': 'D3B', 'Day 3 4:30-8:30': 'D3C',
+  'Day 4 9:30-1:15': 'D4A', 'Day 4 1:00-4:45': 'D4B', 'Day 4 4:30-8:30': 'D4C'
 };
 
 /**
@@ -100,7 +100,7 @@ function readAvailabilityResponses(spreadsheetId, sheetName) {
       const availabilityString = row[7]?.toString().trim() || '';
       
       // Parse availability from comma-separated string
-      // Format: "Day 1 9AM-1PM, Day 1 1PM-5PM, Day 2 9AM-1PM"
+      // Format: "Day 1 9:30-1:15, Day 1 1:00-4:45, Day 2 9:30-1:15"
       const availability = [];
       if (availabilityString) {
         const availabilityItems = availabilityString.split(',').map(item => item.trim());
@@ -153,7 +153,7 @@ function areShiftsConsecutive(shift1, shift2) {
   
   if (day1 !== day2) return false; // Different days, not consecutive
   
-  const time1 = shift1.substring(2); // 'A' (9AM-1PM), 'B' (1PM-5PM), 'C' (5PM-9PM)
+  const time1 = shift1.substring(2); // 'A' (9:30-1:15), 'B' (1:00-4:45), 'C' (4:30-8:30)
   const time2 = shift2.substring(2);
   
   // Consecutive time slots: A->B, B->C
@@ -333,16 +333,31 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
       throw new Error('Spreadsheet ID and output sheet name are required');
     }
     
+    if (!scheduleResult || !scheduleResult.schedule) {
+      throw new Error('Invalid schedule result data');
+    }
+    
+    Logger.log(`Creating schedule sheet: ${outputSheetName}`);
     const ss = getScheduleSpreadsheet(spreadsheetId);
     
-    // Delete existing sheet if it exists, or clear it
+    // Delete existing sheet if it exists
     let sheet = ss.getSheetByName(outputSheetName);
     if (sheet) {
+      Logger.log(`Deleting existing sheet: ${outputSheetName}`);
       ss.deleteSheet(sheet);
+      // Small delay to ensure deletion completes
+      Utilities.sleep(100);
     }
     
     // Create new sheet
+    Logger.log(`Creating new sheet: ${outputSheetName}`);
     sheet = ss.insertSheet(outputSheetName);
+    
+    if (!sheet) {
+      throw new Error(`Failed to create sheet: ${outputSheetName}`);
+    }
+    
+    Logger.log(`Sheet created successfully: ${outputSheetName}`);
     
     // Default day labels if not provided
     const days = dayLabels || ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
@@ -358,8 +373,8 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
     headerRange.setFontColor('#ffffff');
     headerRange.setHorizontalAlignment('center');
     
-    // Create shift rows (9AM-1PM, 1PM-5PM, 5PM-9PM for each day)
-    const times = ['9AM-1PM', '1PM-5PM', '5PM-9PM'];
+    // Create shift rows (9:30-1:15, 1:00-4:45, 4:30-8:30 for each day)
+    const times = ['9:30-1:15', '1:00-4:45', '4:30-8:30'];
     const schedule = scheduleResult.schedule;
     
     let rowNum = 2;
@@ -384,7 +399,9 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
     rowNum++;
     
     const summaryHeaders = ['Volunteer Name', 'Role', 'Email', 'Max Shifts', 'Assigned Shifts', 'Assigned Count'];
-    sheet.getRange(rowNum, 1, 1, summaryHeaders.length).setValues([summaryHeaders]).setFontWeight('bold');
+    const summaryHeaderRange = sheet.getRange(rowNum, 1, 1, summaryHeaders.length);
+    summaryHeaderRange.setValues([summaryHeaders]);
+    summaryHeaderRange.setFontWeight('bold');
     rowNum++;
     
     // Sort volunteers by name
@@ -435,7 +452,18 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
     // Freeze header row
     sheet.setFrozenRows(1);
     
-    Logger.log(`Schedule output to sheet: ${sheetName}`);
+    // Final verification that sheet exists and has data
+    const verifySheet = ss.getSheetByName(outputSheetName);
+    if (!verifySheet) {
+      throw new Error(`Sheet verification failed: ${outputSheetName} was not found after creation`);
+    }
+    
+    const lastRow = verifySheet.getLastRow();
+    if (lastRow < 1) {
+      throw new Error(`Sheet verification failed: ${outputSheetName} appears to be empty`);
+    }
+    
+    Logger.log(`Schedule successfully output to sheet: ${outputSheetName} (${lastRow} rows)`);
     return true;
   }, 'outputScheduleToSheet');
 }
@@ -456,7 +484,18 @@ function createSchedule(spreadsheetId, availabilitySheetName, outputSheetName, o
     const scheduleResult = generateSchedule(spreadsheetId, availabilitySheetName, options);
     
     // Output to sheet (same spreadsheet)
-    outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, options.dayLabels);
+    const outputResult = outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, options.dayLabels);
+    
+    if (!outputResult) {
+      throw new Error('Failed to create schedule sheet');
+    }
+    
+    // Verify sheet was created
+    const ss = getScheduleSpreadsheet(spreadsheetId);
+    const createdSheet = ss.getSheetByName(outputSheetName);
+    if (!createdSheet) {
+      throw new Error(`Schedule sheet "${outputSheetName}" was not created successfully`);
+    }
     
     Logger.log('Schedule generation complete');
     return scheduleResult;

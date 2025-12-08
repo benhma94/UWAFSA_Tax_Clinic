@@ -78,18 +78,18 @@ function getVolunteerScheduleByName(searchTerm) {
     
     // Map shift IDs to human-readable format
     const shiftIdToLabel = {
-      'D1A': { day: 'Day 1', time: '9AM-1PM' },
-      'D1B': { day: 'Day 1', time: '1PM-5PM' },
-      'D1C': { day: 'Day 1', time: '5PM-9PM' },
-      'D2A': { day: 'Day 2', time: '9AM-1PM' },
-      'D2B': { day: 'Day 2', time: '1PM-5PM' },
-      'D2C': { day: 'Day 2', time: '5PM-9PM' },
-      'D3A': { day: 'Day 3', time: '9AM-1PM' },
-      'D3B': { day: 'Day 3', time: '1PM-5PM' },
-      'D3C': { day: 'Day 3', time: '5PM-9PM' },
-      'D4A': { day: 'Day 4', time: '9AM-1PM' },
-      'D4B': { day: 'Day 4', time: '1PM-5PM' },
-      'D4C': { day: 'Day 4', time: '5PM-9PM' }
+      'D1A': { day: 'Day 1', time: '9:30-1:15' },
+      'D1B': { day: 'Day 1', time: '1:00-4:45' },
+      'D1C': { day: 'Day 1', time: '4:30-8:30' },
+      'D2A': { day: 'Day 2', time: '9:30-1:15' },
+      'D2B': { day: 'Day 2', time: '1:00-4:45' },
+      'D2C': { day: 'Day 2', time: '4:30-8:30' },
+      'D3A': { day: 'Day 3', time: '9:30-1:15' },
+      'D3B': { day: 'Day 3', time: '1:00-4:45' },
+      'D3C': { day: 'Day 3', time: '4:30-8:30' },
+      'D4A': { day: 'Day 4', time: '9:30-1:15' },
+      'D4B': { day: 'Day 4', time: '1:00-4:45' },
+      'D4C': { day: 'Day 4', time: '4:30-8:30' }
     };
     
     // Read volunteer assignments
@@ -126,7 +126,7 @@ function getVolunteerScheduleByName(searchTerm) {
     // Sort shifts by day and time
     shifts.sort((a, b) => {
       const dayOrder = { 'Day 1': 1, 'Day 2': 2, 'Day 3': 3, 'Day 4': 4 };
-      const timeOrder = { '9AM-1PM': 1, '1PM-5PM': 2, '5PM-9PM': 3 };
+      const timeOrder = { '9:30-1:15': 1, '1:00-4:45': 2, '4:30-8:30': 3 };
       
       if (dayOrder[a.day] !== dayOrder[b.day]) {
         return dayOrder[a.day] - dayOrder[b.day];
@@ -196,11 +196,11 @@ function getVolunteerScheduleByDay(day, filterRole = '') {
     }
     
     // Map row indices to time slots for that day
-    // Row 1 (index 0) is header, Row 2 (index 1) is 9AM-1PM, Row 3 (index 2) is 1PM-5PM, Row 4 (index 3) is 5PM-9PM
+    // Row 1 (index 0) is header, Row 2 (index 1) is 9:30-1:15, Row 3 (index 2) is 1:00-4:45, Row 4 (index 3) is 4:30-8:30
     const timeSlotMap = {
-      1: `${day} 9AM-1PM`,   // Row 2 (index 1) - 9AM-1PM
-      2: `${day} 1PM-5PM`,   // Row 3 (index 2) - 1PM-5PM
-      3: `${day} 5PM-9PM`    // Row 4 (index 3) - 5PM-9PM
+      1: `${day} 9:30-1:15`,   // Row 2 (index 1) - 9:30-1:15
+      2: `${day} 1:00-4:45`,   // Row 3 (index 2) - 1:00-4:45
+      3: `${day} 4:30-8:30`    // Row 4 (index 3) - 4:30-8:30
     };
     
     const schedule = {};
