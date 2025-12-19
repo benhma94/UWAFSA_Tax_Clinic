@@ -15,17 +15,30 @@ function submitAvailabilityForm(formData) {
       throw new Error('Missing required fields');
     }
 
-    if (!formData.numShifts || formData.numShifts < 3 || formData.numShifts > 12) {
-      throw new Error('Number of shifts must be between 3 and 12');
-    }
-
     // Validate role-specific requirements
-    if (formData.role === 'Filer' && formData.numShifts < 3) {
-      throw new Error('Filers must choose at least 3 shifts');
+    if (formData.role === 'Mentor') {
+      // Mentors can request any number of shifts (1-12)
+      if (!formData.numShifts || formData.numShifts < 1 || formData.numShifts > 12) {
+        throw new Error('Number of shifts must be between 1 and 12');
+      }
+    } else {
+      // Non-mentors must request 3-12 shifts
+      if (!formData.numShifts || formData.numShifts < 3 || formData.numShifts > 12) {
+        throw new Error('Number of shifts must be between 3 and 12');
+      }
+      
+      if (formData.role === 'Filer' && formData.numShifts < 3) {
+        throw new Error('Filers must choose at least 3 shifts');
+      }
     }
-
+    
     if (!formData.availability || formData.availability.length === 0) {
       throw new Error('Please select at least one available time slot');
+    }
+    
+    // Validate that selected availability slots meet the minimum requirement (at least as many slots as requested shifts)
+    if (formData.availability.length < formData.numShifts) {
+      throw new Error(`You selected ${formData.availability.length} time slot${formData.availability.length !== 1 ? 's' : ''} but requested ${formData.numShifts} shift${formData.numShifts !== 1 ? 's' : ''}. Please select at least ${formData.numShifts} time slot${formData.numShifts !== 1 ? 's' : ''} to meet your requested number of shifts.`);
     }
 
     // Get or create the availability sheet

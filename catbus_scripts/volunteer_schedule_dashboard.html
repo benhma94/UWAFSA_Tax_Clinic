@@ -328,11 +328,23 @@
     if (body.classList.contains('dark')) {
       body.classList.replace('dark', 'light');
       toggle.textContent = '☀️';
+      localStorage.setItem('darkMode', 'false');
     } else {
       body.classList.replace('light', 'dark');
       toggle.textContent = '🌙';
+      localStorage.setItem('darkMode', 'true');
     }
   }
+
+  function loadThemePreference() {
+    const darkMode = localStorage.getItem('darkMode');
+    if (darkMode === 'true') {
+      document.body.classList.replace('light', 'dark');
+      document.querySelector('.toggle-theme').textContent = '🌙';
+    }
+  }
+
+  window.addEventListener('load', loadThemePreference);
 
   function searchByName() {
     const searchTerm = document.getElementById('searchName').value.trim().toLowerCase();

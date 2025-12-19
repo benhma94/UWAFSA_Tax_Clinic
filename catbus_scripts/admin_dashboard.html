@@ -151,7 +151,10 @@
     </div>
   </header>
 
-  <h3>🚨 AFSA Tax Clinic QQ Dashboard</h3>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <h3 style="margin: 0;">🚨 AFSA Tax Clinic QQ Dashboard</h3>
+    <button onclick="refresh()" style="padding: 8px 16px; font-size: 0.9em; background-color: var(--accent-color); color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 Refresh</button>
+  </div>
   <div id="container">Loading help requests...</div>
 
   <h3>📋 Review Requests</h3>
@@ -164,6 +167,17 @@
     <canvas id="completionChart" width = "400" height = "200"></canvas>
   </div>
 
+  <div class="summary-box">
+    <h3>🏆 Volunteer Performance</h3>
+    <p>Total Active Volunteers: <strong id="totalVolunteers">0</strong></p>
+    <p>Average Returns per Volunteer: <strong id="avgReturns">0</strong></p>
+
+    <h4 style="margin-top: 20px;">Top 10 All-Time</h4>
+    <div id="topVolunteersAllTime"></div>
+
+    <h4 style="margin-top: 20px;">Top 10 Today</h4>
+    <div id="topVolunteersToday"></div>
+  </div>
 
   <div id="messageBox"></div>
   <div id="errorBox"></div>
@@ -173,6 +187,7 @@
   let lastRequestsSerialized = "";
   let lastReviewRequestsSerialized = "";
   let lastSummarySerialized = "";
+  let lastPerformanceSerialized = "";
   let chartInstance = null;   // persist chart instead of recreating
 
   function toggleTheme() {
@@ -181,7 +196,20 @@
     if (body.classList.contains('dark')) {
       body.classList.replace('dark', 'light');
       toggle.textContent = '☀️';
+      localStorage.setItem('darkMode', 'false');
     } else {
+      body.classList.replace('light', 'dark');
+      toggle.textContent = '🌙';
+      localStorage.setItem('darkMode', 'true');
+    }
+  }
+
+  // Load saved theme preference on page load
+  function loadThemePreference() {
+    const darkMode = localStorage.getItem('darkMode');
+    const body = document.body;
+    const toggle = document.querySelector('.toggle-theme');
+    if (darkMode === 'true') {
       body.classList.replace('light', 'dark');
       toggle.textContent = '🌙';
     }
@@ -280,14 +308,59 @@
   }
 
 
+  function renderPerformanceMetrics(data) {
+    const serialized = JSON.stringify(data);
+    if (serialized === lastPerformanceSerialized) return; // unchanged → skip
+    lastPerformanceSerialized = serialized;
+
+    document.getElementById("totalVolunteers").textContent = data.totalVolunteers;
+    document.getElementById("avgReturns").textContent = data.avgReturnsPerVolunteer;
+
+    // Render top all-time volunteers
+    const allTimeContainer = document.getElementById("topVolunteersAllTime");
+    allTimeContainer.innerHTML = "";
+    if (data.topVolunteers.length === 0) {
+      allTimeContainer.innerHTML = "<p>No data available</p>";
+    } else {
+      const allTimeList = document.createElement("ol");
+      allTimeList.style.paddingLeft = "20px";
+      data.topVolunteers.forEach(vol => {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${vol.name}</strong>: ${vol.count} returns`;
+        allTimeList.appendChild(li);
+      });
+      allTimeContainer.appendChild(allTimeList);
+    }
+
+    // Render top today volunteers
+    const todayContainer = document.getElementById("topVolunteersToday");
+    todayContainer.innerHTML = "";
+    if (data.todayVolunteers.length === 0) {
+      todayContainer.innerHTML = "<p>No returns completed today yet</p>";
+    } else {
+      const todayList = document.createElement("ol");
+      todayList.style.paddingLeft = "20px";
+      data.todayVolunteers.forEach(vol => {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${vol.name}</strong>: ${vol.count} returns`;
+        todayList.appendChild(li);
+      });
+      todayContainer.appendChild(todayList);
+    }
+  }
+
   function refresh() {
     google.script.run.withSuccessHandler(render).getLiveHelpRequests();
     google.script.run.withSuccessHandler(renderReviewRequests).getLiveReviewRequests();
     google.script.run.withSuccessHandler(renderSummary).getReturnSummary();
+    google.script.run.withSuccessHandler(renderPerformanceMetrics).getVolunteerPerformanceMetrics();
   }
 
   // Initial load
-  window.addEventListener('load', refresh);
+  window.addEventListener('load', function() {
+    loadThemePreference();
+    refresh();
+  });
 
   // 🔄 Auto-refresh every 10 seconds
   setInterval(refresh, 10000);

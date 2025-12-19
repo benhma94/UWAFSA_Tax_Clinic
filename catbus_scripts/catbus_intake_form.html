@@ -359,12 +359,27 @@
         body.classList.remove('light');
         body.classList.add('dark');
         themeIcon.textContent = '🌙';
+        localStorage.setItem('darkMode', 'true');
       } else {
         body.classList.remove('dark');
         body.classList.add('light');
         themeIcon.textContent = '☀️';
+        localStorage.setItem('darkMode', 'false');
       }
     }
+
+    function loadThemePreference() {
+      const darkMode = localStorage.getItem('darkMode');
+      const body = document.body;
+      const themeIcon = document.querySelector('.toggle-theme');
+      if (darkMode === 'true') {
+        body.classList.remove('light');
+        body.classList.add('dark');
+        themeIcon.textContent = '🌙';
+      }
+    }
+
+    window.addEventListener('load', loadThemePreference);
     let receptionHelpActive = false;
 
     function toggleReceptionHelp() {
