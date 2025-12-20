@@ -1,0 +1,14 @@
+# Files to ignore when pushing to Google Apps Script
+**/**~
+.git/**
+.gitignore
+node_modules/**
+.clasp.json
+.claspignore
+README.md
+*.md
+package.json
+package-lock.json
+yarn.lock
+.vscode/**
+.DS_Store

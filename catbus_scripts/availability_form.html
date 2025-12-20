@@ -283,10 +283,18 @@
     </div>
   </header>
 
+  <div id="updateNotice" style="display: none; padding: 15px; border-radius: 8px; margin-bottom: 20px; background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7;">
+    <strong>⚠️ Update Mode:</strong> We found a previous submission for this email address. The form has been pre-filled with your previous selections. When you submit, your previous availability will be updated.
+  </div>
+
+  <div id="loadingNotice" style="display: none; padding: 12px; border-radius: 8px; margin-bottom: 20px; background-color: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; font-size: 14px;">
+    <span class="loading" style="margin-right: 8px;"></span> Checking for existing submission...
+  </div>
+
   <form id="availabilityForm" onsubmit="handleSubmit(event)">
     <div class="form-section">
       <h2>Personal Information</h2>
-      
+
       <div class="form-group">
         <label for="firstName" class="required">First Name:</label>
         <input type="text" id="firstName" required>
@@ -299,7 +307,8 @@
 
       <div class="form-group">
         <label for="email" class="required">Email:</label>
-        <input type="email" id="email" required>
+        <input type="email" id="email" required onblur="checkForExistingVolunteer()" oninput="handleEmailInput()">
+        <div class="help-text">We'll check if you've already submitted and pre-fill your previous selections.</div>
       </div>
 
       <div class="form-group">
@@ -370,6 +379,9 @@
     { id: '1:00-4:45', label: '1:00-4:45' },
     { id: '4:30-8:30', label: '4:30-8:30' }
   ];
+
+  let isUpdatingExisting = false;
+  let checkTimeout = null;
 
   function toggleTheme() {
     const body = document.body;
@@ -470,6 +482,103 @@
     checkAvailabilityCount();
   }
 
+  function handleEmailInput() {
+    // Hide update notice when user starts typing
+    showUpdateNotice(false);
+    showLoadingNotice(false);
+  }
+
+  function checkForExistingVolunteer() {
+    // Debounce the check to avoid too many API calls
+    clearTimeout(checkTimeout);
+
+    const email = document.getElementById('email').value.trim();
+
+    // Validate email format before checking
+    const emailInput = document.getElementById('email');
+    if (!email || !emailInput.validity.valid) {
+      showLoadingNotice(false);
+      showUpdateNotice(false);
+      return;
+    }
+
+    // Show loading state
+    showLoadingNotice(true);
+    showUpdateNotice(false);
+
+    checkTimeout = setTimeout(() => {
+      google.script.run
+        .withSuccessHandler(result => {
+          showLoadingNotice(false);
+          if (result.exists) {
+            // Pre-fill the form with existing data
+            prefillForm(result.data);
+            showUpdateNotice(true);
+            isUpdatingExisting = true;
+          } else {
+            showUpdateNotice(false);
+            isUpdatingExisting = false;
+          }
+        })
+        .withFailureHandler(error => {
+          showLoadingNotice(false);
+          console.error('Error checking for existing volunteer:', error);
+        })
+        .checkExistingVolunteer(email);
+    }, 500); // Wait 500ms after user stops typing
+  }
+
+  function showUpdateNotice(show) {
+    const notice = document.getElementById('updateNotice');
+    notice.style.display = show ? 'block' : 'none';
+
+    if (show) {
+      notice.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  function showLoadingNotice(show) {
+    const notice = document.getElementById('loadingNotice');
+    notice.style.display = show ? 'block' : 'none';
+
+    if (show) {
+      notice.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  function prefillForm(data) {
+    // Pre-fill role
+    document.getElementById('role').value = data.role || '';
+
+    // Pre-fill number of shifts
+    document.getElementById('numShifts').value = data.numShifts || '';
+
+    // Pre-fill consecutive preference
+    document.getElementById('consecutive').value = data.consecutive || '';
+
+    // Pre-fill notes
+    document.getElementById('notes').value = data.notes || '';
+
+    // Pre-fill availability checkboxes
+    if (data.availability && data.availability.length > 0) {
+      // First, uncheck all checkboxes
+      const allCheckboxes = document.querySelectorAll('input[name="availability"]');
+      allCheckboxes.forEach(cb => cb.checked = false);
+
+      // Then check the ones in the existing data
+      data.availability.forEach(slot => {
+        const checkbox = Array.from(allCheckboxes).find(cb => cb.value === slot);
+        if (checkbox) {
+          checkbox.checked = true;
+        }
+      });
+    }
+
+    // Update the validation and counts
+    validateShifts();
+    checkAvailabilityCount();
+  }
+
   function buildAvailabilityGrid() {
     const container = document.getElementById('availabilityContainer');
     container.innerHTML = '';
@@ -477,7 +586,7 @@
     DAYS.forEach((day, index) => {
       const dayDiv = document.createElement('div');
       dayDiv.className = 'day-group';
-      
+
       const dayHeader = document.createElement('h3');
       dayHeader.textContent = `${day} - ${DAY_LABELS[index]}`;
       dayDiv.appendChild(dayHeader);
@@ -557,12 +666,18 @@
       .withSuccessHandler(result => {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
-        
-        showMessage('Thank you! Your availability has been submitted successfully.', 'success');
-        
-        // Reset form
+
+        const message = result.isUpdate
+          ? 'Thank you! Your availability has been updated successfully.'
+          : 'Thank you! Your availability has been submitted successfully.';
+
+        showMessage(message, 'success');
+
+        // Reset form and update notice
         document.getElementById('availabilityForm').reset();
         buildAvailabilityGrid();
+        showUpdateNotice(false);
+        isUpdatingExisting = false;
       })
       .withFailureHandler(error => {
         submitBtn.disabled = false;

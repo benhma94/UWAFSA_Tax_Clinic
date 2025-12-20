@@ -4,6 +4,64 @@
  */
 
 /**
+ * Normalizes email for consistent comparison
+ * @param {string} email - Email to normalize
+ * @returns {string} Normalized email
+ */
+function normalizeEmail(email) {
+  return email ? email.toString().trim().toLowerCase() : '';
+}
+
+/**
+ * Checks if a volunteer with the given email already exists
+ * @param {string} email - Email to search for
+ * @returns {Object} Existing volunteer data or {exists: false}
+ */
+function checkExistingVolunteer(email) {
+  return safeExecute(() => {
+    const sheet = getOrCreateAvailabilitySheet();
+    const lastRow = sheet.getLastRow();
+
+    // If sheet is empty (only header), return not found
+    if (lastRow < 2) {
+      return { exists: false };
+    }
+
+    // Only read the columns we need for lookup (all columns)
+    const data = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
+    const normalizedEmail = normalizeEmail(email);
+
+    // Search for email match (column index 3 = email)
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rowEmail = normalizeEmail(row[3]);
+
+      if (rowEmail === normalizedEmail) {
+        // Found existing volunteer - return their data
+        return {
+          exists: true,
+          rowIndex: i + 2, // +2 for 1-based indexing and header row
+          data: {
+            timestamp: row[0],
+            firstName: row[1],
+            lastName: row[2],
+            email: row[3],
+            role: row[4],
+            numShifts: row[5],
+            consecutive: row[6],
+            availability: row[7] ? row[7].split(', ') : [],
+            notes: row[8] || '',
+            lastModified: row[9] || null
+          }
+        };
+      }
+    }
+
+    return { exists: false };
+  }, 'checkExistingVolunteer');
+}
+
+/**
  * Submits availability form data to the schedule availability sheet
  * @param {Object} formData - Form data object containing availability information
  * @returns {Object} Success result
@@ -43,12 +101,19 @@ function submitAvailabilityForm(formData) {
 
     // Get or create the availability sheet
     const sheet = getOrCreateAvailabilitySheet();
-    
+
+    // Check if volunteer already exists
+    const existingVolunteer = checkExistingVolunteer(formData.email);
+
     // Format availability as comma-separated string for storage
     const availabilityString = formData.availability.join(', ');
-    
-    // Prepare row data
-    const timestamp = new Date();
+
+    // Prepare timestamps
+    const now = new Date();
+    const timestamp = existingVolunteer.exists ? existingVolunteer.data.timestamp || now : now;
+    const lastModified = now;
+
+    // Prepare row data (with Last Modified column)
     const row = [
       timestamp,
       formData.firstName.trim(),
@@ -58,17 +123,27 @@ function submitAvailabilityForm(formData) {
       formData.numShifts,
       formData.consecutive || 'No',
       availabilityString,
-      formData.notes || ''
+      formData.notes || '',
+      lastModified
     ];
-    
-    // Append to sheet
-    sheet.appendRow(row);
-    
-    Logger.log(`Availability submitted: ${formData.firstName} ${formData.lastName} (${formData.email})`);
-    
+
+    let isUpdate = false;
+
+    if (existingVolunteer.exists) {
+      // Update existing row
+      sheet.getRange(existingVolunteer.rowIndex, 1, 1, row.length).setValues([row]);
+      Logger.log(`Availability updated: ${formData.firstName} ${formData.lastName} (${formData.email})`);
+      isUpdate = true;
+    } else {
+      // Append new row
+      sheet.appendRow(row);
+      Logger.log(`Availability submitted: ${formData.firstName} ${formData.lastName} (${formData.email})`);
+    }
+
     return {
       success: true,
-      message: 'Availability submitted successfully'
+      message: isUpdate ? 'Availability updated successfully' : 'Availability submitted successfully',
+      isUpdate: isUpdate
     };
   }, 'submitAvailabilityForm');
 }
@@ -95,7 +170,8 @@ function getOrCreateAvailabilitySheet() {
       'Number of Shifts',
       'Consecutive Preference',
       'Availability',
-      'Notes'
+      'Notes',
+      'Last Modified'
     ];
     
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
