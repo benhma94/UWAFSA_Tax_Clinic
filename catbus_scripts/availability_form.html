@@ -2,6 +2,7 @@
 <html>
 <head>
   <base target="_top">
+  <!-- Version: 2024-12-19-V102 Date serialization fix + email first -->
   <style>
     :root {
       --accent-color: rgb(142, 0, 0);
@@ -296,6 +297,12 @@
       <h2>Personal Information</h2>
 
       <div class="form-group">
+        <label for="email" class="required">Email:</label>
+        <input type="email" id="email" required onblur="checkForExistingVolunteer()" oninput="handleEmailInput()" autofocus>
+        <div class="help-text">We'll check if you've already submitted and pre-fill your previous selections.</div>
+      </div>
+
+      <div class="form-group">
         <label for="firstName" class="required">First Name:</label>
         <input type="text" id="firstName" required>
       </div>
@@ -303,12 +310,6 @@
       <div class="form-group">
         <label for="lastName" class="required">Last Name:</label>
         <input type="text" id="lastName" required>
-      </div>
-
-      <div class="form-group">
-        <label for="email" class="required">Email:</label>
-        <input type="email" id="email" required onblur="checkForExistingVolunteer()" oninput="handleEmailInput()">
-        <div class="help-text">We'll check if you've already submitted and pre-fill your previous selections.</div>
       </div>
 
       <div class="form-group">
@@ -382,6 +383,7 @@
 
   let isUpdatingExisting = false;
   let checkTimeout = null;
+  window.CURRENT_EMAIL_TO_CHECK = ''; // Global variable for sandbox workaround
 
   function toggleTheme() {
     const body = document.body;
@@ -489,13 +491,10 @@
   }
 
   function checkForExistingVolunteer() {
-    // Debounce the check to avoid too many API calls
-    clearTimeout(checkTimeout);
-
-    const email = document.getElementById('email').value.trim();
+    var email = document.getElementById('email').value.trim();
 
     // Validate email format before checking
-    const emailInput = document.getElementById('email');
+    var emailInput = document.getElementById('email');
     if (!email || !emailInput.validity.valid) {
       showLoadingNotice(false);
       showUpdateNotice(false);
@@ -506,26 +505,32 @@
     showLoadingNotice(true);
     showUpdateNotice(false);
 
-    checkTimeout = setTimeout(() => {
-      google.script.run
-        .withSuccessHandler(result => {
-          showLoadingNotice(false);
-          if (result.exists) {
-            // Pre-fill the form with existing data
-            prefillForm(result.data);
-            showUpdateNotice(true);
-            isUpdatingExisting = true;
-          } else {
-            showUpdateNotice(false);
-            isUpdatingExisting = false;
-          }
-        })
-        .withFailureHandler(error => {
-          showLoadingNotice(false);
-          console.error('Error checking for existing volunteer:', error);
-        })
-        .checkExistingVolunteer(email);
-    }, 500); // Wait 500ms after user stops typing
+    // Call immediately without setTimeout - setTimeout breaks parameter passing in sandbox!
+    console.log('Checking for existing volunteer with email:', email);
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        console.log('Server response:', result);
+        showLoadingNotice(false);
+        if (result && result.exists) {
+          console.log('Found existing volunteer, prefilling form with:', result.data);
+          // Pre-fill the form with existing data
+          prefillForm(result.data);
+          showUpdateNotice(true);
+          isUpdatingExisting = true;
+        } else {
+          console.log('No existing volunteer found');
+          showUpdateNotice(false);
+          isUpdatingExisting = false;
+        }
+      })
+      .withFailureHandler(function(error) {
+        showLoadingNotice(false);
+        console.error('Error checking for existing volunteer:', error);
+        // Show error to user
+        showMessage('Error checking for existing submission: ' + error.message, 'error');
+      })
+      .checkExistingVolunteer(email);
   }
 
   function showUpdateNotice(show) {
@@ -547,37 +552,185 @@
   }
 
   function prefillForm(data) {
+    console.log('prefillForm called with data:', data);
+
+    // Pre-fill first and last name (if available)
+    if (data.firstName) {
+      document.getElementById('firstName').value = data.firstName;
+      console.log('Prefilled firstName:', data.firstName);
+    }
+    if (data.lastName) {
+      document.getElementById('lastName').value = data.lastName;
+      console.log('Prefilled lastName:', data.lastName);
+    }
+
     // Pre-fill role
-    document.getElementById('role').value = data.role || '';
+    const roleValue = data.role || '';
+    document.getElementById('role').value = roleValue;
+    console.log('Prefilled role:', roleValue);
 
     // Pre-fill number of shifts
-    document.getElementById('numShifts').value = data.numShifts || '';
+    const numShiftsValue = data.numShifts || '';
+    document.getElementById('numShifts').value = numShiftsValue;
+    console.log('Prefilled numShifts:', numShiftsValue);
 
     // Pre-fill consecutive preference
-    document.getElementById('consecutive').value = data.consecutive || '';
+    const consecutiveValue = data.consecutive || '';
+    document.getElementById('consecutive').value = consecutiveValue;
+    console.log('Prefilled consecutive:', consecutiveValue);
 
     // Pre-fill notes
-    document.getElementById('notes').value = data.notes || '';
+    const notesValue = data.notes || '';
+    document.getElementById('notes').value = notesValue;
+    console.log('Prefilled notes:', notesValue);
 
     // Pre-fill availability checkboxes
     if (data.availability && data.availability.length > 0) {
+      console.log('Prefilling availability checkboxes. Data availability:', data.availability);
+
       // First, uncheck all checkboxes
       const allCheckboxes = document.querySelectorAll('input[name="availability"]');
+      console.log('Found', allCheckboxes.length, 'availability checkboxes');
       allCheckboxes.forEach(cb => cb.checked = false);
 
       // Then check the ones in the existing data
+      let matchedCount = 0;
       data.availability.forEach(slot => {
+        console.log('Looking for checkbox with value:', slot);
         const checkbox = Array.from(allCheckboxes).find(cb => cb.value === slot);
         if (checkbox) {
           checkbox.checked = true;
+          matchedCount++;
+          console.log('Checked checkbox for:', slot);
+        } else {
+          console.warn('Could not find checkbox for slot:', slot);
         }
       });
+      console.log('Matched and checked', matchedCount, 'of', data.availability.length, 'slots');
+    } else {
+      console.log('No availability data to prefill');
     }
 
     // Update the validation and counts
     validateShifts();
     checkAvailabilityCount();
+    console.log('Form prefill complete');
   }
+
+  /**
+   * TEST FUNCTION - Call this from browser console to test backend connectivity
+   * Example: testBackendConnection('ben.ma.94@live.com')
+   */
+  window.testBackendConnection = function(email) {
+    console.log('=== BACKEND CONNECTION TEST ===');
+    console.log('Testing with email:', email || 'ben.ma.94@live.com');
+
+    const testEmail = email || 'ben.ma.94@live.com';
+
+    console.log('Calling google.script.run.checkExistingVolunteer...');
+    google.script.run
+      .withSuccessHandler(result => {
+        console.log('SUCCESS! Server returned:', result);
+        console.log('Type of result:', typeof result);
+        console.log('Result stringified:', JSON.stringify(result, null, 2));
+
+        if (result === null) {
+          console.error('❌ PROBLEM: Result is null - backend returned null instead of data object');
+        } else if (result && result.exists) {
+          console.log('✅ SUCCESS: Found volunteer data!');
+          console.log('   - First Name:', result.data.firstName);
+          console.log('   - Last Name:', result.data.lastName);
+          console.log('   - Email:', result.data.email);
+          console.log('   - Role:', result.data.role);
+          console.log('   - Availability slots:', result.data.availability ? result.data.availability.length : 0);
+        } else if (result && !result.exists) {
+          console.log('⚠️ No volunteer found with that email (result.exists = false)');
+        } else {
+          console.warn('⚠️ Unexpected result structure:', result);
+        }
+      })
+      .withFailureHandler(error => {
+        console.error('❌ FAILURE! Error from server:', error);
+        console.error('Error type:', typeof error);
+        console.error('Error message:', error.message || error);
+      })
+      .checkExistingVolunteer(testEmail);
+
+    console.log('Request sent. Waiting for response...');
+    console.log('=== END TEST ===');
+  };
+
+  /**
+   * SIMPLE ECHO TEST - Verifies parameter passing works at all
+   * Example: testEcho('hello')
+   */
+  window.testEcho = function(message) {
+    console.log('=== ECHO TEST ===');
+    console.log('Sending message:', message || 'test message');
+
+    const testMessage = message || 'test message';
+
+    console.log('Calling google.script.run.echoTest...');
+    google.script.run
+      .withSuccessHandler(result => {
+        console.log('✅ SUCCESS! Server echoed back:', result);
+        console.log('   - Received:', result.received);
+        console.log('   - Type:', result.type);
+        console.log('   - Timestamp:', result.timestamp);
+
+        if (result.received === testMessage) {
+          console.log('✅ PARAMETER PASSING WORKS! Message matches what we sent.');
+        } else {
+          console.error('❌ PROBLEM: Message mismatch!');
+          console.error('   - Sent:', testMessage);
+          console.error('   - Got back:', result.received);
+        }
+      })
+      .withFailureHandler(error => {
+        console.error('❌ FAILURE! Error from server:', error);
+      })
+      .echoTest(testMessage);
+
+    console.log('Echo request sent. Waiting for response...');
+    console.log('=== END ECHO TEST ===');
+  };
+
+  /**
+   * DEBUG TEST - Step-by-step debugging of checkExistingVolunteer
+   * Example: testDebug('ben.ma.94@live.com')
+   */
+  window.testDebug = function(email) {
+    console.log('=== DEBUG TEST ===');
+    console.log('Testing with email:', email || 'ben.ma.94@live.com');
+
+    const testEmail = email || 'ben.ma.94@live.com';
+
+    console.log('Calling google.script.run.debugCheckExistingVolunteer...');
+    google.script.run
+      .withSuccessHandler(result => {
+        console.log('✅ DEBUG RESULT:', result);
+        console.log('Step reached:', result.step);
+        console.log('Email:', result.email);
+        console.log('Email type:', result.emailType);
+        if (result.error) {
+          console.error('❌ Error:', result.error);
+        }
+        if (result.normalizedEmail) {
+          console.log('Normalized email:', result.normalizedEmail);
+        }
+        if (result.firstRowEmail) {
+          console.log('First row email:', result.firstRowEmail);
+          console.log('Match:', result.match);
+        }
+      })
+      .withFailureHandler(error => {
+        console.error('❌ FAILURE! Error from server:', error);
+      })
+      .debugCheckExistingVolunteer(testEmail);
+
+    console.log('Debug request sent. Waiting for response...');
+    console.log('=== END DEBUG TEST ===');
+  };
 
   function buildAvailabilityGrid() {
     const container = document.getElementById('availabilityContainer');

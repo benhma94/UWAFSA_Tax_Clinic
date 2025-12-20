@@ -13,52 +13,125 @@ function normalizeEmail(email) {
 }
 
 /**
+ * Wrapper function for web app - accepts email as explicit parameter
+ * @param {string} emailToCheck - Email to search for
+ * @returns {Object} Existing volunteer data or {exists: false}
+ */
+function checkExistingVolunteerByEmail(emailToCheck) {
+  return checkExistingVolunteer(emailToCheck);
+}
+
+/**
+ * Wrapper function that reads email from client-side global variable
+ * This is a workaround for IFRAME sandbox parameter passing issues
+ * @returns {Object} Existing volunteer data or {exists: false}
+ */
+function checkExistingVolunteerFromGlobal() {
+  // Note: We can't actually read client-side globals from server-side
+  // This approach won't work either. We need to use a different method.
+  Logger.log('checkExistingVolunteerFromGlobal called - this won\'t work');
+  return { exists: false, error: 'Cannot read client-side globals from server' };
+}
+
+/**
  * Checks if a volunteer with the given email already exists
  * @param {string} email - Email to search for
  * @returns {Object} Existing volunteer data or {exists: false}
  */
 function checkExistingVolunteer(email) {
-  return safeExecute(() => {
+  Logger.log('=== checkExistingVolunteer START ===');
+  Logger.log('Email parameter: ' + email);
+  Logger.log('Email type: ' + typeof email);
+  Logger.log('Email is null: ' + (email === null));
+  Logger.log('Email is undefined: ' + (email === undefined));
+  Logger.log('Email toString: ' + (email ? email.toString() : 'N/A'));
+
+  try {
+    Logger.log('checkExistingVolunteer called with email: ' + email);
+
     const sheet = getOrCreateAvailabilitySheet();
     const lastRow = sheet.getLastRow();
+    Logger.log('Sheet has ' + lastRow + ' rows (including header)');
 
     // If sheet is empty (only header), return not found
     if (lastRow < 2) {
+      Logger.log('Sheet is empty or only has header, returning not found');
       return { exists: false };
     }
 
-    // Only read the columns we need for lookup (all columns)
-    const data = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
-    const normalizedEmail = normalizeEmail(email);
+    // Get all data including header to debug
+    const allData = sheet.getRange(1, 1, lastRow, 10).getValues();
+    Logger.log('First row (header): ' + JSON.stringify(allData[0]));
 
-    // Search for email match (column index 3 = email)
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      const rowEmail = normalizeEmail(row[3]);
-
-      if (rowEmail === normalizedEmail) {
-        // Found existing volunteer - return their data
-        return {
-          exists: true,
-          rowIndex: i + 2, // +2 for 1-based indexing and header row
-          data: {
-            timestamp: row[0],
-            firstName: row[1],
-            lastName: row[2],
-            email: row[3],
-            role: row[4],
-            numShifts: row[5],
-            consecutive: row[6],
-            availability: row[7] ? row[7].split(', ') : [],
-            notes: row[8] || '',
-            lastModified: row[9] || null
-          }
-        };
+    // Find the email column index by looking at the header
+    const headerRow = allData[0];
+    let emailColIndex = -1;
+    for (let i = 0; i < headerRow.length; i++) {
+      if (headerRow[i] && headerRow[i].toString().toLowerCase().includes('email')) {
+        emailColIndex = i;
+        Logger.log('Found Email column at index: ' + i);
+        break;
       }
     }
 
-    return { exists: false };
-  }, 'checkExistingVolunteer');
+    if (emailColIndex === -1) {
+      Logger.log('ERROR: Could not find Email column in header');
+      return { exists: false, error: 'Email column not found' };
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    Logger.log('Normalized search email: ' + normalizedEmail);
+    Logger.log('Searching through ' + (allData.length - 1) + ' data rows');
+
+    // Search for email match (skip header row at index 0)
+    for (let i = 1; i < allData.length; i++) {
+      const row = allData[i];
+      const rowEmail = normalizeEmail(row[emailColIndex]);
+      Logger.log('Row ' + (i + 1) + ' email: "' + rowEmail + '" vs search: "' + normalizedEmail + '"');
+
+      if (rowEmail === normalizedEmail) {
+        // Found existing volunteer - return their data
+        Logger.log('Found match at row ' + (i + 1));
+
+        // Convert Date objects to strings for serialization
+        const timestamp = row[0] instanceof Date ? row[0].toISOString() : row[0];
+        const lastModified = row[9] instanceof Date ? row[9].toISOString() : (row[9] || null);
+
+        const result = {
+          exists: true,
+          rowIndex: i + 1, // Actual row number in sheet
+          data: {
+            timestamp: timestamp,
+            firstName: row[1],
+            lastName: row[2],
+            email: row[emailColIndex],
+            role: row[4],
+            numShifts: row[5],
+            consecutive: row[6],
+            availability: row[7] ? row[7].toString().split(', ') : [],
+            notes: row[8] || '',
+            lastModified: lastModified
+          }
+        };
+        Logger.log('Returning data with ' + result.data.availability.length + ' availability slots');
+        return result;
+      }
+    }
+
+    Logger.log('No match found after checking all ' + (allData.length - 1) + ' rows');
+    const notFoundResult = { exists: false };
+    Logger.log('Returning not found: ' + JSON.stringify(notFoundResult));
+    Logger.log('=== checkExistingVolunteer END (not found) ===');
+    return notFoundResult;
+  } catch (error) {
+    Logger.log('ERROR in checkExistingVolunteer: ' + error.message);
+    Logger.log('ERROR Stack: ' + error.stack);
+    // Return not found on error to prevent breaking the form
+    const errorResult = { exists: false, error: error.message };
+    Logger.log('Returning error result: ' + JSON.stringify(errorResult));
+    Logger.log('=== checkExistingVolunteer END (error) ===');
+    return errorResult;
+  }
 }
 
 /**

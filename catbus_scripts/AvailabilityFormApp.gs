@@ -10,5 +10,6 @@
 function doGetAvailabilityForm() {
   return HtmlService.createHtmlOutputFromFile('availability_form')
     .setTitle('Volunteer Availability Form')
+    .setSandboxMode(HtmlService.SandboxMode.IFRAME)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

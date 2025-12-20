@@ -4,7 +4,15 @@
       "Bash(wc:*)",
       "Bash(node:*)",
       "Bash(where:*)",
-      "Bash(cmd /c setup-clasp.bat:*)"
+      "Bash(cmd /c setup-clasp.bat:*)",
+      "Bash(clasp deployments:*)",
+      "Bash(cmd /c upload.bat)",
+      "Bash(clasp push:*)",
+      "Bash(cmd /c \"cd /d c:\\\\Users\\\\katma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\catbus_scripts && clasp push\")",
+      "Bash(cmd /c \"cd /d c:\\\\Users\\\\katma\\\\Dropbox\\\\Tax Clinic\\\\Website && upload.bat\")",
+      "Bash(cmd /c \"c:\\\\Users\\\\katma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\catbus_scripts\\\\upload.bat\")",
+      "Bash(cmd /c clasp push)",
+      "Bash(upload.bat)"
     ]
   }
 }
