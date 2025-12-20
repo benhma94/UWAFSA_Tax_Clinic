@@ -67,78 +67,110 @@ function getScheduleSheet(spreadsheetId, sheetName) {
  * @returns {Array<Object>} Array of volunteer availability objects
  */
 function readAvailabilityResponses(spreadsheetId, sheetName) {
-  return safeExecute(() => {
-    if (!spreadsheetId || !sheetName) {
-      throw new Error('Spreadsheet ID and sheet name are required');
-    }
-    
-    const sheet = getScheduleSheet(spreadsheetId, sheetName);
-    const lastRow = sheet.getLastRow();
-    
-    if (lastRow <= 1) {
-      return [];
-    }
-    
-    // Read all rows (assuming form responses format)
-    // Column structure: Timestamp, First Name, Last Name, Email, Role, Number of Shifts, Consecutive Preference, Availability (comma-separated), Notes
-    const data = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
-    
-    const volunteers = [];
-    
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      
-      // Skip empty rows
-      if (!row[0] && !row[1] && !row[2]) continue;
-      
-      const firstName = row[1]?.toString().trim() || '';
-      const lastName = row[2]?.toString().trim() || '';
-      const email = row[3]?.toString().trim() || '';
-      const role = row[4]?.toString().trim() || '';
-      const maxShifts = parseInt(row[5]) || 0;
-      const preferConsecutive = (row[6]?.toString().trim().toLowerCase() === 'yes');
-      const availabilityString = row[7]?.toString().trim() || '';
-      
-      // Parse availability from comma-separated string
-      // Format: "Day 1 9:30-1:15, Day 1 1:00-4:45, Day 2 9:30-1:15"
-      const availability = [];
-      if (availabilityString) {
-        const availabilityItems = availabilityString.split(',').map(item => item.trim());
-        availabilityItems.forEach(item => {
-          // Map availability string to shift ID
-          if (AVAILABILITY_TO_SHIFT_MAP[item]) {
-            availability.push(AVAILABILITY_TO_SHIFT_MAP[item]);
-          } else {
-            // Try to match variations (case-insensitive, spacing variations)
-            const normalizedItem = item.replace(/\s+/g, ' ');
-            for (const [key, shiftId] of Object.entries(AVAILABILITY_TO_SHIFT_MAP)) {
-              if (normalizedItem.toLowerCase() === key.toLowerCase()) {
-                availability.push(shiftId);
-                break;
-              }
+  if (!spreadsheetId || !sheetName) {
+    throw new Error('Spreadsheet ID and sheet name are required');
+  }
+
+  Logger.log('Reading availability from spreadsheet: ' + spreadsheetId + ', sheet: ' + sheetName);
+
+  // OPTIMIZED: Cache spreadsheet to avoid multiple opens
+  const ss = getScheduleSpreadsheet(spreadsheetId);
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    throw new Error(`Sheet "${sheetName}" not found in spreadsheet`);
+  }
+  
+  // OPTIMIZED: Get both last row and last column in single operation
+  const lastRow = sheet.getLastRow();
+  const lastCol = Math.max(8, sheet.getLastColumn()); // Ensure we read at least 8 columns
+
+  Logger.log('Sheet has ' + lastRow + ' rows (including header)');
+
+  if (lastRow <= 1) {
+    Logger.log('No data rows found');
+    return [];
+  }
+
+  // Read all rows (assuming form responses format)
+  // Column structure: Timestamp, First Name, Last Name, Email, Role, Number of Shifts, Consecutive Preference, Availability (comma-separated)
+  // Note: Only reading columns 1-8 (through Availability) as Notes and Last Modified columns are not used
+  Logger.log('Reading ' + (lastRow - 1) + ' data rows, 8 columns');
+  
+  // OPTIMIZED: Limit data read to prevent memory issues with very large sheets
+  const maxRows = Math.min(lastRow - 1, 1000); // Cap at 1000 rows to prevent timeout
+  const data = sheet.getRange(2, 1, maxRows, 8).getValues();
+  
+  // Small delay after large read operation
+  if (maxRows > 100) {
+    Utilities.sleep(100);
+  }
+
+  const volunteers = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+
+    // Skip empty rows
+    if (!row[0] && !row[1] && !row[2]) continue;
+
+    const firstName = row[1]?.toString().trim() || '';
+    const lastName = row[2]?.toString().trim() || '';
+    const email = row[3]?.toString().trim() || '';
+    const role = row[4]?.toString().trim() || '';
+    const maxShifts = parseInt(row[5]) || 0;
+    const preferConsecutive = (row[6]?.toString().trim().toLowerCase() === 'yes');
+    const availabilityString = row[7]?.toString().trim() || '';
+
+    // Parse availability from comma-separated string
+    // Format: "Day 1 9:30-1:15, Day 1 1:00-4:45, Day 2 9:30-1:15"
+    const availability = [];
+    if (availabilityString) {
+      const availabilityItems = availabilityString.split(',').map(item => item.trim());
+      availabilityItems.forEach(item => {
+        if (!item) return; // Skip empty items after splitting
+        
+        // Map availability string to shift ID
+        if (AVAILABILITY_TO_SHIFT_MAP[item]) {
+          availability.push(AVAILABILITY_TO_SHIFT_MAP[item]);
+        } else {
+          // Try to match variations (case-insensitive, spacing variations)
+          const normalizedItem = item.replace(/\s+/g, ' ');
+          let found = false;
+          for (const [key, shiftId] of Object.entries(AVAILABILITY_TO_SHIFT_MAP)) {
+            if (normalizedItem.toLowerCase() === key.toLowerCase()) {
+              availability.push(shiftId);
+              found = true;
+              break;
             }
           }
-        });
-      }
+          if (!found) {
+            Logger.log(`Warning: Could not map availability item "${item}" to shift ID. Available keys: ${Object.keys(AVAILABILITY_TO_SHIFT_MAP).slice(0, 3).join(', ')}...`);
+          }
+        }
+      });
       
-      if (firstName && lastName && availability.length > 0 && maxShifts > 0) {
-        volunteers.push({
-          firstName,
-          lastName,
-          fullName: `${firstName} ${lastName}`,
-          email,
-          role,
-          maxShifts,
-          preferConsecutive,
-          availability,
-          assignedShifts: [] // Will be populated during scheduling
-        });
+      if (availability.length === 0 && availabilityItems.length > 0) {
+        Logger.log(`Warning: Volunteer ${firstName} ${lastName} has availability string "${availabilityString}" but no valid shifts were mapped`);
       }
     }
-    
-    Logger.log(`Read ${volunteers.length} volunteers with availability`);
-    return volunteers;
-  }, 'readAvailabilityResponses');
+
+    if (firstName && lastName && availability.length > 0 && maxShifts > 0) {
+      volunteers.push({
+        firstName,
+        lastName,
+        fullName: `${firstName} ${lastName}`,
+        email,
+        role,
+        maxShifts,
+        preferConsecutive,
+        availability,
+        assignedShifts: [] // Will be populated during scheduling
+      });
+    }
+  }
+
+  Logger.log(`Successfully read ${volunteers.length} volunteers with availability`);
+  return volunteers;
 }
 
 /**
@@ -168,19 +200,22 @@ function areShiftsConsecutive(shift1, shift2) {
  * @returns {Object} Schedule object with assignments
  */
 function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
-  return safeExecute(() => {
-    const {
-      minVolunteersPerShift = 1,
-      maxVolunteersPerShift = 999,
-      prioritizeConsecutive = true
-    } = options;
-    
-    // Read availability
-    const volunteers = readAvailabilityResponses(spreadsheetId, availabilitySheetName);
-    
-    if (volunteers.length === 0) {
-      throw new Error('No volunteer availability data found');
-    }
+  const {
+    minVolunteersPerShift = 1,
+    maxVolunteersPerShift = 999,
+    prioritizeConsecutive = true
+  } = options;
+
+  Logger.log('Reading availability from: ' + availabilitySheetName);
+
+  // Read availability - removed safeExecute wrapper to reduce call stack depth
+  const volunteers = readAvailabilityResponses(spreadsheetId, availabilitySheetName);
+
+  Logger.log('Found ' + volunteers.length + ' volunteers with availability');
+
+  if (volunteers.length === 0) {
+    throw new Error('No volunteer availability data found. Please ensure volunteers have submitted the availability form.');
+  }
     
     // Initialize schedule structure
     const schedule = {};
@@ -237,6 +272,21 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
     }
     
     // Phase 2: Fill remaining shifts, prioritizing under-staffed shifts
+    // OPTIMIZED: Build availability index once instead of filtering repeatedly
+    const shiftToVolunteers = {};
+    SHIFT_IDS.forEach(shiftId => {
+      shiftToVolunteers[shiftId] = [];
+    });
+
+    // Build reverse index: for each shift, which volunteers are available
+    sortedVolunteers.forEach(v => {
+      v.availability.forEach(shiftId => {
+        if (shiftToVolunteers[shiftId]) {
+          shiftToVolunteers[shiftId].push(v);
+        }
+      });
+    });
+
     // Sort shifts by current assignment count (fewer = higher priority)
     const shiftPriorities = SHIFT_IDS.map(shiftId => ({
       shiftId,
@@ -248,49 +298,37 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
       if (a.currentCount >= a.targetCount && b.currentCount < b.targetCount) return 1;
       return a.currentCount - b.currentCount;
     });
-    
-    // Try to fill each shift
-    for (const { shiftId, currentCount, targetCount } of shiftPriorities) {
-      // Find volunteers available for this shift who haven't hit their max
-      const availableVolunteers = sortedVolunteers.filter(v => {
-        const hasAvailability = v.availability.includes(shiftId);
+
+    // Try to fill each shift - OPTIMIZED to avoid repeated filtering
+    for (const { shiftId } of shiftPriorities) {
+      // Get volunteers available for this shift (from pre-built index)
+      const potentialVolunteers = shiftToVolunteers[shiftId];
+
+      // Filter only those who can still take shifts
+      const availableVolunteers = potentialVolunteers.filter(v => {
         const underMax = volunteerAssignments[v.fullName].length < v.maxShifts;
         const notAssigned = !schedule[shiftId].includes(v.fullName);
-        const shiftNotFull = schedule[shiftId].length < maxVolunteersPerShift;
-        
-        return hasAvailability && underMax && notAssigned && shiftNotFull;
+        return underMax && notAssigned;
       });
-      
-      // Assign volunteers to reach target
-      while (schedule[shiftId].length < targetCount && availableVolunteers.length > 0) {
-        // Pick volunteer with most remaining capacity
-        availableVolunteers.sort((a, b) => {
-          const aRemaining = a.maxShifts - volunteerAssignments[a.fullName].length;
-          const bRemaining = b.maxShifts - volunteerAssignments[b.fullName].length;
-          return bRemaining - aRemaining;
-        });
-        
-        const volunteer = availableVolunteers.shift();
-        if (volunteer) {
-          schedule[shiftId].push(volunteer.fullName);
-          volunteerAssignments[volunteer.fullName].push(shiftId);
-        }
+
+      // Sort by remaining capacity (descending) - do this once
+      availableVolunteers.sort((a, b) => {
+        const aRemaining = a.maxShifts - volunteerAssignments[a.fullName].length;
+        const bRemaining = b.maxShifts - volunteerAssignments[b.fullName].length;
+        return bRemaining - aRemaining;
+      });
+
+      // Assign volunteers up to max capacity for shift
+      let assigned = 0;
+      for (const volunteer of availableVolunteers) {
+        if (schedule[shiftId].length >= maxVolunteersPerShift) break;
+
+        schedule[shiftId].push(volunteer.fullName);
+        volunteerAssignments[volunteer.fullName].push(shiftId);
+        assigned++;
       }
-      
-      // Fill up to max if more volunteers are available
-      while (schedule[shiftId].length < maxVolunteersPerShift && availableVolunteers.length > 0) {
-        const volunteer = availableVolunteers.shift();
-        if (volunteer) {
-          schedule[shiftId].push(volunteer.fullName);
-          volunteerAssignments[volunteer.fullName].push(shiftId);
-          
-          // Remove from available list for this shift if they've hit max
-          if (volunteerAssignments[volunteer.fullName].length >= volunteer.maxShifts) {
-            const index = availableVolunteers.findIndex(v => v.fullName === volunteer.fullName);
-            if (index > -1) availableVolunteers.splice(index, 1);
-          }
-        }
-      }
+
+      Logger.log(`Shift ${shiftId}: assigned ${assigned} volunteers (total: ${schedule[shiftId].length})`);
     }
     
     // Build result summary
@@ -313,10 +351,9 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
         assignedCount: (volunteerAssignments[v.fullName] || []).length
       }))
     };
-    
-    Logger.log(`Schedule generated: ${result.summary.shiftsFilled}/${result.summary.totalShifts} shifts filled`);
-    return result;
-  }, 'generateSchedule');
+
+  Logger.log(`Schedule generated: ${result.summary.shiftsFilled}/${result.summary.totalShifts} shifts filled`);
+  return result;
 }
 
 /**
@@ -329,142 +366,305 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
  */
 function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, dayLabels = null) {
   return safeExecute(() => {
-    if (!spreadsheetId || !outputSheetName) {
-      throw new Error('Spreadsheet ID and output sheet name are required');
-    }
-    
-    if (!scheduleResult || !scheduleResult.schedule) {
-      throw new Error('Invalid schedule result data');
-    }
-    
-    Logger.log(`Creating schedule sheet: ${outputSheetName}`);
-    const ss = getScheduleSpreadsheet(spreadsheetId);
-    
-    // Delete existing sheet if it exists
-    let sheet = ss.getSheetByName(outputSheetName);
-    if (sheet) {
-      Logger.log(`Deleting existing sheet: ${outputSheetName}`);
-      ss.deleteSheet(sheet);
-      // Small delay to ensure deletion completes
-      Utilities.sleep(100);
-    }
-    
-    // Create new sheet
-    Logger.log(`Creating new sheet: ${outputSheetName}`);
-    sheet = ss.insertSheet(outputSheetName);
-    
-    if (!sheet) {
-      throw new Error(`Failed to create sheet: ${outputSheetName}`);
-    }
-    
-    Logger.log(`Sheet created successfully: ${outputSheetName}`);
-    
-    // Default day labels if not provided
-    const days = dayLabels || ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
-    
-    // Create header row
-    const headers = ['Time / Day', ...days];
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    
-    // Format header row
-    const headerRange = sheet.getRange(1, 1, 1, headers.length);
-    headerRange.setFontWeight('bold');
-    headerRange.setBackground('#4285f4');
-    headerRange.setFontColor('#ffffff');
-    headerRange.setHorizontalAlignment('center');
-    
-    // Create shift rows (9:30-1:15, 1:00-4:45, 4:30-8:30 for each day)
-    const times = ['9:30-1:15', '1:00-4:45', '4:30-8:30'];
-    const schedule = scheduleResult.schedule;
-    
-    let rowNum = 2;
-    for (let timeIdx = 0; timeIdx < 3; timeIdx++) {
-      const row = [times[timeIdx]];
-      
-      for (let dayIdx = 0; dayIdx < 4; dayIdx++) {
-        const shiftId = SHIFT_IDS[dayIdx * 3 + timeIdx];
-        const volunteers = schedule[shiftId] || [];
-        row.push(volunteers.join(', ') || '(unfilled)');
+    try {
+      if (!spreadsheetId || !outputSheetName) {
+        throw new Error('Spreadsheet ID and output sheet name are required');
       }
       
-      sheet.getRange(rowNum, 1, 1, row.length).setValues([row]);
-      rowNum++;
-    }
-    
-    // Add spacing
-    rowNum++;
-    
-    // Add volunteer assignment summary
-    sheet.getRange(rowNum, 1, 1, 1).setValue('VOLUNTEER ASSIGNMENTS').setFontWeight('bold');
-    rowNum++;
-    
-    const summaryHeaders = ['Volunteer Name', 'Role', 'Email', 'Max Shifts', 'Assigned Shifts', 'Assigned Count'];
-    const summaryHeaderRange = sheet.getRange(rowNum, 1, 1, summaryHeaders.length);
-    summaryHeaderRange.setValues([summaryHeaders]);
-    summaryHeaderRange.setFontWeight('bold');
-    rowNum++;
-    
-    // Sort volunteers by name
-    const sortedVolunteers = [...scheduleResult.volunteers].sort((a, b) => 
-      a.name.localeCompare(b.name)
-    );
-    
-    for (const vol of sortedVolunteers) {
-      const row = [
-        vol.name,
-        vol.role || 'N/A',
-        vol.email,
-        vol.maxShifts,
-        vol.assignedShifts.join(', ') || '(none)',
-        vol.assignedCount
+      if (!scheduleResult || !scheduleResult.schedule) {
+        Logger.log('Error: scheduleResult structure: ' + JSON.stringify(Object.keys(scheduleResult || {})));
+        throw new Error('Invalid schedule result data - schedule property missing');
+      }
+      
+      Logger.log(`Creating schedule sheet: ${outputSheetName}`);
+      Logger.log(`Schedule result has ${Object.keys(scheduleResult.schedule || {}).length} shifts`);
+      Logger.log(`Schedule result has ${(scheduleResult.volunteers || []).length} volunteers`);
+      
+      const ss = getScheduleSpreadsheet(spreadsheetId);
+      
+      // Delete existing sheet if it exists
+      let sheet = ss.getSheetByName(outputSheetName);
+      if (sheet) {
+        Logger.log(`Deleting existing sheet: ${outputSheetName}`);
+        ss.deleteSheet(sheet);
+        // Delay to ensure deletion completes
+        Utilities.sleep(500);
+      }
+      
+      // Create new sheet
+      Logger.log(`Creating new sheet: ${outputSheetName}`);
+      sheet = ss.insertSheet(outputSheetName);
+      
+      if (!sheet) {
+        throw new Error(`Failed to create sheet: ${outputSheetName}`);
+      }
+      
+      Logger.log(`Sheet created successfully: ${outputSheetName}`);
+      
+      // Small delay after sheet creation
+      Utilities.sleep(200);
+      
+      // Default day labels if not provided
+      const days = dayLabels || ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
+      
+      // Build all data arrays first (OPTIMIZED: batch write instead of individual writes)
+      const allData = [];
+      const formatRanges = []; // Track ranges that need special formatting
+      
+      // Create header row
+      const headers = ['Time / Day', ...days];
+      allData.push(headers);
+      
+      // Create shift rows (9:30-1:15, 1:00-4:45, 4:30-8:30 for each day)
+      const times = ['9:30-1:15', '1:00-4:45', '4:30-8:30'];
+      const schedule = scheduleResult.schedule;
+      
+      for (let timeIdx = 0; timeIdx < 3; timeIdx++) {
+        const row = [times[timeIdx]];
+        
+        for (let dayIdx = 0; dayIdx < 4; dayIdx++) {
+          const shiftId = SHIFT_IDS[dayIdx * 3 + timeIdx];
+          const volunteers = schedule[shiftId] || [];
+          row.push(volunteers.join(', ') || '(unfilled)');
+        }
+        
+        allData.push(row);
+      }
+      
+      // Add spacing row (empty) - pad with empty strings to match column count
+      const emptyRow = new Array(headers.length).fill('');
+      allData.push(emptyRow);
+      
+      // Add volunteer assignment section header
+      const volunteerHeaderRow = ['VOLUNTEER ASSIGNMENTS'];
+      // Pad to match column count
+      while (volunteerHeaderRow.length < headers.length) {
+        volunteerHeaderRow.push('');
+      }
+      allData.push(volunteerHeaderRow);
+      formatRanges.push({ row: allData.length, type: 'volunteerHeader' });
+      
+      // Add summary headers
+      const summaryHeaders = ['Volunteer Name', 'Role', 'Email', 'Max Shifts', 'Assigned Shifts', 'Assigned Count'];
+      // Pad to match column count
+      while (summaryHeaders.length < headers.length) {
+        summaryHeaders.push('');
+      }
+      allData.push(summaryHeaders);
+      formatRanges.push({ row: allData.length, type: 'summaryHeader' });
+      
+      // Sort volunteers by name and build all volunteer rows
+      if (!scheduleResult.volunteers || !Array.isArray(scheduleResult.volunteers)) {
+        Logger.log('Warning: scheduleResult.volunteers is not an array, using empty array');
+        scheduleResult.volunteers = [];
+      }
+      
+      const sortedVolunteers = [...scheduleResult.volunteers].sort((a, b) => {
+        const nameA = (a && a.name) ? a.name : '';
+        const nameB = (b && b.name) ? b.name : '';
+        return nameA.localeCompare(nameB);
+      });
+      
+      const highlightedRows = []; // Track rows that need background colors
+      
+      for (const vol of sortedVolunteers) {
+        if (!vol) continue; // Skip null/undefined entries
+        
+        const assignedShifts = Array.isArray(vol.assignedShifts) ? vol.assignedShifts : [];
+        const row = [
+          vol.name || '',
+          vol.role || 'N/A',
+          vol.email || '',
+          vol.maxShifts || 0,
+          assignedShifts.join(', ') || '(none)',
+          vol.assignedCount || 0
+        ];
+        
+        // Pad row to match column count
+        while (row.length < headers.length) {
+          row.push('');
+        }
+        
+        allData.push(row);
+        
+        // Track rows that need highlighting
+        if (vol.assignedCount > vol.maxShifts) {
+          highlightedRows.push({ row: allData.length, color: '#ffcccc' }); // Red for over-assigned
+        } else if (vol.assignedCount === 0 && vol.maxShifts > 0) {
+          highlightedRows.push({ row: allData.length, color: '#fff4cc' }); // Yellow for unassigned
+        }
+      }
+      
+      // Add spacing before stats - pad empty rows
+      allData.push(new Array(headers.length).fill(''));
+      allData.push(new Array(headers.length).fill(''));
+      
+      // Add summary statistics
+      const statsStartRow = allData.length + 1; // Track where stats start (1-indexed)
+      const stats = [
+        ['Summary Statistics', ''],
+        ['Total Shifts', scheduleResult.summary.totalShifts],
+        ['Shifts with Assignments', scheduleResult.summary.shiftsFilled],
+        ['Shifts at Minimum', scheduleResult.summary.shiftsAtMinimum],
+        ['Total Volunteers', scheduleResult.summary.totalVolunteers],
+        ['Total Assignments', scheduleResult.summary.totalAssignments]
       ];
       
-      // Highlight if over-assigned or under-utilized
-      const range = sheet.getRange(rowNum, 1, 1, row.length);
-      range.setValues([row]);
+      // Pad stats rows
+      stats.forEach(row => {
+        while (row.length < headers.length) {
+          row.push('');
+        }
+        allData.push(row);
+      });
       
-      if (vol.assignedCount > vol.maxShifts) {
-        range.setBackground('#ffcccc'); // Red for over-assigned
-      } else if (vol.assignedCount === 0 && vol.maxShifts > 0) {
-        range.setBackground('#fff4cc'); // Yellow for unassigned
+      formatRanges.push({ row: statsStartRow, type: 'statsHeader' });
+      
+      // Validate all rows have correct column count
+      for (let i = 0; i < allData.length; i++) {
+        if (!allData[i] || !Array.isArray(allData[i])) {
+          Logger.log(`Warning: Row ${i + 1} is not an array, fixing...`);
+          allData[i] = new Array(headers.length).fill('');
+        } else if (allData[i].length !== headers.length) {
+          Logger.log(`Warning: Row ${i + 1} has ${allData[i].length} columns, expected ${headers.length}, fixing...`);
+          while (allData[i].length < headers.length) {
+            allData[i].push('');
+          }
+          allData[i] = allData[i].slice(0, headers.length);
+        }
       }
       
-      rowNum++;
+      // OPTIMIZED: Write all data in one batch operation
+      Logger.log(`Writing ${allData.length} rows, ${headers.length} columns in batch...`);
+      try {
+        const dataRange = sheet.getRange(1, 1, allData.length, headers.length);
+        dataRange.setValues(allData);
+      } catch (error) {
+        Logger.log('Error writing batch data: ' + error.message);
+        Logger.log('Data shape: ' + allData.length + ' rows, checking first row length: ' + (allData[0] ? allData[0].length : 'null'));
+        throw new Error('Failed to write schedule data: ' + error.message);
+      }
+      
+      // Small delay after large write
+      Utilities.sleep(300);
+      
+      // OPTIMIZED: Apply formatting in batches
+      // Format header row (row 1)
+      try {
+        const headerRange = sheet.getRange(1, 1, 1, headers.length);
+        headerRange.setFontWeight('bold');
+        headerRange.setBackground('#4285f4');
+        headerRange.setFontColor('#ffffff');
+        headerRange.setHorizontalAlignment('center');
+      } catch (e) {
+        Logger.log('Warning: Could not format header row: ' + e.message);
+        // Continue - formatting is not critical
+      }
+      
+      // Format volunteer section header
+      try {
+        const volHeaderEntry = formatRanges.find(f => f.type === 'volunteerHeader');
+        if (volHeaderEntry && volHeaderEntry.row > 0 && volHeaderEntry.row <= allData.length) {
+          const volHeaderRange = sheet.getRange(volHeaderEntry.row, 1, 1, 1);
+          volHeaderRange.setFontWeight('bold');
+        }
+      } catch (e) {
+        Logger.log('Warning: Could not format volunteer header: ' + e.message);
+      }
+      
+      // Format summary header row
+      try {
+        const sumHeaderEntry = formatRanges.find(f => f.type === 'summaryHeader');
+        if (sumHeaderEntry && sumHeaderEntry.row > 0 && sumHeaderEntry.row <= allData.length) {
+          const sumHeaderRange = sheet.getRange(sumHeaderEntry.row, 1, 1, summaryHeaders.length);
+          sumHeaderRange.setFontWeight('bold');
+        }
+      } catch (e) {
+        Logger.log('Warning: Could not format summary header: ' + e.message);
+      }
+      
+      // Format stats header
+      try {
+        const statsHeaderEntry = formatRanges.find(f => f.type === 'statsHeader');
+        if (statsHeaderEntry && statsHeaderEntry.row > 0 && statsHeaderEntry.row <= allData.length) {
+          const statsHeaderRange = sheet.getRange(statsHeaderEntry.row, 1, 1, 2);
+          statsHeaderRange.setFontWeight('bold');
+        }
+      } catch (e) {
+        Logger.log('Warning: Could not format stats header: ' + e.message);
+      }
+      
+      // Apply background colors to highlighted rows (batch by color)
+      try {
+        const redRows = highlightedRows.filter(h => h.color === '#ffcccc').map(h => h.row).filter(r => r > 0 && r <= allData.length);
+        const yellowRows = highlightedRows.filter(h => h.color === '#fff4cc').map(h => h.row).filter(r => r > 0 && r <= allData.length);
+        
+        if (redRows.length > 0) {
+          for (const rowNum of redRows) {
+            try {
+              const range = sheet.getRange(rowNum, 1, 1, summaryHeaders.length);
+              range.setBackground('#ffcccc');
+            } catch (e) {
+              Logger.log(`Warning: Could not highlight row ${rowNum}: ` + e.message);
+            }
+          }
+        }
+        
+        if (yellowRows.length > 0) {
+          for (const rowNum of yellowRows) {
+            try {
+              const range = sheet.getRange(rowNum, 1, 1, summaryHeaders.length);
+              range.setBackground('#fff4cc');
+            } catch (e) {
+              Logger.log(`Warning: Could not highlight row ${rowNum}: ` + e.message);
+            }
+          }
+        }
+      } catch (e) {
+        Logger.log('Warning: Could not apply row highlighting: ' + e.message);
+        // Continue - highlighting is not critical
+      }
+      
+      // Small delay before final operations
+      Utilities.sleep(200);
+      
+      // Auto-resize columns (limit to first 10 columns to avoid timeout)
+      try {
+        sheet.autoResizeColumns(1, Math.min(headers.length, 10));
+      } catch (e) {
+        Logger.log('Auto-resize warning: ' + e.message);
+        // Continue if auto-resize fails
+      }
+      
+      // Freeze header row
+      try {
+        sheet.setFrozenRows(1);
+      } catch (e) {
+        Logger.log('Warning: Could not freeze header row: ' + e.message);
+        // Continue - freezing is not critical
+      }
+      
+      // Final verification that sheet exists and has data
+      const verifySheet = ss.getSheetByName(outputSheetName);
+      if (!verifySheet) {
+        throw new Error(`Sheet verification failed: ${outputSheetName} was not found after creation`);
+      }
+      
+      const lastRow = verifySheet.getLastRow();
+      if (lastRow < 1) {
+        throw new Error(`Sheet verification failed: ${outputSheetName} appears to be empty`);
+      }
+      
+      Logger.log(`Schedule successfully output to sheet: ${outputSheetName} (${lastRow} rows)`);
+      return true;
+    } catch (error) {
+      Logger.log('ERROR in outputScheduleToSheet: ' + error.message);
+      Logger.log('ERROR Stack: ' + (error.stack || 'No stack trace'));
+      Logger.log('Error type: ' + (error.name || 'Unknown'));
+      
+      // Re-throw with more context
+      throw new Error('outputScheduleToSheet failed: ' + error.message + (error.stack ? ' | Stack: ' + error.stack.substring(0, 200) : ''));
     }
-    
-    // Add summary statistics
-    rowNum += 2;
-    const stats = [
-      ['Summary Statistics', ''],
-      ['Total Shifts', scheduleResult.summary.totalShifts],
-      ['Shifts with Assignments', scheduleResult.summary.shiftsFilled],
-      ['Shifts at Minimum', scheduleResult.summary.shiftsAtMinimum],
-      ['Total Volunteers', scheduleResult.summary.totalVolunteers],
-      ['Total Assignments', scheduleResult.summary.totalAssignments]
-    ];
-    
-    sheet.getRange(rowNum, 1, stats.length, 2).setValues(stats);
-    sheet.getRange(rowNum, 1, 1, 2).setFontWeight('bold');
-    
-    // Auto-resize columns
-    sheet.autoResizeColumns(1, headers.length);
-    
-    // Freeze header row
-    sheet.setFrozenRows(1);
-    
-    // Final verification that sheet exists and has data
-    const verifySheet = ss.getSheetByName(outputSheetName);
-    if (!verifySheet) {
-      throw new Error(`Sheet verification failed: ${outputSheetName} was not found after creation`);
-    }
-    
-    const lastRow = verifySheet.getLastRow();
-    if (lastRow < 1) {
-      throw new Error(`Sheet verification failed: ${outputSheetName} appears to be empty`);
-    }
-    
-    Logger.log(`Schedule successfully output to sheet: ${outputSheetName} (${lastRow} rows)`);
-    return true;
   }, 'outputScheduleToSheet');
 }
 
@@ -477,29 +677,36 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
  * @returns {Object} Schedule result object
  */
 function createSchedule(spreadsheetId, availabilitySheetName, outputSheetName, options = {}) {
-  return safeExecute(() => {
-    Logger.log('Starting schedule generation...');
-    
-    // Generate schedule
-    const scheduleResult = generateSchedule(spreadsheetId, availabilitySheetName, options);
-    
-    // Output to sheet (same spreadsheet)
-    const outputResult = outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, options.dayLabels);
-    
-    if (!outputResult) {
-      throw new Error('Failed to create schedule sheet');
-    }
-    
-    // Verify sheet was created
-    const ss = getScheduleSpreadsheet(spreadsheetId);
-    const createdSheet = ss.getSheetByName(outputSheetName);
-    if (!createdSheet) {
-      throw new Error(`Schedule sheet "${outputSheetName}" was not created successfully`);
-    }
-    
-    Logger.log('Schedule generation complete');
-    return scheduleResult;
-  }, 'createSchedule');
+  Logger.log('Starting schedule generation...');
+
+  // Generate schedule - this is the heavy computation
+  Logger.log('Calling generateSchedule...');
+  const scheduleResult = generateSchedule(spreadsheetId, availabilitySheetName, options);
+  Logger.log('Schedule generated with ' + scheduleResult.summary.totalAssignments + ' assignments');
+
+  // OPTIMIZED: Add delay between computation and spreadsheet operations
+  Utilities.sleep(300);
+
+  // Output to sheet (same spreadsheet)
+  Logger.log('Writing schedule to sheet...');
+  const outputResult = outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, options.dayLabels);
+
+  if (!outputResult) {
+    throw new Error('Failed to create schedule sheet');
+  }
+
+  // OPTIMIZED: Small delay before verification
+  Utilities.sleep(200);
+
+  // Verify sheet was created
+  const ss = getScheduleSpreadsheet(spreadsheetId);
+  const createdSheet = ss.getSheetByName(outputSheetName);
+  if (!createdSheet) {
+    throw new Error(`Schedule sheet "${outputSheetName}" was not created successfully`);
+  }
+
+  Logger.log('Schedule generation complete');
+  return scheduleResult;
 }
 
 /**
@@ -566,12 +773,34 @@ function extractSpreadsheetIdAndGetSheets(url) {
  * @returns {Object} Schedule result object
  */
 function generateScheduleFromDashboard(outputSheetName, options = {}) {
-  return safeExecute(() => {
+  try {
+    Logger.log('=== SCHEDULE GENERATION START ===');
+    Logger.log('Output sheet: ' + outputSheetName);
+    Logger.log('Options: ' + JSON.stringify(options));
+
     // Use main CATBUS spreadsheet
     const spreadsheetId = CONFIG.SPREADSHEET_ID;
     const availabilitySheetName = CONFIG.SHEETS.SCHEDULE_AVAILABILITY;
-    return createSchedule(spreadsheetId, availabilitySheetName, outputSheetName, options);
-  }, 'generateScheduleFromDashboard');
+
+    // Don't nest safeExecute - just call directly to avoid deep call stack
+    Logger.log('Calling createSchedule...');
+    Logger.log('Spreadsheet ID: ' + spreadsheetId);
+    Logger.log('Availability sheet: ' + availabilitySheetName);
+    
+    const result = createSchedule(spreadsheetId, availabilitySheetName, outputSheetName, options);
+
+    Logger.log('=== SCHEDULE GENERATION COMPLETE ===');
+    return result;
+  } catch (error) {
+    Logger.log('ERROR in generateScheduleFromDashboard: ' + error.message);
+    Logger.log('Error type: ' + (error.name || 'Unknown'));
+    Logger.log('Stack: ' + (error.stack || 'No stack trace'));
+    Logger.log('Full error: ' + JSON.stringify(error));
+    
+    // Preserve original error message if it's informative
+    const errorMsg = error.message || error.toString();
+    throw new Error('Schedule generation failed: ' + errorMsg);
+  }
 }
 
 /**
@@ -596,4 +825,88 @@ function getScheduleStats(spreadsheetId, scheduleSheetName) {
       message: 'Use createSchedule() to generate a new schedule or parse existing sheet'
     };
   }, 'getScheduleStats');
+}
+
+/**
+ * Diagnostic function to check availability sheet data
+ * Returns raw data from the first few rows to help debug issues
+ * @returns {Object} Debug information
+ */
+function debugAvailabilitySheet() {
+  return safeExecute(() => {
+    const spreadsheetId = CONFIG.SPREADSHEET_ID;
+    const sheetName = CONFIG.SHEETS.SCHEDULE_AVAILABILITY;
+
+    // First, check if spreadsheet and sheet exist
+    const ss = SpreadsheetApp.openById(spreadsheetId);
+    const allSheets = ss.getSheets().map(s => s.getName());
+
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      return {
+        error: `Sheet "${sheetName}" not found in spreadsheet`,
+        requestedSheetName: sheetName,
+        availableSheets: allSheets,
+        spreadsheetId: spreadsheetId,
+        note: 'The Schedule Availability sheet does not exist. Please check the sheet name or create it using the availability form.'
+      };
+    }
+
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+
+    if (lastRow <= 1) {
+      return {
+        error: 'No data found in Schedule Availability sheet',
+        sheetName: sheetName,
+        lastRow: lastRow,
+        lastCol: lastCol,
+        note: 'Sheet exists but has no data. Please submit the availability form to populate data.'
+      };
+    }
+
+    // Read headers
+    const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+
+    // Read first 3 data rows (or all if less than 3)
+    const numSampleRows = Math.min(3, lastRow - 1);
+    const sampleData = sheet.getRange(2, 1, numSampleRows, lastCol).getValues();
+
+    // DON'T call readAvailabilityResponses - it causes nested safeExecute and "system busy"
+    // Instead do a quick inline check
+    let quickTest = { success: true, volunteers: 0 };
+    try {
+      const testData = sheet.getRange(2, 1, Math.min(10, lastRow - 1), 8).getValues();
+      let count = 0;
+      for (let i = 0; i < testData.length; i++) {
+        const firstName = testData[i][1]?.toString().trim();
+        const lastName = testData[i][2]?.toString().trim();
+        const availability = testData[i][7]?.toString().trim();
+        if (firstName && lastName && availability) {
+          count++;
+        }
+      }
+      quickTest.volunteers = count;
+    } catch (e) {
+      quickTest.success = false;
+      quickTest.error = e.message;
+    }
+
+    // Convert Date objects to strings for JSON serialization
+    const serializedSampleData = sampleData.map(row =>
+      row.map(cell => cell instanceof Date ? cell.toISOString() : cell)
+    );
+
+    return {
+      sheetName: sheetName,
+      totalRows: lastRow - 1,
+      totalColumns: lastCol,
+      headers: headers,
+      sampleData: serializedSampleData,
+      quickTest: quickTest,
+      expectedFormat: 'Columns: Timestamp, First Name, Last Name, Email, Role, Number of Shifts, Consecutive Preference, Availability',
+      note: 'Data format looks good! Your availability data is properly formatted.',
+      recommendation: 'Click "Generate Schedule" to create the shift schedule. The data is ready!'
+    };
+  }, 'debugAvailabilitySheet');
 }

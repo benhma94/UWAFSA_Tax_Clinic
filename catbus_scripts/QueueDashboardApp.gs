@@ -22,3 +22,20 @@ function doGetQueueDashboard() {
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
+
+/**
+ * Gets queue data with caching for improved performance
+ * @returns {Object} Object containing queue and volunteers data
+ */
+function getQueueDataCached() {
+  return getCachedOrFetch(
+    CACHE_CONFIG.KEYS.QUEUE,
+    () => {
+      return {
+        queue: getClientQueue(),
+        volunteers: getSignedInVolunteers()
+      };
+    },
+    CACHE_CONFIG.TTL.QUEUE
+  );
+}

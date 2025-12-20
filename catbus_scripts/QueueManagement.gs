@@ -150,7 +150,13 @@ function assignClientToVolunteer(clientId, volunteerName) {
       clientId,
       volunteerName
     ]);
-    
+
+    // Invalidate cache since queue data changed
+    invalidateMultiple([
+      CACHE_CONFIG.KEYS.QUEUE,
+      CACHE_CONFIG.KEYS.VOLUNTEER_LIST
+    ]);
+
     logAudit('Client Assigned', `Client: ${clientId}, Volunteer: ${volunteerName}`);
     return true;
   }, 'assignClientToVolunteer');

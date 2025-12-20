@@ -4,6 +4,76 @@
  */
 
 /**
+ * Gets a list of all volunteer names from the schedule
+ * @returns {Array<string>} Array of volunteer names
+ */
+function getAllVolunteerNames() {
+  return safeExecute(() => {
+    const sheet = getScheduleSheet();
+    const data = sheet.getDataRange().getValues();
+    
+    // Find volunteer assignments section
+    let assignmentsStartRow = -1;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toString().toUpperCase().includes('VOLUNTEER ASSIGNMENTS')) {
+        assignmentsStartRow = i + 2; // Skip header row
+        break;
+      }
+    }
+    
+    if (assignmentsStartRow === -1) {
+      return [];
+    }
+    
+    const volunteerNames = [];
+    
+    // Read all volunteer names
+    for (let i = assignmentsStartRow; i < data.length; i++) {
+      const name = data[i][0]?.toString().trim() || '';
+      
+      if (name && name !== '(none)' && !name.toLowerCase().includes('summary')) {
+        volunteerNames.push(name);
+      }
+    }
+    
+    return volunteerNames.sort();
+  }, 'getAllVolunteerNames');
+}
+
+/**
+ * Gets the day labels from the schedule sheet header
+ * @returns {Array<string>} Array of day labels (e.g., ['Sat, Mar 21', 'Sun, Mar 22', ...])
+ */
+function getDayLabels() {
+  return safeExecute(() => {
+    const sheet = getScheduleSheet();
+    const data = sheet.getDataRange().getValues();
+
+    if (data.length === 0) {
+      return ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
+    }
+
+    const headerRow = data[0];
+    const dayLabels = [];
+
+    // Header format: ['Time / Day', Day1, Day2, Day3, Day4]
+    // Skip column 0 (Time / Day) and read columns 1-4
+    for (let i = 1; i <= 4 && i < headerRow.length; i++) {
+      const dayLabel = headerRow[i]?.toString().trim() || `Day ${i}`;
+      // Simplify the date format
+      dayLabels.push(simplifyDateFormat(dayLabel));
+    }
+
+    // Fill in defaults if not enough columns
+    while (dayLabels.length < 4) {
+      dayLabels.push(`Day ${dayLabels.length + 1}`);
+    }
+
+    return dayLabels;
+  }, 'getDayLabels');
+}
+
+/**
  * Gets the schedule sheet - tries to find the schedule sheet by looking for "VOLUNTEER ASSIGNMENTS" header
  * @returns {Sheet} The schedule sheet, or null if not found
  */
@@ -59,10 +129,19 @@ function getScheduleSheet() {
 function getVolunteerScheduleByName(searchTerm) {
   return safeExecute(() => {
     const sheet = getScheduleSheet();
-    
+
     // Read the schedule data
     const data = sheet.getDataRange().getValues();
-    
+
+    // Get day labels from header row (columns 1-4)
+    const headerRow = data[0];
+    const dayLabels = [];
+    for (let i = 1; i <= 4 && i < headerRow.length; i++) {
+      const dayLabel = headerRow[i]?.toString().trim() || `Day ${i}`;
+      // Parse the date to simplify format (e.g., "Saturday March 21" -> "Sat, Mar 21")
+      dayLabels.push(simplifyDateFormat(dayLabel));
+    }
+
     // Find volunteer assignments section
     let assignmentsStartRow = -1;
     for (let i = 0; i < data.length; i++) {
@@ -71,45 +150,45 @@ function getVolunteerScheduleByName(searchTerm) {
         break;
       }
     }
-    
+
     if (assignmentsStartRow === -1) {
       return { shifts: [] };
     }
-    
-    // Map shift IDs to human-readable format
+
+    // Map shift IDs to human-readable format with actual dates
     const shiftIdToLabel = {
-      'D1A': { day: 'Day 1', time: '9:30-1:15' },
-      'D1B': { day: 'Day 1', time: '1:00-4:45' },
-      'D1C': { day: 'Day 1', time: '4:30-8:30' },
-      'D2A': { day: 'Day 2', time: '9:30-1:15' },
-      'D2B': { day: 'Day 2', time: '1:00-4:45' },
-      'D2C': { day: 'Day 2', time: '4:30-8:30' },
-      'D3A': { day: 'Day 3', time: '9:30-1:15' },
-      'D3B': { day: 'Day 3', time: '1:00-4:45' },
-      'D3C': { day: 'Day 3', time: '4:30-8:30' },
-      'D4A': { day: 'Day 4', time: '9:30-1:15' },
-      'D4B': { day: 'Day 4', time: '1:00-4:45' },
-      'D4C': { day: 'Day 4', time: '4:30-8:30' }
+      'D1A': { day: dayLabels[0] || 'Day 1', time: '9:30-1:15' },
+      'D1B': { day: dayLabels[0] || 'Day 1', time: '1:00-4:45' },
+      'D1C': { day: dayLabels[0] || 'Day 1', time: '4:30-8:30' },
+      'D2A': { day: dayLabels[1] || 'Day 2', time: '9:30-1:15' },
+      'D2B': { day: dayLabels[1] || 'Day 2', time: '1:00-4:45' },
+      'D2C': { day: dayLabels[1] || 'Day 2', time: '4:30-8:30' },
+      'D3A': { day: dayLabels[2] || 'Day 3', time: '9:30-1:15' },
+      'D3B': { day: dayLabels[2] || 'Day 3', time: '1:00-4:45' },
+      'D3C': { day: dayLabels[2] || 'Day 3', time: '4:30-8:30' },
+      'D4A': { day: dayLabels[3] || 'Day 4', time: '9:30-1:15' },
+      'D4B': { day: dayLabels[3] || 'Day 4', time: '1:00-4:45' },
+      'D4C': { day: dayLabels[3] || 'Day 4', time: '4:30-8:30' }
     };
-    
+
     // Read volunteer assignments
     const shifts = [];
     let volunteerName = '';
-    
+
     for (let i = assignmentsStartRow; i < data.length; i++) {
       const name = data[i][0]?.toString().trim() || '';
       const assignedShiftsString = data[i][4]?.toString().trim() || ''; // Column E (index 4)
-      
+
       if (!name || name === '(none)') continue;
-      
+
       // Check if name matches search term
       if (name.toLowerCase().includes(searchTerm.toLowerCase())) {
         volunteerName = name;
-        
+
         // Parse assigned shifts
         if (assignedShiftsString && assignedShiftsString !== '(none)') {
           const shiftIds = assignedShiftsString.split(',').map(s => s.trim());
-          
+
           shiftIds.forEach(shiftId => {
             if (shiftIdToLabel[shiftId]) {
               shifts.push({
@@ -122,23 +201,57 @@ function getVolunteerScheduleByName(searchTerm) {
         }
       }
     }
-    
+
     // Sort shifts by day and time
     shifts.sort((a, b) => {
-      const dayOrder = { 'Day 1': 1, 'Day 2': 2, 'Day 3': 3, 'Day 4': 4 };
-      const timeOrder = { '9:30-1:15': 1, '1:00-4:45': 2, '4:30-8:30': 3 };
-      
-      if (dayOrder[a.day] !== dayOrder[b.day]) {
-        return dayOrder[a.day] - dayOrder[b.day];
+      // Extract day number from shift ID for sorting
+      const getDayNum = (shiftId) => parseInt(shiftId.charAt(1));
+      const getTimeNum = (shiftId) => shiftId.charCodeAt(2) - 65; // A=0, B=1, C=2
+
+      const aDayNum = getDayNum(a.shiftId);
+      const bDayNum = getDayNum(b.shiftId);
+
+      if (aDayNum !== bDayNum) {
+        return aDayNum - bDayNum;
       }
-      return timeOrder[a.time] - timeOrder[b.time];
+      return getTimeNum(a.shiftId) - getTimeNum(b.shiftId);
     });
-    
+
     return {
       volunteerName: volunteerName,
       shifts: shifts
     };
   }, 'getVolunteerScheduleByName');
+}
+
+/**
+ * Simplifies date format from "Saturday March 21" to "Sat, Mar 21"
+ * @param {string} dateString - Full date string
+ * @returns {string} Simplified date string
+ */
+function simplifyDateFormat(dateString) {
+  if (!dateString || typeof dateString !== 'string') {
+    return dateString;
+  }
+
+  // Try to parse the date string (e.g., "Saturday March 21" or "Saturday March 21 2026")
+  const parts = dateString.trim().split(/\s+/);
+
+  if (parts.length < 3) {
+    return dateString; // Can't parse, return original
+  }
+
+  const dayOfWeek = parts[0]; // "Saturday"
+  const month = parts[1];      // "March"
+  const day = parts[2];        // "21"
+
+  // Abbreviate day of week (first 3 characters)
+  const dayAbbr = dayOfWeek.substring(0, 3);
+
+  // Abbreviate month (first 3 characters)
+  const monthAbbr = month.substring(0, 3);
+
+  return `${dayAbbr}, ${monthAbbr} ${day}`;
 }
 
 /**
@@ -179,10 +292,12 @@ function getVolunteerScheduleByDay(day, filterRole = '') {
     }
     
     // Find the day column in the header row
+    // The schedule structure is always: ['Time / Day', Day1, Day2, Day3, Day4]
+    // Can match by exact header text (e.g., "Saturday March 21") or by day number
     let dayColumn = -1;
     const headerRow = data[0];
-    
-    // Header format: ['Time / Day', 'Day 1', 'Day 2', 'Day 3', 'Day 4']
+
+    // First, try to match by exact header text (for full date labels like "Saturday March 21 2026")
     for (let i = 1; i < headerRow.length; i++) {
       const headerValue = headerRow[i]?.toString().trim() || '';
       if (headerValue === day) {
@@ -190,17 +305,47 @@ function getVolunteerScheduleByDay(day, filterRole = '') {
         break;
       }
     }
-    
+
+    // If not found, try matching simplified format (e.g., "Sat, Mar 21" matches "Saturday March 21 2026")
     if (dayColumn === -1) {
+      for (let i = 1; i < headerRow.length; i++) {
+        const headerValue = headerRow[i]?.toString().trim() || '';
+        const simplifiedHeader = simplifyDateFormat(headerValue);
+        if (simplifiedHeader === day) {
+          dayColumn = i;
+          break;
+        }
+      }
+    }
+
+    // If not found, try to extract day number from "Day 1", "Day 2", "Day 3", "Day 4"
+    if (dayColumn === -1) {
+      const dayMatch = day.match(/Day\s*(\d+)/i);
+      if (dayMatch) {
+        const dayNumber = parseInt(dayMatch[1]);
+        if (dayNumber >= 1 && dayNumber <= 4) {
+          // Day 1 = column 1, Day 2 = column 2, Day 3 = column 3, Day 4 = column 4
+          dayColumn = dayNumber;
+        }
+      }
+    }
+    
+    // Validate column exists
+    if (dayColumn === -1 || dayColumn >= headerRow.length) {
+      Logger.log(`Could not find column for day: ${day}. Header row: ${JSON.stringify(headerRow)}`);
       return { schedule: {}, volunteerRoles: volunteerRoles };
     }
     
+    // Get the actual day label from the header for display and simplify it
+    const actualDayLabel = simplifyDateFormat(headerRow[dayColumn]?.toString().trim() || day);
+    Logger.log(`Found day column ${dayColumn} for day: ${day}. Header value: ${actualDayLabel}`);
+
     // Map row indices to time slots for that day
     // Row 1 (index 0) is header, Row 2 (index 1) is 9:30-1:15, Row 3 (index 2) is 1:00-4:45, Row 4 (index 3) is 4:30-8:30
     const timeSlotMap = {
-      1: `${day} 9:30-1:15`,   // Row 2 (index 1) - 9:30-1:15
-      2: `${day} 1:00-4:45`,   // Row 3 (index 2) - 1:00-4:45
-      3: `${day} 4:30-8:30`    // Row 4 (index 3) - 4:30-8:30
+      1: `${actualDayLabel} 9:30-1:15`,   // Row 2 (index 1) - 9:30-1:15
+      2: `${actualDayLabel} 1:00-4:45`,   // Row 3 (index 2) - 1:00-4:45
+      3: `${actualDayLabel} 4:30-8:30`    // Row 4 (index 3) - 4:30-8:30
     };
     
     const schedule = {};
@@ -214,7 +359,7 @@ function getVolunteerScheduleByDay(day, filterRole = '') {
       if (volunteersString && volunteersString !== '(unfilled)') {
         // Split by comma and trim, filter out empty strings
         let volunteers = volunteersString.split(',').map(v => v.trim()).filter(v => v && v.length > 0);
-        
+
         // Filter by role if specified
         if (filterRole && filterRole.trim()) {
           volunteers = volunteers.filter(volunteer => {
@@ -222,13 +367,21 @@ function getVolunteerScheduleByDay(day, filterRole = '') {
             return role === filterRole.trim();
           });
         }
-        
+
+        // Sort alphabetically
+        volunteers.sort((a, b) => a.localeCompare(b));
+
         schedule[timeSlot] = volunteers;
       } else {
         schedule[timeSlot] = [];
       }
     }
     
-    return { schedule: schedule, volunteerRoles: volunteerRoles };
+    // Return schedule with the actual day label for display
+    return { 
+      schedule: schedule, 
+      volunteerRoles: volunteerRoles,
+      dayLabel: actualDayLabel  // Include the actual day label for display
+    };
   }, 'getVolunteerScheduleByDay');
 }

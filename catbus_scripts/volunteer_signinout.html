@@ -297,6 +297,74 @@
       color: #aaa;
     }
 
+    /* Autocomplete dropdown styles */
+    .autocomplete-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 2px solid var(--border-light);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      background-color: #ffffff;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark .autocomplete-dropdown {
+      background-color: #333;
+      border-color: var(--border-dark);
+    }
+
+    .autocomplete-item {
+      padding: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark .autocomplete-item {
+      border-bottom-color: var(--border-dark);
+    }
+
+    .autocomplete-item:hover {
+      background-color: rgba(142, 0, 0, 0.1);
+    }
+
+    body.dark .autocomplete-item:hover {
+      background-color: rgba(142, 0, 0, 0.2);
+    }
+
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+
+    .autocomplete-item.highlighted {
+      background-color: rgba(142, 0, 0, 0.15);
+    }
+
+    body.dark .autocomplete-item.highlighted {
+      background-color: rgba(142, 0, 0, 0.3);
+    }
+
+    .autocomplete-no-matches {
+      padding: 12px;
+      color: #666;
+      font-style: italic;
+    }
+
+    body.dark .autocomplete-no-matches {
+      color: #aaa;
+    }
+
     .footer-copyright {
       position: fixed;
       bottom: 10px;
@@ -339,7 +407,11 @@
       <form id="signInForm" onsubmit="handleSignIn(event)">
         <div class="form-group">
           <label for="volunteerName">Your Name:</label>
-          <input type="text" id="volunteerName" required placeholder="Enter your full name">
+          <div class="autocomplete-container">
+            <input type="text" id="volunteerName" required placeholder="Start typing your name..." autocomplete="off">
+            <div id="volunteerAutocomplete" class="autocomplete-dropdown"></div>
+          </div>
+          <div class="help-text">Select from suggestions or type a custom name</div>
         </div>
         
         <div class="form-group">
@@ -366,7 +438,6 @@
         
         <div class="form-group">
           <label for="sessionSelect">Select Your Session:</label>
-          <button type="button" class="refresh-btn" onclick="refreshActiveSessions()">🔄 Refresh</button>
           <select id="sessionSelect" required>
             <option value="">Loading active sessions...</option>
           </select>
@@ -404,6 +475,9 @@
 <script>
   let refreshInterval = null;
   let allSessions = []; // Store all sessions for filtering
+  let allVolunteers = []; // Store volunteer data: [{name: string, role: string}]
+  let filteredVolunteers = []; // Filtered volunteers for autocomplete
+  let highlightedIndex = -1; // Currently highlighted autocomplete item
 
   function toggleTheme() {
     const body = document.body;
@@ -429,6 +503,170 @@
 
   window.addEventListener('load', loadThemePreference);
 
+  /**
+   * Loads volunteer data from consolidated sheet for autocomplete
+   */
+  function loadVolunteerData() {
+    console.log('loadVolunteerData called - starting to fetch volunteer data');
+    google.script.run
+      .withSuccessHandler(volunteers => {
+        allVolunteers = volunteers || [];
+        console.log(`✓ Loaded ${allVolunteers.length} volunteers for autocomplete`);
+        if (allVolunteers.length > 0) {
+          console.log('Sample volunteer:', allVolunteers[0]);
+        }
+      })
+      .withFailureHandler(error => {
+        console.error('✗ Error loading volunteer data:', error);
+        allVolunteers = [];
+      })
+      .getConsolidatedVolunteerData();
+  }
+
+  /**
+   * Sets up autocomplete functionality for volunteer name input
+   */
+  function setupVolunteerAutocomplete() {
+    const input = document.getElementById('volunteerName');
+    const dropdown = document.getElementById('volunteerAutocomplete');
+
+    console.log('setupVolunteerAutocomplete called');
+    console.log('Input element:', input);
+    console.log('Dropdown element:', dropdown);
+
+    if (!input || !dropdown) {
+      console.error('Missing autocomplete elements!');
+      return;
+    }
+
+    input.addEventListener('input', function() {
+      const searchTerm = this.value.trim().toLowerCase();
+      console.log('Input event - search term:', searchTerm, '| allVolunteers count:', allVolunteers.length);
+
+      if (searchTerm.length === 0) {
+        dropdown.style.display = 'none';
+        filteredVolunteers = [];
+        highlightedIndex = -1;
+        return;
+      }
+
+      filteredVolunteers = allVolunteers.filter(v =>
+        v.name.toLowerCase().includes(searchTerm)
+      );
+
+      highlightedIndex = -1;
+
+      if (filteredVolunteers.length === 0) {
+        dropdown.innerHTML = '<div class="autocomplete-no-matches">No matching volunteers found</div>';
+        dropdown.style.display = 'block';
+      } else {
+        const displayCount = Math.min(filteredVolunteers.length, 10);
+        let html = '';
+
+        for (let i = 0; i < displayCount; i++) {
+          const volunteer = filteredVolunteers[i];
+          const escapedName = volunteer.name.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+          const highlightedName = highlightMatch(volunteer.name, searchTerm);
+          const roleText = volunteer.role ? ` <span style="opacity: 0.7; font-size: 0.9em;">(${volunteer.role})</span>` : '';
+
+          html += `<div class="autocomplete-item" data-index="${i}" data-name="${escapedName}" data-role="${volunteer.role || ''}" onclick="selectVolunteer(this.dataset.name, this.dataset.role)">${highlightedName}${roleText}</div>`;
+        }
+
+        if (filteredVolunteers.length > 10) {
+          html += `<div class="autocomplete-no-matches">... and ${filteredVolunteers.length - 10} more</div>`;
+        }
+
+        dropdown.innerHTML = html;
+        dropdown.style.display = 'block';
+      }
+    });
+
+    input.addEventListener('keydown', function(e) {
+      if (dropdown.style.display === 'none' || filteredVolunteers.length === 0) {
+        return;
+      }
+
+      const items = dropdown.querySelectorAll('.autocomplete-item');
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        highlightedIndex = (highlightedIndex + 1) % items.length;
+        updateAutocompleteHighlight(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        highlightedIndex = highlightedIndex <= 0 ? items.length - 1 : highlightedIndex - 1;
+        updateAutocompleteHighlight(items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filteredVolunteers.length) {
+          const selectedItem = items[highlightedIndex];
+          selectVolunteer(selectedItem.dataset.name, selectedItem.dataset.role);
+        }
+      } else if (e.key === 'Escape') {
+        dropdown.style.display = 'none';
+        highlightedIndex = -1;
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.style.display = 'none';
+        highlightedIndex = -1;
+      }
+    });
+  }
+
+  /**
+   * Updates visual highlighting of autocomplete items
+   */
+  function updateAutocompleteHighlight(items) {
+    items.forEach((item, index) => {
+      if (index === highlightedIndex) {
+        item.classList.add('highlighted');
+        item.scrollIntoView({ block: 'nearest' });
+      } else {
+        item.classList.remove('highlighted');
+      }
+    });
+  }
+
+  /**
+   * Highlights matching text in autocomplete suggestions
+   */
+  function highlightMatch(text, searchTerm) {
+    if (!searchTerm) return text;
+    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    return text.replace(regex, '<strong>$1</strong>');
+  }
+
+  /**
+   * Selects a volunteer from autocomplete and preloads station if Mentor
+   */
+  function selectVolunteer(name, role) {
+    const input = document.getElementById('volunteerName');
+    const dropdown = document.getElementById('volunteerAutocomplete');
+    const stationSelect = document.getElementById('stationSelect');
+
+    input.value = name;
+    dropdown.style.display = 'none';
+    highlightedIndex = -1;
+
+    // Auto-preload "Mentor" station if role is "Mentor"
+    if (role && role.trim() === 'Mentor') {
+      const mentorOption = Array.from(stationSelect.options).find(
+        opt => opt.value === 'Mentor'
+      );
+
+      if (mentorOption) {
+        stationSelect.value = 'Mentor';
+        console.log('Auto-selected Mentor station for', name);
+      }
+    } else {
+      // Reset to placeholder "Select station..." option
+      stationSelect.value = '';
+    }
+  }
+
   function showMessage(message, type = 'info') {
     const messageBox = document.getElementById('messageBox');
     messageBox.textContent = message;
@@ -453,7 +691,15 @@
       .withSuccessHandler(stations => {
         const select = document.getElementById('stationSelect');
         select.innerHTML = '';
-        
+
+        // Add placeholder option
+        const placeholderOption = document.createElement('option');
+        placeholderOption.value = '';
+        placeholderOption.textContent = 'Select station...';
+        placeholderOption.disabled = true;
+        placeholderOption.selected = true;
+        select.appendChild(placeholderOption);
+
         if (stations && stations.length > 0) {
           stations.forEach(station => {
             const option = document.createElement('option');
@@ -462,16 +708,16 @@
             select.appendChild(option);
           });
         } else {
-          const option = document.createElement('option');
-          option.value = '';
-          option.textContent = 'No stations available';
-          option.disabled = true;
-          select.appendChild(option);
+          const noStationOption = document.createElement('option');
+          noStationOption.value = '';
+          noStationOption.textContent = 'No stations available';
+          noStationOption.disabled = true;
+          select.appendChild(noStationOption);
         }
       })
       .withFailureHandler(error => {
         const select = document.getElementById('stationSelect');
-        select.innerHTML = '<option value="">Error loading stations</option>';
+        select.innerHTML = '<option value="" disabled selected>Error loading stations</option>';
         console.error('Error loading stations:', error);
       })
       .getAvailableStations();
@@ -656,10 +902,12 @@
 
   // Initialize on page load
   window.addEventListener('load', () => {
+    loadVolunteerData();          // Load volunteer data for autocomplete
+    setupVolunteerAutocomplete(); // Setup autocomplete event handlers
     loadAvailableStations();
     loadActiveSessions();
     refreshStats();
-    
+
     // Auto-refresh every 30 seconds
     refreshInterval = setInterval(() => {
       loadAvailableStations();

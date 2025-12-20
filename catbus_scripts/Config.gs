@@ -6,7 +6,19 @@
 const CONFIG = {
   // Spreadsheet ID - Update this if you need to change spreadsheets
   SPREADSHEET_ID: '1W669LwuA8IpB03BlmhwnUkkupMZW2Cg0I_6cvSp0pwI',
-  
+
+  // External Spreadsheet for Volunteer Data
+  EXTERNAL_SPREADSHEETS: {
+    CONSOLIDATED_VOLUNTEERS: {
+      ID: '1HvJ3HFwcQySPaRMk0_5XIDo7qcjnhiah4DEM23Dknqg',
+      SHEET_NAME: 'Consolidated List',
+      COLUMNS: {
+        ROLE: 0,        // Column A - Role (e.g., "Mentor")
+        NAME: 7         // Column H - Volunteer names
+      }
+    }
+  },
+
   // Sheet Names
   SHEETS: {
     CLIENT_INTAKE: 'Client Intake',

@@ -69,6 +69,10 @@ function sendRequest(volunteer, requestType) {
       config.primaryStatus
     ]);
 
+    // Invalidate cache since request data changed
+    const cacheKey = requestType === 'HELP' ? CACHE_CONFIG.KEYS.HELP_REQUESTS : CACHE_CONFIG.KEYS.REVIEW_REQUESTS;
+    invalidateCache(cacheKey);
+
     logAudit(`${requestType} Request Sent`, `Volunteer: ${volunteer}`);
     return true;
   }, `send${requestType}Request`);
@@ -111,6 +115,11 @@ function updateRequestStatus(volunteer, requestType, fromStatus, toStatus) {
         if (v === volunteer && fromStatuses.some(fs => fs.toLowerCase() === status.toLowerCase())) {
           const rowNum = startRow + i;
           sheet.getRange(rowNum, config.columns.STATUS + 1).setValue(toStatus);
+
+          // Invalidate cache since request data changed
+          const cacheKey = requestType === 'HELP' ? CACHE_CONFIG.KEYS.HELP_REQUESTS : CACHE_CONFIG.KEYS.REVIEW_REQUESTS;
+          invalidateCache(cacheKey);
+
           logAudit(`${requestType} Request Updated`, `Volunteer: ${volunteer}, Status: ${toStatus}`);
           return true;
         }

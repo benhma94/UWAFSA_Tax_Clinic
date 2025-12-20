@@ -56,3 +56,15 @@ function getReviewRequestStatus(volunteer) {
 function getLiveReviewRequests() {
   return getLiveRequests('REVIEW');
 }
+
+/**
+ * Gets all currently requested review requests with caching
+ * @returns {Array<Object>} Array of review request objects
+ */
+function getLiveReviewRequestsCached() {
+  return getCachedOrFetch(
+    CACHE_CONFIG.KEYS.REVIEW_REQUESTS,
+    () => getLiveReviewRequests(),
+    CACHE_CONFIG.TTL.REVIEW_REQUESTS
+  );
+}

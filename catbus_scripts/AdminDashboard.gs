@@ -4,6 +4,18 @@
  */
 
 /**
+ * Gets return completion summary with caching
+ * @returns {Object} Summary with totalCompleted, completedToday, and hourlyCounts
+ */
+function getReturnSummaryCached() {
+  return getCachedOrFetch(
+    CACHE_CONFIG.KEYS.RETURN_SUMMARY,
+    () => getReturnSummary(),
+    CACHE_CONFIG.TTL.RETURN_SUMMARY
+  );
+}
+
+/**
  * Gets return completion summary
  * Optimized to read only necessary columns and rows
  * @returns {Object} Summary with totalCompleted, completedToday, and hourlyCounts

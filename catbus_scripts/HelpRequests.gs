@@ -57,3 +57,15 @@ function getHelpStatus(volunteer) {
 function getLiveHelpRequests() {
   return getLiveRequests('HELP');
 }
+
+/**
+ * Gets all currently active or escalated help requests with caching
+ * @returns {Array<Object>} Array of help request objects
+ */
+function getLiveHelpRequestsCached() {
+  return getCachedOrFetch(
+    CACHE_CONFIG.KEYS.HELP_REQUESTS,
+    () => getLiveHelpRequests(),
+    CACHE_CONFIG.TTL.HELP_REQUESTS
+  );
+}

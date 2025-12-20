@@ -265,6 +265,74 @@
     .footer-copyright:hover {
       opacity: 0.8;
     }
+
+    /* Autocomplete dropdown styles */
+    .autocomplete-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 2px solid var(--border-light);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      background-color: #ffffff;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark .autocomplete-dropdown {
+      background-color: #333;
+      border-color: var(--border-dark);
+    }
+
+    .autocomplete-item {
+      padding: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark .autocomplete-item {
+      border-bottom-color: var(--border-dark);
+    }
+
+    .autocomplete-item:hover {
+      background-color: rgba(142, 0, 0, 0.1);
+    }
+
+    body.dark .autocomplete-item:hover {
+      background-color: rgba(142, 0, 0, 0.2);
+    }
+
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+
+    .autocomplete-item.highlighted {
+      background-color: rgba(142, 0, 0, 0.15);
+    }
+
+    body.dark .autocomplete-item.highlighted {
+      background-color: rgba(142, 0, 0, 0.3);
+    }
+
+    .no-matches {
+      padding: 12px;
+      color: #666;
+      font-style: italic;
+    }
+
+    body.dark .no-matches {
+      color: #aaa;
+    }
   </style>
 </head>
 <body class="light">
@@ -279,9 +347,13 @@
     <h2>Search by Name</h2>
     <div class="form-group">
       <label for="searchName">Search for your name:</label>
-      <div style="display: flex; gap: 10px;">
-        <input type="text" id="searchName" placeholder="Enter your first or last name" style="flex: 1;">
+      <div class="autocomplete-container">
+        <input type="text" id="searchName" placeholder="Start typing to search for a volunteer..." autocomplete="off" style="flex: 1;">
+        <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
+      </div>
+      <div style="margin-top: 10px; display: flex; gap: 10px;">
         <button type="button" onclick="searchByName()" style="width: auto; min-width: 100px;">Search</button>
+        <button type="button" onclick="clearSearch()" style="width: auto; min-width: 100px; background-color: #666;">Clear</button>
       </div>
     </div>
     
@@ -297,10 +369,10 @@
       <label for="selectDay">Select a day:</label>
       <select id="selectDay" onchange="viewDaySchedule()">
         <option value="">Select a day...</option>
-        <option value="Day 1">Day 1</option>
-        <option value="Day 2">Day 2</option>
-        <option value="Day 3">Day 3</option>
-        <option value="Day 4">Day 4</option>
+        <option value="Day 1" id="dayOption1">Loading...</option>
+        <option value="Day 2" id="dayOption2">Loading...</option>
+        <option value="Day 3" id="dayOption3">Loading...</option>
+        <option value="Day 4" id="dayOption4">Loading...</option>
       </select>
     </div>
     
@@ -322,6 +394,10 @@
   </div>
 
 <script>
+  let allVolunteerNames = [];
+  let filteredVolunteers = [];
+  let highlightedIndex = -1;
+
   function toggleTheme() {
     const body = document.body;
     const toggle = document.querySelector('.toggle-theme');
@@ -344,7 +420,160 @@
     }
   }
 
-  window.addEventListener('load', loadThemePreference);
+  window.addEventListener('load', () => {
+    loadThemePreference();
+    loadVolunteerNames();
+    loadDayLabels();
+    setupAutocomplete();
+  });
+
+  function loadDayLabels() {
+    google.script.run
+      .withSuccessHandler(dayLabels => {
+        // Update dropdown options with actual day labels
+        for (let i = 0; i < 4 && i < dayLabels.length; i++) {
+          const option = document.getElementById(`dayOption${i + 1}`);
+          if (option) {
+            option.textContent = dayLabels[i] || `Day ${i + 1}`;
+            option.value = dayLabels[i] || `Day ${i + 1}`;
+          }
+        }
+      })
+      .withFailureHandler(error => {
+        console.error('Error loading day labels:', error);
+        // Keep default "Day 1", "Day 2", etc. if loading fails
+      })
+      .getDayLabels();
+  }
+
+  function loadVolunteerNames() {
+    google.script.run
+      .withSuccessHandler(names => {
+        allVolunteerNames = names || [];
+        console.log('Loaded ' + allVolunteerNames.length + ' volunteer names');
+      })
+      .withFailureHandler(error => {
+        console.error('Error loading volunteer names:', error);
+        allVolunteerNames = [];
+      })
+      .getAllVolunteerNames();
+  }
+
+  function setupAutocomplete() {
+    const searchInput = document.getElementById('searchName');
+    const dropdown = document.getElementById('autocompleteDropdown');
+
+    searchInput.addEventListener('input', function() {
+      const searchTerm = this.value.trim().toLowerCase();
+      
+      if (searchTerm.length === 0) {
+        dropdown.style.display = 'none';
+        filteredVolunteers = [];
+        return;
+      }
+
+      // Filter volunteers
+      filteredVolunteers = allVolunteerNames.filter(name => 
+        name.toLowerCase().includes(searchTerm)
+      );
+
+      highlightedIndex = -1;
+
+      if (filteredVolunteers.length === 0) {
+        dropdown.innerHTML = '<div class="no-matches">No volunteers found</div>';
+        dropdown.style.display = 'block';
+      } else {
+        // Show up to 10 results
+        const displayCount = Math.min(filteredVolunteers.length, 10);
+        let html = '';
+        for (let i = 0; i < displayCount; i++) {
+          const volunteerName = filteredVolunteers[i];
+          // Escape the name for HTML and use data attribute for safer handling
+          const escapedName = volunteerName.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+          html += `<div class="autocomplete-item" data-index="${i}" data-name="${escapedName}" onclick="selectVolunteer(this.dataset.name)">${highlightMatch(volunteerName, searchTerm)}</div>`;
+        }
+        if (filteredVolunteers.length > 10) {
+          html += `<div class="no-matches">... and ${filteredVolunteers.length - 10} more</div>`;
+        }
+        dropdown.innerHTML = html;
+        dropdown.style.display = 'block';
+      }
+    });
+
+    // Handle keyboard navigation
+    searchInput.addEventListener('keydown', function(e) {
+      if (dropdown.style.display === 'none' || filteredVolunteers.length === 0) {
+        if (e.key === 'Enter') {
+          searchByName();
+        }
+        return;
+      }
+
+      const items = dropdown.querySelectorAll('.autocomplete-item');
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        highlightedIndex = (highlightedIndex + 1) % items.length;
+        updateHighlight(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        highlightedIndex = highlightedIndex <= 0 ? items.length - 1 : highlightedIndex - 1;
+        updateHighlight(items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filteredVolunteers.length) {
+          const selectedItem = items[highlightedIndex];
+          selectVolunteer(selectedItem.dataset.name);
+        } else {
+          searchByName();
+        }
+      } else if (e.key === 'Escape') {
+        dropdown.style.display = 'none';
+        highlightedIndex = -1;
+      }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.style.display = 'none';
+        highlightedIndex = -1;
+      }
+    });
+  }
+
+  function updateHighlight(items) {
+    items.forEach((item, index) => {
+      if (index === highlightedIndex) {
+        item.classList.add('highlighted');
+        item.scrollIntoView({ block: 'nearest' });
+      } else {
+        item.classList.remove('highlighted');
+      }
+    });
+  }
+
+  function highlightMatch(text, searchTerm) {
+    if (!searchTerm) return text;
+    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    return text.replace(regex, '<strong>$1</strong>');
+  }
+
+  function selectVolunteer(name) {
+    document.getElementById('searchName').value = name;
+    document.getElementById('autocompleteDropdown').style.display = 'none';
+    highlightedIndex = -1;
+    // Automatically search when a volunteer is selected
+    searchByName();
+  }
+
+  function clearSearch() {
+    document.getElementById('searchName').value = '';
+    document.getElementById('autocompleteDropdown').style.display = 'none';
+    document.getElementById('nameResults').style.display = 'none';
+    filteredVolunteers = [];
+    highlightedIndex = -1;
+  }
 
   function searchByName() {
     const searchTerm = document.getElementById('searchName').value.trim().toLowerCase();
@@ -425,11 +654,6 @@
     const dayResultsContent = document.getElementById('dayResultsContent');
     
     dayResults.style.display = 'block';
-    let headerText = `Schedule for ${selectedDay}`;
-    if (filterRole) {
-      headerText += ` - ${filterRole} only`;
-    }
-    dayResultsHeader.textContent = headerText;
     dayResultsContent.innerHTML = '<div class="loading"></div> Loading...';
 
     google.script.run
@@ -444,9 +668,20 @@
 
   function displayDayResults(result, day, filterRole) {
     const dayResultsContent = document.getElementById('dayResultsContent');
+    const dayResultsHeader = document.getElementById('dayResultsHeader');
+    
+    // Use the actual day label from the result if available
+    const displayDay = result.dayLabel || day;
+    
+    // Update header with actual day label
+    let headerText = `Schedule for ${displayDay}`;
+    if (filterRole) {
+      headerText += ` - ${filterRole} only`;
+    }
+    dayResultsHeader.textContent = headerText;
     
     if (!result || !result.schedule || Object.keys(result.schedule).length === 0) {
-      let message = `No volunteers scheduled for ${day}`;
+      let message = `No volunteers scheduled for ${displayDay}`;
       if (filterRole) {
         message += ` with role ${filterRole}`;
       }
@@ -513,7 +748,7 @@
     });
 
     if (!html) {
-      let message = `No volunteers scheduled for ${day}`;
+      let message = `No volunteers scheduled for ${displayDay}`;
       if (filterRole) {
         message += ` with role ${filterRole}`;
       }
@@ -523,12 +758,7 @@
     dayResultsContent.innerHTML = html;
   }
 
-  // Allow Enter key to trigger search
-  document.getElementById('searchName').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      searchByName();
-    }
-  });
+  // Enter key handling is now in setupAutocomplete() for better autocomplete integration
 </script>
 <div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
 </body>

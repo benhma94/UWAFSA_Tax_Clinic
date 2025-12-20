@@ -236,3 +236,135 @@ function getSignInStats() {
     };
   }, 'getSignInStats');
 }
+
+/**
+ * Gets consolidated volunteer data from external spreadsheet
+ * Used for autocomplete in sign-in form
+ * @returns {Array<Object>} Array of objects with {name: string, role: string}
+ */
+function getConsolidatedVolunteerData() {
+  return safeExecute(() => {
+    try {
+      const externalConfig = CONFIG.EXTERNAL_SPREADSHEETS.CONSOLIDATED_VOLUNTEERS;
+      Logger.log(`Opening external spreadsheet: ${externalConfig.ID}`);
+      Logger.log(`Looking for sheet: ${externalConfig.SHEET_NAME}`);
+
+      const ss = SpreadsheetApp.openById(externalConfig.ID);
+      const sheet = ss.getSheetByName(externalConfig.SHEET_NAME);
+
+      if (!sheet) {
+        Logger.log(`Sheet "${externalConfig.SHEET_NAME}" not found in external spreadsheet`);
+        Logger.log(`Available sheets: ${ss.getSheets().map(s => s.getName()).join(', ')}`);
+        return [];
+      }
+
+      const data = sheet.getDataRange().getValues();
+      Logger.log(`Sheet has ${data.length} rows`);
+
+      // Log first few rows to debug
+      if (data.length > 0) {
+        Logger.log(`Header row (row 0): ${JSON.stringify(data[0])}`);
+      }
+      if (data.length > 1) {
+        Logger.log(`Sample data row (row 1): ${JSON.stringify(data[1])}`);
+        Logger.log(`  - Column A (index 0): "${data[1][0]}"`);
+        Logger.log(`  - Column H (index 7): "${data[1][7]}"`);
+      }
+
+      const volunteers = [];
+
+      // Skip header row (index 0), start from row 1
+      for (let i = 1; i < data.length; i++) {
+        const role = data[i][externalConfig.COLUMNS.ROLE]?.toString().trim() || '';
+        const name = data[i][externalConfig.COLUMNS.NAME]?.toString().trim() || '';
+
+        // Only include rows with valid names
+        if (name && name.length > 0) {
+          volunteers.push({
+            name: name,
+            role: role || 'N/A'
+          });
+        }
+      }
+
+      // Sort by name for consistent ordering
+      volunteers.sort((a, b) => a.name.localeCompare(b.name));
+
+      Logger.log(`Loaded ${volunteers.length} volunteers from consolidated sheet`);
+      if (volunteers.length > 0) {
+        Logger.log(`Sample volunteer: ${JSON.stringify(volunteers[0])}`);
+      }
+
+      return volunteers;
+
+    } catch (error) {
+      Logger.log(`Error accessing external spreadsheet: ${error.message}`);
+      Logger.log(`Error stack: ${error.stack}`);
+      // Return empty array if external sheet is not accessible
+      // This allows the form to still work without autocomplete
+      return [];
+    }
+  }, 'getConsolidatedVolunteerData');
+}
+
+/**
+ * TEST FUNCTION - Run this directly in Apps Script editor to debug
+ * Shows detailed information about the consolidated sheet data
+ */
+function testConsolidatedSheet() {
+  const externalConfig = CONFIG.EXTERNAL_SPREADSHEETS.CONSOLIDATED_VOLUNTEERS;
+
+  Logger.log('=== TESTING CONSOLIDATED SHEET ACCESS ===');
+  Logger.log(`Spreadsheet ID: ${externalConfig.ID}`);
+  Logger.log(`Sheet Name: ${externalConfig.SHEET_NAME}`);
+
+  try {
+    const ss = SpreadsheetApp.openById(externalConfig.ID);
+    Logger.log('✓ Successfully opened spreadsheet');
+
+    const allSheets = ss.getSheets();
+    Logger.log(`\nAvailable sheets (${allSheets.length}):`);
+    allSheets.forEach((s, i) => {
+      Logger.log(`  ${i + 1}. "${s.getName()}"`);
+    });
+
+    const sheet = ss.getSheetByName(externalConfig.SHEET_NAME);
+    if (!sheet) {
+      Logger.log(`\n✗ ERROR: Sheet "${externalConfig.SHEET_NAME}" not found!`);
+      return;
+    }
+
+    Logger.log(`\n✓ Found sheet: "${externalConfig.SHEET_NAME}"`);
+
+    const data = sheet.getDataRange().getValues();
+    Logger.log(`\nSheet has ${data.length} rows x ${data[0]?.length || 0} columns`);
+
+    // Show first 5 rows with all columns
+    Logger.log('\n=== FIRST 5 ROWS (All Columns) ===');
+    for (let i = 0; i < Math.min(5, data.length); i++) {
+      Logger.log(`\nRow ${i}:`);
+      for (let j = 0; j < data[i].length; j++) {
+        const colLetter = String.fromCharCode(65 + j); // A, B, C, etc.
+        const value = data[i][j];
+        Logger.log(`  Column ${colLetter} (index ${j}): "${value}"`);
+      }
+    }
+
+    // Specifically check columns A and H
+    Logger.log('\n=== CHECKING TARGET COLUMNS (A and H) ===');
+    Logger.log(`Column A is index: ${externalConfig.COLUMNS.ROLE}`);
+    Logger.log(`Column H is index: ${externalConfig.COLUMNS.NAME}`);
+
+    for (let i = 0; i < Math.min(10, data.length); i++) {
+      const role = data[i][externalConfig.COLUMNS.ROLE];
+      const name = data[i][externalConfig.COLUMNS.NAME];
+      Logger.log(`Row ${i}: Role="${role}" | Name="${name}"`);
+    }
+
+    Logger.log('\n=== TEST COMPLETE ===');
+
+  } catch (error) {
+    Logger.log(`\n✗ ERROR: ${error.message}`);
+    Logger.log(`Stack: ${error.stack}`);
+  }
+}
