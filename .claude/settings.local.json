@@ -13,7 +13,10 @@
       "Bash(cmd /c \"c:\\\\Users\\\\katma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\catbus_scripts\\\\upload.bat\")",
       "Bash(cmd /c clasp push)",
       "Bash(upload.bat)",
-      "Bash(cmd /c \"cd /d c:\\\\Users\\\\Ben Ma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\catbus_scripts && upload.bat\")"
+      "Bash(cmd /c \"cd /d c:\\\\Users\\\\Ben Ma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\catbus_scripts && upload.bat\")",
+      "Bash(grep:*)",
+      "Bash(cd:*)",
+      "Bash(xargs:*)"
     ]
   }
 }
