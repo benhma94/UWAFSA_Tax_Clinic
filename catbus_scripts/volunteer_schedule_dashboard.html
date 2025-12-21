@@ -5,15 +5,20 @@
   <style>
     :root {
       --accent-color: rgb(142, 0, 0);
-      --bg-color-light: #ffffff;
+      --bg-color-light: #f5f5f5;
       --text-color-light: #1a1a1a;
-      --input-bg-light: #f2f2f2;
-      --border-light: #ccc;
+      --input-bg-light: #ffffff;
+      --border-light: #e0e0e0;
       --bg-color-dark: #1e1e1e;
       --text-color-dark: #f0f0f0;
       --input-bg-dark: #2a2a2a;
       --border-dark: #444;
       --success-color: #27ae60;
+      --mentor-color: #3498db;
+      --frontline-color: #2ecc71;
+      --filer-color: #9b59b6;
+      --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.1);
+      --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     body.light {
@@ -29,22 +34,40 @@
     body {
       margin: 0;
       font-family: 'Segoe UI', Verdana, sans-serif;
-      padding: 20px;
+      padding: 30px 20px;
       transition: background 0.3s, color 0.3s;
       max-width: 1200px;
       margin: 0 auto;
+      line-height: 1.6;
     }
 
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 30px;
+      margin-bottom: 40px;
     }
 
     h1 {
       margin: 0;
       color: var(--accent-color);
+      font-size: 2em;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+    }
+
+    h2 {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 1.3em;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    h3 {
+      font-size: 1.1em;
+      font-weight: 600;
+      letter-spacing: -0.2px;
     }
 
     .toggle-theme {
@@ -55,11 +78,16 @@
 
     .form-section {
       background: var(--input-bg-light);
-      padding: 25px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      border: 2px solid var(--border-light);
-      transition: background 0.3s, border 0.3s;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      border: 1px solid var(--border-light);
+      box-shadow: var(--shadow-light);
+      transition: background 0.3s, border 0.3s, box-shadow 0.3s;
+    }
+
+    .form-section:hover {
+      box-shadow: var(--shadow-hover);
     }
 
     body.light .form-section {
@@ -70,6 +98,11 @@
     body.dark .form-section {
       background-color: var(--input-bg-dark);
       border-color: var(--border-dark);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    body.dark .form-section:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     }
 
     .form-group {
@@ -86,11 +119,11 @@
     select,
     button {
       width: 100%;
-      padding: 12px;
+      padding: 12px 16px;
       border: 2px solid var(--border-light);
-      border-radius: 4px;
+      border-radius: 8px;
       font-size: 14px;
-      transition: border 0.3s, background 0.3s;
+      transition: border 0.3s, background 0.3s, transform 0.2s, box-shadow 0.3s;
       box-sizing: border-box;
     }
 
@@ -112,6 +145,7 @@
     select:focus {
       outline: none;
       border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(142, 0, 0, 0.1);
     }
 
     button {
@@ -119,11 +153,18 @@
       color: white;
       border: none;
       cursor: pointer;
-      font-weight: 500;
+      font-weight: 600;
+      transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
     }
 
     button:hover:not(:disabled) {
       background-color: #a00000;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(142, 0, 0, 0.3);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
     }
 
     button:disabled {
@@ -132,39 +173,77 @@
     }
 
     .results-section {
-      margin-top: 20px;
+      margin-top: 25px;
+      animation: fadeIn 0.4s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .schedule-table {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       margin-top: 15px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .schedule-table th,
     .schedule-table td {
-      padding: 12px;
+      padding: 14px 16px;
       text-align: left;
-      border: 1px solid var(--border-light);
+      border-bottom: 1px solid var(--border-light);
     }
 
     body.dark .schedule-table th,
     body.dark .schedule-table td {
-      border-color: var(--border-dark);
+      border-bottom-color: var(--border-dark);
     }
 
     .schedule-table th {
       background-color: var(--accent-color);
       color: white;
-      font-weight: bold;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.85em;
+      letter-spacing: 0.5px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .schedule-table tbody tr {
+      transition: background-color 0.2s;
+    }
+
+    .schedule-table tbody tr:hover {
+      background-color: rgba(142, 0, 0, 0.05);
+    }
+
+    body.dark .schedule-table tbody tr:hover {
+      background-color: rgba(142, 0, 0, 0.15);
     }
 
     .schedule-table tr:nth-child(even) {
-      background-color: var(--input-bg-light);
+      background-color: rgba(0, 0, 0, 0.02);
     }
 
     body.dark .schedule-table tr:nth-child(even) {
-      background-color: var(--input-bg-dark);
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    .schedule-table tbody tr:last-child td {
+      border-bottom: none;
     }
 
     .shift-badge {
@@ -204,40 +283,93 @@
     }
 
     .day-header {
-      font-weight: bold;
+      font-weight: 600;
       color: var(--accent-color);
-      margin-top: 20px;
-      margin-bottom: 10px;
+      margin-top: 25px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--accent-color);
+      font-size: 1.1em;
     }
 
     .volunteer-item {
-      padding: 8px;
-      margin-bottom: 5px;
-      border-radius: 4px;
-      transition: background 0.3s, color 0.3s;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      transition: background 0.2s, color 0.3s, transform 0.2s, box-shadow 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .volunteer-item:hover {
+      transform: translateX(4px);
+      box-shadow: -3px 0 0 0 var(--accent-color);
     }
 
     body.light .volunteer-item {
-      background: var(--input-bg-light);
+      background: #f9f9f9;
       color: var(--text-color-light);
+      border-color: var(--border-light);
     }
 
     body.dark .volunteer-item {
-      background: var(--input-bg-dark);
+      background: #2d2d2d;
       color: var(--text-color-dark);
+      border-color: var(--border-dark);
     }
 
     .empty-slot {
-      padding: 8px;
+      padding: 12px 16px;
       transition: color 0.3s;
+      font-style: italic;
+      color: #999;
     }
 
     body.light .empty-slot {
-      color: #666;
+      color: #999;
     }
 
     body.dark .empty-slot {
-      color: #aaa;
+      color: #666;
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      font-weight: 600;
+      margin-left: 8px;
+      transition: transform 0.2s;
+    }
+
+    .role-badge.mentor {
+      background-color: rgba(52, 152, 219, 0.15);
+      color: var(--mentor-color);
+      border: 1px solid var(--mentor-color);
+    }
+
+    .role-badge.frontline {
+      background-color: rgba(46, 204, 113, 0.15);
+      color: var(--frontline-color);
+      border: 1px solid var(--frontline-color);
+    }
+
+    .role-badge.filer {
+      background-color: rgba(155, 89, 182, 0.15);
+      color: var(--filer-color);
+      border: 1px solid var(--filer-color);
+    }
+
+    body.dark .role-badge.mentor {
+      background-color: rgba(52, 152, 219, 0.25);
+    }
+
+    body.dark .role-badge.frontline {
+      background-color: rgba(46, 204, 113, 0.25);
+    }
+
+    body.dark .role-badge.filer {
+      background-color: rgba(155, 89, 182, 0.25);
     }
 
     .footer-copyright {
@@ -333,6 +465,30 @@
     body.dark .no-matches {
       color: #aaa;
     }
+
+    .help-text {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    body.dark .help-text {
+      color: #999;
+    }
+
+    .total-shifts {
+      margin-top: 20px;
+      padding: 12px 16px;
+      background-color: rgba(142, 0, 0, 0.05);
+      border-left: 4px solid var(--accent-color);
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    body.dark .total-shifts {
+      background-color: rgba(142, 0, 0, 0.15);
+    }
   </style>
 </head>
 <body class="light">
@@ -352,8 +508,8 @@
         <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
       </div>
       <div style="margin-top: 10px; display: flex; gap: 10px;">
-        <button type="button" onclick="searchByName()" style="width: auto; min-width: 100px;">Search</button>
-        <button type="button" onclick="clearSearch()" style="width: auto; min-width: 100px; background-color: #666;">Clear</button>
+        <button type="button" onclick="searchByName()" style="width: auto; min-width: 120px;">🔍 Search</button>
+        <button type="button" onclick="clearSearch()" style="width: auto; min-width: 120px; background-color: #666;">✖️ Clear</button>
       </div>
     </div>
     
@@ -634,7 +790,7 @@
     html += `
         </tbody>
       </table>
-      <p style="margin-top: 15px;"><strong>Total Shifts: ${result.shifts.length}</strong></p>
+      <div class="total-shifts">📊 Total Shifts: ${result.shifts.length}</div>
     `;
 
     nameResultsContent.innerHTML = html;
@@ -737,13 +893,14 @@
         html += '<ul style="list-style: none; padding-left: 0;">';
         timeSlots[timeSlot].forEach(volunteer => {
           const role = volunteerRoles[volunteer] || 'N/A';
+          const roleClass = role.toLowerCase();
           html += `<li class="volunteer-item">
-            <strong>${volunteer}</strong> <span style="opacity: 0.7; font-size: 0.9em;">(${role})</span>
+            <strong>${volunteer}</strong> <span class="role-badge ${roleClass}">${role}</span>
           </li>`;
         });
         html += '</ul>';
       } else {
-        html += '<div class="empty-slot" style="font-style: italic;">No volunteers scheduled</div>';
+        html += '<div class="empty-slot">No volunteers scheduled for this time slot</div>';
       }
     });
 

@@ -16,7 +16,9 @@
       "Bash(cmd /c \"cd /d c:\\\\Users\\\\Ben Ma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\catbus_scripts && upload.bat\")",
       "Bash(grep:*)",
       "Bash(cd:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(clasp:*)",
+      "Bash(git restore:*)"
     ]
   }
 }

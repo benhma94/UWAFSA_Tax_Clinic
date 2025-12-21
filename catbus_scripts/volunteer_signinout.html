@@ -839,16 +839,20 @@
       .withSuccessHandler(result => {
         btn.disabled = false;
         btn.textContent = originalText;
-        
+
         showMessage(`Successfully signed in! Welcome, ${result.volunteerName} at Station ${result.station}`, 'success');
-        
+
         // Clear form
         document.getElementById('signInForm').reset();
-        
-        // Refresh all data
+
+        // Refresh all data immediately
         loadAvailableStations();
         loadActiveSessions();
-        refreshStats();
+
+        // Refresh stats with a slight delay to ensure backend is updated
+        setTimeout(() => {
+          refreshStats();
+        }, 500);
       })
       .withFailureHandler(error => {
         btn.disabled = false;
@@ -879,18 +883,21 @@
       .withSuccessHandler(result => {
         btn.disabled = false;
         btn.textContent = originalText;
-        
+
         showMessage(`Successfully signed out. Thank you, ${result.volunteerName || 'volunteer'}!`, 'success');
-        
-        // Refresh all data
-        loadAvailableStations();
-        
+
         // Reset form and clear search
         document.getElementById('signOutForm').reset();
         document.getElementById('sessionSearch').value = '';
-        
+
+        // Refresh all data immediately
+        loadAvailableStations();
         loadActiveSessions();
-        refreshStats();
+
+        // Refresh stats with a slight delay to ensure backend is updated
+        setTimeout(() => {
+          refreshStats();
+        }, 500);
       })
       .withFailureHandler(error => {
         btn.disabled = false;
