@@ -91,33 +91,44 @@ function getClientIntakeInfo(clientID) {
     }
     
     // Optimization: Search from bottom up (most recent clients first)
-    // Read only necessary columns: Client ID (5), Filing Years (2), Situations (3), Notes (4), Needs Senior Review (6)
+    // Read only necessary columns: Client ID (5), Filing Years (2), Situations (3), Notes (4), Needs Senior Review (6), Documents (8)
     const clientIdCol = CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID + 1;
     const numRows = lastRow - 1;
-    
+
     // Read Client ID column first to find the row
     const clientIdData = sheet.getRange(2, clientIdCol, numRows, 1).getValues();
-    
+
     // Search from bottom up (most recent first)
     for (let i = clientIdData.length - 1; i >= 0; i--) {
       const id = clientIdData[i][0]?.toString().trim();
-      
+
       if (id === clientID) {
         // Found it! Now read only the necessary columns for this row
         const rowNum = i + 2; // +2 because we start from row 2
-        const rowData = sheet.getRange(rowNum, CONFIG.COLUMNS.CLIENT_INTAKE.FILING_YEARS + 1, 1, 5).getValues()[0];
-        
-        const needsSeniorReview = rowData[4] === true || 
+        const rowData = sheet.getRange(rowNum, CONFIG.COLUMNS.CLIENT_INTAKE.FILING_YEARS + 1, 1, 7).getValues()[0];
+
+        const needsSeniorReview = rowData[4] === true ||
                                   rowData[4]?.toString().toLowerCase() === 'true';
         const filingYears = rowData[0]?.toString().split(',').map(y => y.trim()) || [];
         const situations = rowData[1]?.toString().split(',').map(s => s.trim()) || [];
         const notes = rowData[2]?.toString().trim() || '';
-        
+
+        // Parse documents JSON (column index 6 = DOCUMENTS column relative to FILING_YEARS)
+        let documents = [];
+        try {
+          const documentsStr = rowData[6]?.toString().trim() || '[]';
+          documents = JSON.parse(documentsStr);
+        } catch (e) {
+          Logger.log(`Error parsing documents JSON for client ${clientID}: ${e.message}`);
+          documents = [];
+        }
+
         return {
           filingYears: filingYears,
           situations: situations,
           notes: notes,
-          needsSeniorReview: needsSeniorReview
+          needsSeniorReview: needsSeniorReview,
+          documents: documents
         };
       }
     }

@@ -18,7 +18,8 @@
       "Bash(cd:*)",
       "Bash(xargs:*)",
       "Bash(clasp:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(cmd /c \"c:\\\\Users\\\\Ben Ma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\catbus_scripts\\\\upload.bat\")"
     ]
   }
 }

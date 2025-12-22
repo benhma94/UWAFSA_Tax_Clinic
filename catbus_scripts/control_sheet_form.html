@@ -16,6 +16,10 @@
       --success-color: #27ae60;
       --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.1);
       --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+      --panel-width-desktop: 320px;
+      --panel-width-tablet: 280px;
+      --panel-height-mobile: 60vh;
+      --toggle-btn-size: 48px;
     }
 
     body.light {
@@ -103,6 +107,21 @@
     }
 
     /* Ensure datalist dropdowns match select styling */
+    input[list] {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 12px;
+      padding-right: 36px;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+    }
+
+    body.dark input[list] {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23f0f0f0' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
+    }
+
     input[list]::-webkit-calendar-picker-indicator {
       display: none;
     }
@@ -958,6 +977,261 @@
       border-top-color: var(--border-dark);
     }
 
+    /* Document Checklist Side Panel */
+    #documentChecklist {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: var(--panel-width-desktop);
+      height: 100vh;
+      transform: translateX(100%);
+      transition: transform 0.3s ease-in-out;
+      z-index: 1500;
+      overflow-y: auto;
+      box-shadow: -4px 0 12px rgba(0, 0, 0, 0.2);
+    }
+
+    body.light #documentChecklist {
+      background-color: var(--input-bg-light);
+      color: var(--text-color-light);
+      border-left: 1px solid var(--border-light);
+    }
+
+    body.dark #documentChecklist {
+      background-color: var(--input-bg-dark);
+      color: var(--text-color-dark);
+      border-left: 1px solid var(--border-dark);
+    }
+
+    body.panel-open #documentChecklist {
+      transform: translateX(0);
+    }
+
+    /* Backdrop Overlay */
+    body.panel-open::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 1400;
+      animation: panelFadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes panelFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* Toggle Button */
+    .checklist-toggle-btn {
+      position: fixed;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
+      width: var(--toggle-btn-size);
+      height: var(--toggle-btn-size);
+      border-radius: 50%;
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      box-shadow: 0 4px 12px rgba(142, 0, 0, 0.3);
+      cursor: pointer;
+      z-index: 1600;
+      transition: transform 0.2s, box-shadow 0.2s;
+      font-size: 1.5em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .checklist-toggle-btn:hover {
+      transform: translateY(-50%) scale(1.1);
+      box-shadow: 0 6px 16px rgba(142, 0, 0, 0.4);
+    }
+
+    .checklist-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: #27ae60;
+      color: white;
+      border-radius: 12px;
+      padding: 2px 6px;
+      font-size: 0.6em;
+      font-weight: bold;
+    }
+
+    /* Panel Header */
+    .panel-header {
+      position: sticky;
+      top: 0;
+      background-color: var(--accent-color);
+      color: white;
+      padding: 16px 20px;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-header h3 {
+      margin: 0;
+      font-size: 1.1em;
+    }
+
+    .panel-add-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2em;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 8px;
+      transition: opacity 0.2s;
+    }
+
+    .panel-add-btn:hover {
+      opacity: 0.8;
+    }
+
+    /* Panel Body */
+    .panel-body {
+      padding: 20px;
+    }
+
+    /* Add Document Section */
+    #addDocumentSection {
+      background: rgba(142, 0, 0, 0.05);
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark #addDocumentSection {
+      background: rgba(142, 0, 0, 0.15);
+      border-bottom-color: var(--border-dark);
+    }
+
+    #customDocumentInput {
+      background-color: white;
+      color: var(--text-color-light);
+      border: 1px solid var(--border-light);
+    }
+
+    body.dark #customDocumentInput {
+      background-color: var(--input-bg-dark);
+      color: var(--text-color-dark);
+      border-color: var(--border-dark);
+    }
+
+    .checklist-category {
+      margin-bottom: 20px;
+    }
+
+    .checklist-category-header {
+      font-weight: 600;
+      font-size: 0.95em;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--accent-color);
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border-light);
+    }
+
+    body.dark .checklist-category-header {
+      border-bottom-color: var(--border-dark);
+    }
+
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      padding: 8px 0;
+      transition: background-color 0.2s;
+    }
+
+    .checklist-item:hover {
+      background-color: rgba(142, 0, 0, 0.05);
+      border-radius: 4px;
+    }
+
+    body.dark .checklist-item:hover {
+      background-color: rgba(142, 0, 0, 0.15);
+    }
+
+    .checklist-item input[type="checkbox"] {
+      margin-right: 10px;
+      margin-top: 2px;
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      accent-color: var(--accent-color);
+    }
+
+    .checklist-item label {
+      cursor: pointer;
+      line-height: 1.4;
+      transition: text-decoration 0.2s, opacity 0.2s;
+      font-size: 0.9em;
+      user-select: none;
+    }
+
+    .checklist-item input:checked + label {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    /* Responsive Styles */
+    @media (max-width: 1024px) {
+      #documentChecklist {
+        width: var(--panel-width-tablet);
+      }
+
+      body.panel-open::before {
+        background: rgba(0, 0, 0, 0.5);
+      }
+    }
+
+    @media (max-width: 768px) {
+      #documentChecklist {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: var(--panel-height-mobile);
+        transform: translateY(100%);
+        border-top: 1px solid var(--border-light);
+        border-left: none;
+        border-radius: 16px 16px 0 0;
+      }
+
+      body.dark #documentChecklist {
+        border-top-color: var(--border-dark);
+      }
+
+      body.panel-open #documentChecklist {
+        transform: translateY(0);
+      }
+
+      .checklist-toggle-btn {
+        top: auto;
+        bottom: 20px;
+        transform: none;
+      }
+
+      .checklist-toggle-btn:hover {
+        transform: scale(1.1);
+      }
+    }
+
     /* Footer Copyright */
     .footer-copyright {
       position: fixed;
@@ -987,6 +1261,11 @@
   </style>
 </head>
 <body class="light" onload="loadDropdowns()">
+  <button class="checklist-toggle-btn" onclick="toggleDocumentPanel()" aria-label="Toggle document checklist">
+    📋
+    <span class="checklist-badge">0/25</span>
+  </button>
+
   <header>
     <h3>AFSA Tax Clinic Control Sheet</h3>
     <div>
@@ -1177,6 +1456,27 @@
     </div>
   </div>
 
+  <!-- Document Checklist Side Panel -->
+  <div id="documentChecklist" aria-hidden="true" role="complementary">
+    <div class="panel-header">
+      <h3>📋 Document Checklist</h3>
+      <button class="panel-add-btn" onclick="toggleAddDocumentInput()" title="Add custom item" aria-label="Add custom document">➕</button>
+    </div>
+
+    <!-- Add Custom Document Input (hidden by default) -->
+    <div id="addDocumentSection" style="display: none; padding: 12px 20px;">
+      <input type="text" id="customDocumentInput" placeholder="Enter document name..." style="width: 100%; padding: 8px; border-radius: 4px; font-size: 0.9em; margin-bottom: 8px;">
+      <div style="display: flex; gap: 8px;">
+        <button onclick="confirmAddCustomDocument()" style="flex: 1; padding: 6px; background-color: var(--accent-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Add</button>
+        <button onclick="cancelAddCustomDocument()" style="flex: 1; padding: 6px; background-color: #777; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Cancel</button>
+      </div>
+    </div>
+
+    <div class="panel-body">
+      <!-- Categories will be generated by JavaScript -->
+    </div>
+  </div>
+
   <script defer>
     let volunteerMap = {};
     let rowCount = 1;
@@ -1279,7 +1579,10 @@
             document.getElementById('notesDisplay').textContent = '';
             document.getElementById('notesContainer').style.display = 'none';
           }
-          
+
+          // Refresh document checklist with intake data - ONLY shows selected documents
+          renderDocumentChecklist();
+
           // Show reminder dialogs based on client situations
           showReminderDialogs(data);
         })
@@ -2557,6 +2860,276 @@
       const modal = document.getElementById('reminderModal');
       modal.classList.remove('show');
     }
+
+    // ===== Document Checklist Side Panel =====
+
+    // Document Checklist Data
+    const DOCUMENT_CATEGORIES = [
+      {
+        id: 'essential',
+        title: 'Essential Documents (All Clients)',
+        items: [
+          'Government-issued photo ID',
+          'Notice of Assessment (NOA) from previous year',
+          'Social Insurance Number (SIN)'
+        ]
+      },
+      {
+        id: 'employment',
+        title: 'Employment Income',
+        items: [
+          'T4 - Employment Income',
+          'T4A - Pension, Retirement, Scholarships/RESP Withdrawals',
+          'T4E - Employment Insurance/Unemployment Benefits',
+          'T5007 - Statement of Benefits (EI, Social Assistance)'
+        ]
+      },
+      {
+        id: 'investment',
+        title: 'Investment Income',
+        items: [
+          'T5 - Investment Income (interest, dividends)',
+          'T3 - Trust Income/ETFs/Mutual Funds',
+        ]
+      },
+      {
+        id: 'student',
+        title: 'Student Documents',
+        items: [
+          'T2202 - Tuition and Enrolment Certificate',
+          'Rent receipts (if claiming)',
+          'UHIP receipts (international students)',
+          'Student loan interest statements'
+        ]
+      },
+      {
+        id: 'deductions',
+        title: 'Deductions & Credits',
+        items: [
+          'RRSP contribution receipts',
+          'FHSA contribution receipts',
+          'Medical expense receipts',
+          'Charitable donation receipts',
+          'Child care expense receipts',
+          'Moving expense receipts'
+        ]
+      },
+    ];
+
+    // Toggle panel open/closed
+    function toggleDocumentPanel() {
+      const body = document.body;
+      const panel = document.getElementById('documentChecklist');
+      const isOpen = body.classList.contains('panel-open');
+
+      if (isOpen) {
+        body.classList.remove('panel-open');
+        panel.setAttribute('aria-hidden', 'true');
+      } else {
+        body.classList.add('panel-open');
+        panel.setAttribute('aria-hidden', 'false');
+      }
+    }
+
+    // Render checklist items - ONLY shows documents selected during intake
+    function renderDocumentChecklist() {
+      const panelBody = document.querySelector('#documentChecklist .panel-body');
+      if (!panelBody) return;
+
+      panelBody.innerHTML = '';
+
+      // Get documents from currentClientData
+      const selectedDocIds = (currentClientData && currentClientData.documents) || [];
+
+      if (selectedDocIds.length === 0) {
+        panelBody.innerHTML = '<p style="opacity: 0.7; padding: 20px; text-align: center;">No documents were selected during intake.</p>';
+        updateChecklistProgress();
+        return;
+      }
+
+      // Create a single "Documents" section
+      const categoryDiv = document.createElement('div');
+      categoryDiv.className = 'checklist-category';
+
+      const categoryHeader = document.createElement('div');
+      categoryHeader.className = 'checklist-category-header';
+      categoryHeader.textContent = 'Client Documents';
+      categoryDiv.appendChild(categoryHeader);
+
+      // Render only the selected documents
+      selectedDocIds.forEach((docId) => {
+        // Parse docId (e.g., "essential_0" -> category: "essential", index: 0)
+        const [categoryId, indexStr] = docId.split('_');
+        const index = parseInt(indexStr);
+
+        // Find the document in DOCUMENT_CATEGORIES
+        const category = DOCUMENT_CATEGORIES.find(cat => cat.id === categoryId);
+        if (!category || !category.items[index]) return;
+
+        const itemText = category.items[index];
+
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'checklist-item';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `checklist_${docId}`;
+        checkbox.value = docId;
+        checkbox.addEventListener('change', function() {
+          handleChecklistItemChange(this);
+        });
+
+        const label = document.createElement('label');
+        label.htmlFor = checkbox.id;
+        label.textContent = itemText;
+
+        itemDiv.appendChild(checkbox);
+        itemDiv.appendChild(label);
+        categoryDiv.appendChild(itemDiv);
+      });
+
+      panelBody.appendChild(categoryDiv);
+      updateChecklistProgress();
+    }
+
+    // Handle checkbox change
+    function handleChecklistItemChange(checkbox) {
+      const label = checkbox.nextElementSibling;
+
+      if (checkbox.checked) {
+        label.style.textDecoration = 'line-through';
+        label.style.opacity = '0.6';
+      } else {
+        label.style.textDecoration = 'none';
+        label.style.opacity = '1';
+      }
+
+      updateChecklistProgress();
+    }
+
+    // Update progress badge
+    function updateChecklistProgress() {
+      const total = document.querySelectorAll('.checklist-item input').length;
+      const checked = document.querySelectorAll('.checklist-item input:checked').length;
+      const badge = document.querySelector('.checklist-badge');
+
+      if (badge) {
+        badge.textContent = `${checked}/${total}`;
+      }
+    }
+
+    // Toggle add document input section
+    function toggleAddDocumentInput() {
+      const section = document.getElementById('addDocumentSection');
+      const input = document.getElementById('customDocumentInput');
+
+      if (section.style.display === 'none') {
+        section.style.display = 'block';
+        input.value = '';
+        input.focus();
+      } else {
+        section.style.display = 'none';
+      }
+    }
+
+    // Confirm and add custom document
+    function confirmAddCustomDocument() {
+      const input = document.getElementById('customDocumentInput');
+      const itemName = input.value.trim();
+
+      if (!itemName) return;
+
+      const panelBody = document.querySelector('#documentChecklist .panel-body');
+      if (!panelBody) return;
+
+      // Find or create the checklist category
+      let categoryDiv = panelBody.querySelector('.checklist-category');
+
+      // If no category exists (empty state), create one
+      if (!categoryDiv) {
+        categoryDiv = document.createElement('div');
+        categoryDiv.className = 'checklist-category';
+
+        const categoryHeader = document.createElement('div');
+        categoryHeader.className = 'checklist-category-header';
+        categoryHeader.textContent = 'Client Documents';
+        categoryDiv.appendChild(categoryHeader);
+
+        panelBody.innerHTML = ''; // Clear empty message
+        panelBody.appendChild(categoryDiv);
+      }
+
+      // Create the custom item
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'checklist-item';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = `custom_${Date.now()}`;
+      checkbox.addEventListener('change', function() {
+        handleChecklistItemChange(this);
+      });
+
+      const label = document.createElement('label');
+      label.htmlFor = checkbox.id;
+      label.textContent = itemName;
+      label.style.fontStyle = 'italic'; // Visual indicator it's custom
+      label.style.opacity = '0.8';
+
+      itemDiv.appendChild(checkbox);
+      itemDiv.appendChild(label);
+      categoryDiv.appendChild(itemDiv);
+
+      updateChecklistProgress();
+
+      // Hide the input section
+      toggleAddDocumentInput();
+    }
+
+    // Cancel adding custom document
+    function cancelAddCustomDocument() {
+      toggleAddDocumentInput();
+    }
+
+    // Allow Enter key to confirm, Escape to cancel
+    document.addEventListener('DOMContentLoaded', function() {
+      const input = document.getElementById('customDocumentInput');
+      if (input) {
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            confirmAddCustomDocument();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelAddCustomDocument();
+          }
+        });
+      }
+    });
+
+    // Escape key to close panel
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && document.body.classList.contains('panel-open')) {
+        toggleDocumentPanel();
+      }
+    });
+
+    // Click outside panel to close
+    document.addEventListener('click', function(e) {
+      if (document.body.classList.contains('panel-open')) {
+        const panel = document.getElementById('documentChecklist');
+        const toggleBtn = document.querySelector('.checklist-toggle-btn');
+
+        if (!panel.contains(e.target) && !toggleBtn.contains(e.target)) {
+          toggleDocumentPanel();
+        }
+      }
+    });
+
+    // Initialize checklist on page load
+    window.addEventListener('load', function() {
+      renderDocumentChecklist();
+    });
   </script>
 <div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
 </body>

@@ -42,7 +42,8 @@ const CONFIG = {
       NOTES: 4,
       CLIENT_ID: 5,
       NEEDS_SENIOR_REVIEW: 6,
-      IS_HIGH_PRIORITY: 7
+      IS_HIGH_PRIORITY: 7,
+      DOCUMENTS: 8
     },
     CLIENT_ASSIGNMENT: {
       TIMESTAMP: 0,

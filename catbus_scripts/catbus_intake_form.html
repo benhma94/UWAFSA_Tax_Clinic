@@ -134,8 +134,9 @@
       align-items: center;
     }
 
-    #mainForm { display: none; text-align: left; }
-    #ineligibleMsg { display: none; color: red; margin-top: 20px; font-weight: bold; text-align: left; }
+    #mainFormSection { display: none; }
+    #mainForm { text-align: left; }
+    #ineligibleMsg { display: none; color: red; margin-top: 20px; font-weight: bold; text-align: center; }
     #incomeLimitGroup, #conditionalQuestions { display: none; }
 
     #notes {
@@ -371,8 +372,271 @@
     #ineligibleMsg {
       animation: fadeIn 0.4s ease-in;
     }
+
+    /* Document Checklist Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    .modal-content {
+      background: var(--input-bg-light);
+      color: var(--text-color-light);
+      border-radius: 12px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    body.dark .modal-content {
+      background: var(--input-bg-dark);
+      color: var(--text-color-dark);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 2px solid var(--border-light);
+    }
+
+    body.dark .modal-header {
+      border-bottom-color: var(--border-dark);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: var(--accent-color);
+      font-size: 1.4rem;
+    }
+
+    .modal-close-btn {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      cursor: pointer;
+      color: var(--text-color-light);
+      line-height: 1;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s;
+    }
+
+    body.dark .modal-close-btn {
+      color: var(--text-color-dark);
+    }
+
+    .modal-close-btn:hover {
+      color: var(--accent-color);
+    }
+
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 2px solid var(--border-light);
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    body.dark .modal-footer {
+      border-top-color: var(--border-dark);
+    }
+
+    .modal-done-btn {
+      padding: 10px 24px;
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95em;
+      transition: background 0.2s;
+    }
+
+    .modal-done-btn:hover {
+      background-color: #a50000;
+    }
+
+    .checklist-category {
+      margin-bottom: 24px;
+    }
+
+    .checklist-category-header {
+      font-weight: 600;
+      font-size: 1.05em;
+      color: var(--accent-color);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark .checklist-category-header {
+      border-bottom-color: var(--border-dark);
+    }
+
+    .checklist-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+    }
+
+    .checklist-item input[type="checkbox"] {
+      margin-right: 10px;
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+    }
+
+    .checklist-item label {
+      margin: 0;
+      cursor: pointer;
+      font-weight: 400;
+      flex: 1;
+    }
   </style>
   <script>
+    // Document Categories for checklist
+    const DOCUMENT_CATEGORIES = [
+      {
+        id: 'essential',
+        title: 'Essential Documents (All Clients)',
+        items: [
+          'Government-issued photo ID',
+          'Notice of Assessment (NOA) from previous year',
+          'Social Insurance Number (SIN)'
+        ]
+      },
+      {
+        id: 'employment',
+        title: 'Employment Income',
+        items: [
+          'T4 - Employment Income',
+          'T4A - Pension, Retirement, Scholarships/RESP Withdrawals',
+          'T4E - Employment Insurance/Unemployment Benefits',
+          'T5007 - Statement of Benefits (EI, Social Assistance)'
+        ]
+      },
+      {
+        id: 'investment',
+        title: 'Investment Income',
+        items: [
+          'T5 - Investment Income (interest, dividends)',
+          'T3 - Trust Income/ETFs/Mutual Funds',
+        ]
+      },
+      {
+        id: 'student',
+        title: 'Student Documents',
+        items: [
+          'T2202 - Tuition and Enrolment Certificate',
+          'Rent receipts (if claiming)',
+          'UHIP receipts (international students)',
+          'Student loan interest statements'
+        ]
+      },
+      {
+        id: 'deductions',
+        title: 'Deductions & Credits',
+        items: [
+          'RRSP contribution receipts',
+          'FHSA contribution receipts',
+          'Medical expense receipts',
+          'Charitable donation receipts',
+          'Child care expense receipts',
+          'Moving expense receipts'
+        ]
+      },
+    ];
+
+    // Open the intake document modal
+    function openIntakeDocumentModal() {
+      const modal = document.getElementById('intakeDocumentModal');
+      modal.style.display = 'flex';
+      renderIntakeDocumentChecklist();
+    }
+
+    // Close the intake document modal
+    function closeIntakeDocumentModal() {
+      const modal = document.getElementById('intakeDocumentModal');
+      modal.style.display = 'none';
+      updateIntakeDocumentBadge();
+    }
+
+    // Render the document checklist in the modal
+    function renderIntakeDocumentChecklist() {
+      const modalBody = document.getElementById('intakeDocumentModalBody');
+      modalBody.innerHTML = '';
+
+      DOCUMENT_CATEGORIES.forEach(category => {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.className = 'checklist-category';
+
+        const categoryHeader = document.createElement('div');
+        categoryHeader.className = 'checklist-category-header';
+        categoryHeader.textContent = category.title;
+        categoryDiv.appendChild(categoryHeader);
+
+        category.items.forEach((item, index) => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'checklist-item';
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.id = `intake_doc_${category.id}_${index}`;
+          checkbox.value = `${category.id}_${index}`;
+          checkbox.name = 'intakeDocuments';
+          checkbox.addEventListener('change', updateIntakeDocumentBadge);
+
+          const label = document.createElement('label');
+          label.htmlFor = checkbox.id;
+          label.textContent = item;
+
+          itemDiv.appendChild(checkbox);
+          itemDiv.appendChild(label);
+          categoryDiv.appendChild(itemDiv);
+        });
+
+        modalBody.appendChild(categoryDiv);
+      });
+    }
+
+    // Update the badge count on the button
+    function updateIntakeDocumentBadge() {
+      const checkboxes = document.querySelectorAll('input[name="intakeDocuments"]:checked');
+      const badge = document.getElementById('intakeDocumentBadge');
+      badge.textContent = checkboxes.length;
+    }
+
+    // Get selected documents as an array of IDs
+    function getSelectedDocuments() {
+      const checkboxes = document.querySelectorAll('input[name="intakeDocuments"]:checked');
+      return Array.from(checkboxes).map(cb => cb.value);
+    }
+
     function toggleIncomeQuestion() {
       const tuition = document.querySelector('input[name="tuition"]:checked');
       const group = document.getElementById('incomeLimitGroup');
@@ -402,7 +666,7 @@
         foreign === 'Yes'
       );
 
-      document.getElementById('mainForm').style.display = !isIneligible && docs && present && selfEmp && bankrupt && rental && foreign ? 'block' : 'none';
+      document.getElementById('mainFormSection').style.display = !isIneligible && docs && present && selfEmp && bankrupt && rental && foreign ? 'block' : 'none';
       document.getElementById('ineligibleMsg').style.display = isIneligible ? 'block' : 'none';
     }
 
@@ -448,7 +712,8 @@
         situations: [...document.querySelectorAll('input[name="situations"]:checked')].map(cb => cb.value),
         notes: document.getElementById('notes').value,
         needsSeniorReview: document.getElementById('needsSeniorReview').checked,
-        isHighPriority: document.getElementById('isHighPriority').checked
+        isHighPriority: document.getElementById('isHighPriority').checked,
+        documents: getSelectedDocuments()
       };
 
       google.script.run
@@ -468,8 +733,13 @@
       document.getElementById('eligibilityForm').reset();
       document.getElementById('mainForm').reset();
 
+      // Reset document checklist selections
+      const docCheckboxes = document.querySelectorAll('input[name="intakeDocuments"]');
+      docCheckboxes.forEach(cb => cb.checked = false);
+      updateIntakeDocumentBadge();
+
       // Reset UI state
-      document.getElementById('mainForm').style.display = 'none';
+      document.getElementById('mainFormSection').style.display = 'none';
       document.getElementById('ineligibleMsg').style.display = 'none';
       document.getElementById('incomeLimitGroup').style.display = 'none';
       document.getElementById('conditionalQuestions').style.display = 'none';
@@ -621,7 +891,7 @@
 
     <div id="ineligibleMsg">Unfortunately, this client does not meet our eligibility requirements. <button onclick="resetForm()">Reset</button></div>
 
-    <div class="form-section">
+    <div id="mainFormSection" class="form-section">
     <form id="mainForm" onsubmit="submitMainForm(); return false;">
       <p>Client is eligible for services, please complete the below inputs.</p>
     
@@ -668,6 +938,9 @@
         <br>
         <div class="form-group">
           <label>Please briefly identify the documents that client has and complete the checklist.<span class="tooltip" data-tooltip="Refer to the checklist and provided guide for samples of documents">?</span></label>
+          <button type="button" onclick="openIntakeDocumentModal()" style="margin-top: 8px; padding: 10px 20px; background-color: var(--accent-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95em; transition: background 0.2s;">
+            📋 Document Checklist <span id="intakeDocumentBadge" style="background: white; color: var(--accent-color); padding: 2px 8px; border-radius: 12px; margin-left: 8px; font-weight: 700;">0</span>
+          </button>
         </div>
         <br>
         <div class="form-group">
@@ -690,6 +963,21 @@
     <div id="receptionHelpArea" style="text-align: center; margin-top: 30px;">
       <button id="receptionHelpBtn" onclick="toggleReceptionHelp()">📞 Call for Help</button>
       <button id="receptionEscalateBtn" onclick="escalateReceptionHelp()" style="display: none;">🚨 Escalate to Senior Mentor</button>
+    </div>
+  </div>
+
+  <div id="intakeDocumentModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📋 Document Checklist</h3>
+        <button class="modal-close-btn" onclick="closeIntakeDocumentModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="intakeDocumentModalBody">
+        <!-- Document categories will be rendered here by JavaScript -->
+      </div>
+      <div class="modal-footer">
+        <button onclick="closeIntakeDocumentModal()" class="modal-done-btn">Done</button>
+      </div>
     </div>
   </div>
 
