@@ -17,31 +17,31 @@ function getClientQueue() {
     const intakeLastRow = intakeSheet.getLastRow();
     const assignmentLastRow = assignmentSheet.getLastRow();
     
-    // Read only necessary columns: Timestamp (0), Client ID (5), and Priority (7)
-    const intakeData = intakeLastRow > 1 
+    // Read only necessary columns: Timestamp (0), Client ID (5), Priority (7), Documents (8)
+    const intakeData = intakeLastRow > 1
       ? intakeSheet.getRange(2, 1, intakeLastRow - 1, 8).getValues()
       : [];
-    
+
     // Build set of assigned client IDs - only read if there are assignments
     const assignedClientIds = new Set();
     if (assignmentLastRow > 1) {
-      const assignmentData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1, 
+      const assignmentData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1,
                                                       assignmentLastRow - 1, 1).getValues();
       assignmentData.forEach(row => {
         const clientId = row[0]?.toString().trim();
         if (clientId) assignedClientIds.add(clientId);
       });
     }
-    
+
     const queue = [];
     const now = new Date();
-    
+
     for (let i = 0; i < intakeData.length; i++) {
       const timestamp = intakeData[i][CONFIG.COLUMNS.CLIENT_INTAKE.TIMESTAMP];
       const clientId = intakeData[i][CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID]?.toString().trim();
-      const isHighPriority = intakeData[i][CONFIG.COLUMNS.CLIENT_INTAKE.IS_HIGH_PRIORITY] === true || 
+      const isHighPriority = intakeData[i][CONFIG.COLUMNS.CLIENT_INTAKE.IS_HIGH_PRIORITY] === true ||
                             intakeData[i][CONFIG.COLUMNS.CLIENT_INTAKE.IS_HIGH_PRIORITY]?.toString().toLowerCase() === 'true';
-      
+
       if (clientId && !assignedClientIds.has(clientId)) {
         queue.push({
           clientId,
@@ -261,4 +261,92 @@ function getQueueData() {
       volunteers: getAvailableVolunteers()
     };
   }, 'getQueueData');
+}
+
+/**
+ * Removes a client from the queue before they are assigned
+ * Records cancellation in Tax Return Tracker with INCOMPLETE status
+ * @param {string} clientId - Client ID to remove
+ * @param {string} reason - Reason for removal
+ * @returns {Object} Object with success status and message
+ */
+function removeClientFromQueue(clientId, reason) {
+  return safeExecute(() => {
+    // Sanitize inputs
+    clientId = sanitizeInput(clientId, 10);
+    reason = sanitizeInput(reason, 500);
+
+    if (!clientId || !reason) {
+      return {success: false, message: 'Client ID and reason are required'};
+    }
+
+    if (!validateClientID(clientId)) {
+      return {success: false, message: `Invalid client ID format: ${clientId}`};
+    }
+
+    const intakeSheet = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
+    const assignmentSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+    const trackerSheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+
+    // Verify client exists in intake sheet
+    const intakeLastRow = intakeSheet.getLastRow();
+    let clientFound = false;
+
+    if (intakeLastRow > 1) {
+      const clientIdCol = CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID + 1;
+      const intakeData = intakeSheet.getRange(2, clientIdCol, intakeLastRow - 1, 1).getValues();
+      for (let i = 0; i < intakeData.length; i++) {
+        const currentClientId = intakeData[i][0]?.toString().trim();
+        if (currentClientId === clientId) {
+          clientFound = true;
+          break;
+        }
+      }
+    }
+
+    if (!clientFound) {
+      return {success: false, message: 'Client not found'};
+    }
+
+    // Check if client is already assigned
+    const assignmentLastRow = assignmentSheet.getLastRow();
+    if (assignmentLastRow > 1) {
+      const assignmentData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1,
+                                                      assignmentLastRow - 1, 2).getValues();
+      for (let i = 0; i < assignmentData.length; i++) {
+        const assignedClient = assignmentData[i][0]?.toString().trim();
+        const completed = assignmentData[i][1]?.toString().trim().toLowerCase();
+
+        if (assignedClient === clientId && completed !== 'complete') {
+          return {success: false, message: 'Cannot remove assigned client'};
+        }
+      }
+    }
+
+    // Record removal in Tax Return Tracker with INCOMPLETE status
+    trackerSheet.appendRow([
+      new Date(),                          // Timestamp
+      'Reception',                         // Volunteer
+      clientId,                            // Client ID
+      '',                                  // Tax Year (empty)
+      '',                                  // Reviewer (empty)
+      '',                                  // Secondary Reviewer (empty)
+      '',                                  // Married (empty)
+      '',                                  // E-file (empty)
+      '',                                  // Paper (empty)
+      'Yes',                               // INCOMPLETE
+      'REMOVED FROM QUEUE: ' + reason      // Notes/Reason
+    ]);
+
+    // Invalidate cache
+    invalidateMultiple([
+      CACHE_CONFIG.KEYS.QUEUE,
+      CACHE_CONFIG.KEYS.VOLUNTEER_LIST
+    ]);
+
+    // Log audit
+    logAudit('Queue Removal', `Client: ${clientId}, Reason: ${reason}`);
+
+    return {success: true, message: 'Client removed from queue'};
+  }, 'removeClientFromQueue');
 }

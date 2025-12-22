@@ -447,6 +447,12 @@
           ${priorityBadge}
           <div class="mobile-card-title">${client.clientId}</div>
           <div class="mobile-card-info">⏱️ Wait Time: ${client.waitTime}</div>
+          <div style="margin-top: 10px; text-align: center;">
+            <button onclick="openRemoveClientModal('${client.clientId}')"
+                    style="background-color:#c0392b; color:white; border:none; padding:8px 16px; border-radius:5px; cursor:pointer; font-weight:600; width:100%;">
+              🗑️ Remove from Queue
+            </button>
+          </div>
         `;
         tbody.appendChild(card);
       });
@@ -471,6 +477,12 @@
         row.innerHTML = `
           <td>${priorityBadge}${client.clientId}</td>
           <td>${client.waitTime}</td>
+          <td style="text-align: center;">
+            <button onclick="openRemoveClientModal('${client.clientId}')"
+                    style="background-color:#c0392b; color:white; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; font-weight:600; font-size:0.85em;">
+              🗑️ Remove
+            </button>
+          </td>
         `;
         tbody.appendChild(row);
       });
@@ -530,6 +542,81 @@
     }, 250);
   });
 
+  // Remove client from queue functions
+  let clientToRemove = null;
+
+  function openRemoveClientModal(clientId) {
+    clientToRemove = clientId;
+    document.getElementById('removeClientModal').style.display = 'flex';
+    // Reset radio selections and hide "Other" textarea
+    document.querySelectorAll('input[name="removeReason"]').forEach(r => r.checked = false);
+    document.getElementById('removeReasonOtherText').style.display = 'none';
+    document.getElementById('removeReasonOtherText').value = '';
+    document.getElementById('removeReasonOtherText').disabled = true;
+  }
+
+  function closeRemoveClientModal() {
+    document.getElementById('removeClientModal').style.display = 'none';
+    clientToRemove = null;
+  }
+
+  function handleRemoveReasonChange() {
+    const otherRadio = document.getElementById('removeReasonOther');
+    const otherText = document.getElementById('removeReasonOtherText');
+
+    if (otherRadio.checked) {
+      otherText.style.display = 'block';
+      otherText.disabled = false;
+    } else {
+      otherText.style.display = 'none';
+      otherText.disabled = true;
+      otherText.value = '';
+    }
+  }
+
+  function confirmRemoveClient() {
+    const selectedReason = document.querySelector('input[name="removeReason"]:checked');
+
+    if (!selectedReason) {
+      alert('Please select a reason for removal');
+      return;
+    }
+
+    let reason = selectedReason.value;
+
+    // If "Other" is selected, get custom text
+    if (selectedReason.id === 'removeReasonOther') {
+      const customText = document.getElementById('removeReasonOtherText').value.trim();
+      if (!customText) {
+        alert('Please provide details for the removal reason');
+        return;
+      }
+      reason = customText;
+    }
+
+    // Close modal immediately
+    closeRemoveClientModal();
+
+    // Call backend
+    google.script.run
+      .withSuccessHandler(handleRemoveSuccess)
+      .withFailureHandler(handleRemoveError)
+      .removeClientFromQueue(clientToRemove, reason);
+  }
+
+  function handleRemoveSuccess(result) {
+    if (result.success) {
+      alert('Client removed from queue');
+      loadQueue(); // Refresh the queue
+    } else {
+      alert(result.message);
+    }
+  }
+
+  function handleRemoveError(error) {
+    alert('Error removing client: ' + error.message);
+  }
+
   window.onload = function() {
     loadThemePreference();
     loadQueue();
@@ -557,6 +644,7 @@
         <tr>
           <th>Client ID</th>
           <th>Wait Time</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody id="queueBody">
@@ -577,6 +665,43 @@
     <button onclick="refreshAfterModal()" style="margin-top:15px; padding:8px 20px; background-color:rgb(142, 0, 0); color:white; border:none; border-radius:5px; cursor:pointer;">OK</button>
   </div>
 </div>
+
+<!-- Remove Client Modal -->
+<div id="removeClientModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:white; color:#1a1a1a; padding:30px; border-radius:12px; text-align:center; max-width:450px; width:90%; margin:auto; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
+    <h3 style="margin-top:0; margin-bottom:20px; color:#c0392b;">Remove Client from Queue</h3>
+    <p style="margin-bottom:20px;">Please select the reason for removing this client:</p>
+
+    <div style="text-align: left; margin: 20px 0;">
+      <label style="display: block; margin: 10px 0; cursor: pointer;">
+        <input type="radio" name="removeReason" value="Client left before being served" onchange="handleRemoveReasonChange()" style="margin-right: 8px;">
+        Client left before being served
+      </label>
+      <label style="display: block; margin: 10px 0; cursor: pointer;">
+        <input type="radio" name="removeReason" value="Client no longer needs service" onchange="handleRemoveReasonChange()" style="margin-right: 8px;">
+        Client no longer needs service
+      </label>
+      <label style="display: block; margin: 10px 0; cursor: pointer;">
+        <input type="radio" name="removeReason" value="Duplicate entry" onchange="handleRemoveReasonChange()" style="margin-right: 8px;">
+        Duplicate entry
+      </label>
+      <label style="display: block; margin: 10px 0; cursor: pointer;">
+        <input type="radio" name="removeReason" id="removeReasonOther" value="Other" onchange="handleRemoveReasonChange()" style="margin-right: 8px;">
+        Other:
+      </label>
+      <textarea id="removeReasonOtherText" placeholder="Please provide details..."
+                style="width: 100%; min-height: 60px; padding: 8px; margin-top: 5px; border-radius: 5px;
+                       display: none; font-family: inherit; resize: vertical; border: 1px solid #ddd;"
+                disabled></textarea>
+    </div>
+
+    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 25px;">
+      <button onclick="confirmRemoveClient()" style="padding:10px 20px; background-color:#c0392b; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Confirm Removal</button>
+      <button onclick="closeRemoveClientModal()" style="padding:10px 20px; background-color:#7f8c8d; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
 </body>
 </html>
