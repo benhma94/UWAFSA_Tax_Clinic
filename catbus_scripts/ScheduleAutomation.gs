@@ -19,22 +19,9 @@
  * - Shift IDs: D1A (9:30-1:15), D1B (1:00-4:45), D1C (4:30-8:30), etc.
  */
 
-const SHIFT_NAMES = [
-  'Day 1 9:30-1:15', 'Day 1 1:00-4:45', 'Day 1 4:30-8:30',
-  'Day 2 9:30-1:15', 'Day 2 1:00-4:45', 'Day 2 4:30-8:30',
-  'Day 3 9:30-1:15', 'Day 3 1:00-4:45', 'Day 3 4:30-8:30',
-  'Day 4 9:30-1:15', 'Day 4 1:00-4:45', 'Day 4 4:30-8:30'
-];
-
+// Shift IDs - stable identifiers for each shift (never change these)
+// Display formatting is handled by SCHEDULE_CONFIG in Config.gs
 const SHIFT_IDS = ['D1A', 'D1B', 'D1C', 'D2A', 'D2B', 'D2C', 'D3A', 'D3B', 'D3C', 'D4A', 'D4B', 'D4C'];
-
-// Map availability string formats to shift IDs
-const AVAILABILITY_TO_SHIFT_MAP = {
-  'Day 1 9:30-1:15': 'D1A', 'Day 1 1:00-4:45': 'D1B', 'Day 1 4:30-8:30': 'D1C',
-  'Day 2 9:30-1:15': 'D2A', 'Day 2 1:00-4:45': 'D2B', 'Day 2 4:30-8:30': 'D2C',
-  'Day 3 9:30-1:15': 'D3A', 'Day 3 1:00-4:45': 'D3B', 'Day 3 4:30-8:30': 'D3C',
-  'Day 4 9:30-1:15': 'D4A', 'Day 4 1:00-4:45': 'D4B', 'Day 4 4:30-8:30': 'D4C'
-};
 
 /**
  * Gets a spreadsheet by ID (for schedule automation, may be different from main CATBUS spreadsheet)
@@ -121,36 +108,24 @@ function readAvailabilityResponses(spreadsheetId, sheetName) {
     const preferConsecutive = (row[6]?.toString().trim().toLowerCase() === 'yes');
     const availabilityString = row[7]?.toString().trim() || '';
 
-    // Parse availability from comma-separated string
-    // Format: "Day 1 9:30-1:15, Day 1 1:00-4:45, Day 2 9:30-1:15"
+    // Parse availability from comma-separated shift IDs
+    // Format: "D1A,D1B,D2C" (shift IDs stored directly, no parsing needed!)
     const availability = [];
     if (availabilityString) {
-      const availabilityItems = availabilityString.split(',').map(item => item.trim());
-      availabilityItems.forEach(item => {
-        if (!item) return; // Skip empty items after splitting
-        
-        // Map availability string to shift ID
-        if (AVAILABILITY_TO_SHIFT_MAP[item]) {
-          availability.push(AVAILABILITY_TO_SHIFT_MAP[item]);
+      const shiftIds = availabilityString.split(',').map(id => id.trim());
+      shiftIds.forEach(shiftId => {
+        if (!shiftId) return; // Skip empty items
+
+        // Validate shift ID
+        if (SHIFT_IDS.includes(shiftId)) {
+          availability.push(shiftId);
         } else {
-          // Try to match variations (case-insensitive, spacing variations)
-          const normalizedItem = item.replace(/\s+/g, ' ');
-          let found = false;
-          for (const [key, shiftId] of Object.entries(AVAILABILITY_TO_SHIFT_MAP)) {
-            if (normalizedItem.toLowerCase() === key.toLowerCase()) {
-              availability.push(shiftId);
-              found = true;
-              break;
-            }
-          }
-          if (!found) {
-            Logger.log(`Warning: Could not map availability item "${item}" to shift ID. Available keys: ${Object.keys(AVAILABILITY_TO_SHIFT_MAP).slice(0, 3).join(', ')}...`);
-          }
+          Logger.log(`Warning: Invalid shift ID "${shiftId}" for ${firstName} ${lastName}. Valid IDs: ${SHIFT_IDS.join(', ')}`);
         }
       });
-      
-      if (availability.length === 0 && availabilityItems.length > 0) {
-        Logger.log(`Warning: Volunteer ${firstName} ${lastName} has availability string "${availabilityString}" but no valid shifts were mapped`);
+
+      if (availability.length === 0 && shiftIds.length > 0) {
+        Logger.log(`Warning: Volunteer ${firstName} ${lastName} has availability "${availabilityString}" but no valid shift IDs were found`);
       }
     }
 
@@ -415,8 +390,8 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
       const headers = ['Time / Day', ...days];
       allData.push(headers);
       
-      // Create shift rows (9:30-1:15, 1:00-4:45, 4:30-8:30 for each day)
-      const times = ['9:30-1:15', '1:00-4:45', '4:30-8:30'];
+      // Create shift rows using display labels from config
+      const times = ['A', 'B', 'C'].map(slotKey => SCHEDULE_CONFIG.TIME_SLOTS[slotKey].display);
       const schedule = scheduleResult.schedule;
       
       for (let timeIdx = 0; timeIdx < 3; timeIdx++) {

@@ -147,3 +147,101 @@ function getSheet(sheetName) {
   }
   return sheet;
 }
+
+/**
+ * Schedule Configuration
+ * Centralized source of truth for shift definitions and display mappings
+ * This allows frontend to change time slots and day labels without touching backend code
+ */
+const SCHEDULE_CONFIG = {
+  // Shift structure
+  DAYS_COUNT: 4,
+  SLOTS_PER_DAY: 3,
+
+  // Time slot definitions (for display only - backend only uses A/B/C)
+  TIME_SLOTS: {
+    'A': { start: '9:45', end: '1:15', display: '9:45-1:15', label: 'Morning' },
+    'B': { start: '1:00', end: '4:45', display: '1:00-4:45', label: 'Afternoon' },
+    'C': { start: '4:30', end: '8:15', display: '4:30-8:15', label: 'Evening' }
+  },
+
+  // Default day labels (can be overridden in schedule generation)
+  DEFAULT_DAY_LABELS: [
+    'Saturday March 21, 2026',
+    'Sunday March 22, 2026',
+    'Saturday March 28, 2026',
+    'Sunday March 29, 2026'
+  ],
+
+  // Shift ID to metadata mapping
+  SHIFTS: {
+    'D1A': { dayIndex: 0, slotIndex: 0, slotKey: 'A' },
+    'D1B': { dayIndex: 0, slotIndex: 1, slotKey: 'B' },
+    'D1C': { dayIndex: 0, slotIndex: 2, slotKey: 'C' },
+    'D2A': { dayIndex: 1, slotIndex: 0, slotKey: 'A' },
+    'D2B': { dayIndex: 1, slotIndex: 1, slotKey: 'B' },
+    'D2C': { dayIndex: 1, slotIndex: 2, slotKey: 'C' },
+    'D3A': { dayIndex: 2, slotIndex: 0, slotKey: 'A' },
+    'D3B': { dayIndex: 2, slotIndex: 1, slotKey: 'B' },
+    'D3C': { dayIndex: 2, slotIndex: 2, slotKey: 'C' },
+    'D4A': { dayIndex: 3, slotIndex: 0, slotKey: 'A' },
+    'D4B': { dayIndex: 3, slotIndex: 1, slotKey: 'B' },
+    'D4C': { dayIndex: 3, slotIndex: 2, slotKey: 'C' }
+  },
+
+  /**
+   * Get display label for a shift ID
+   * @param {string} shiftId - Shift ID like "D1A"
+   * @param {string[]} dayLabels - Optional custom day labels
+   * @returns {Object} {day: "Saturday March 21", time: "9:45-1:15", full: "Saturday March 21 9:45-1:15"}
+   */
+  getShiftLabel: function(shiftId, dayLabels) {
+    const shift = this.SHIFTS[shiftId];
+    if (!shift) return null;
+
+    const dayLabel = (dayLabels && dayLabels[shift.dayIndex]) || this.DEFAULT_DAY_LABELS[shift.dayIndex] || `Day ${shift.dayIndex + 1}`;
+    const timeSlot = this.TIME_SLOTS[shift.slotKey];
+
+    return {
+      day: dayLabel,
+      time: timeSlot ? timeSlot.display : '',
+      full: `${dayLabel} ${timeSlot ? timeSlot.display : ''}`
+    };
+  },
+
+  /**
+   * Get shift ID from day index and slot key
+   * @param {number} dayIndex - Day index (0-3)
+   * @param {string} slotKey - Slot key ('A', 'B', or 'C')
+   * @returns {string} Shift ID like "D1A"
+   */
+  getShiftId: function(dayIndex, slotKey) {
+    return `D${dayIndex + 1}${slotKey}`;
+  },
+
+  /**
+   * Get all shift IDs for a given day index
+   * @param {number} dayIndex - Day index (0-3)
+   * @returns {string[]} Array of shift IDs like ["D1A", "D1B", "D1C"]
+   */
+  getShiftsForDay: function(dayIndex) {
+    return Object.keys(this.SHIFTS).filter(id => this.SHIFTS[id].dayIndex === dayIndex);
+  },
+
+  /**
+   * Get all valid shift IDs
+   * @returns {string[]} Array of all shift IDs
+   */
+  getAllShiftIds: function() {
+    return Object.keys(this.SHIFTS);
+  },
+
+  /**
+   * Validate a shift ID
+   * @param {string} shiftId - Shift ID to validate
+   * @returns {boolean} True if valid
+   */
+  isValidShiftId: function(shiftId) {
+    return this.SHIFTS.hasOwnProperty(shiftId);
+  }
+};

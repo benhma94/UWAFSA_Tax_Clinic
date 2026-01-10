@@ -373,13 +373,34 @@
   <div id="messageBox"></div>
 
 <script>
-  const DAYS = ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
-  const DAY_LABELS = ['Saturday March 21, 2026', 'Sunday March 22, 2026', 'Saturday March 28, 2026', 'Sunday March 29, 2026'];
-  const TIME_SLOTS = [
-    { id: '9:30-1:15', label: '9:30-1:15' },
-    { id: '1:00-4:45', label: '1:00-4:45' },
-    { id: '4:30-8:30', label: '4:30-8:30' }
-  ];
+  // Schedule configuration - Frontend display settings
+  const SHIFT_CONFIG = {
+    TIME_SLOTS: {
+      'A': { display: '9:45-1:15', label: 'Morning' },
+      'B': { display: '1:00-4:45', label: 'Afternoon' },
+      'C': { display: '4:30-8:15', label: 'Evening' }
+    },
+    DAYS: ['Day 1', 'Day 2', 'Day 3', 'Day 4'],
+    DAY_LABELS: [
+      'Saturday March 21, 2026',
+      'Sunday March 22, 2026',
+      'Saturday March 28, 2026',
+      'Sunday March 29, 2026'
+    ],
+
+    // Get shift ID from day index and slot key
+    getShiftId: function(dayIndex, slotKey) {
+      return `D${dayIndex + 1}${slotKey}`;
+    }
+  };
+
+  // Legacy constants for backward compatibility with existing code
+  const DAYS = SHIFT_CONFIG.DAYS;
+  const DAY_LABELS = SHIFT_CONFIG.DAY_LABELS;
+  const TIME_SLOTS = Object.keys(SHIFT_CONFIG.TIME_SLOTS).map(key => ({
+    id: key, // Now 'A', 'B', 'C' instead of time strings
+    label: SHIFT_CONFIG.TIME_SLOTS[key].display
+  }));
 
   let isUpdatingExisting = false;
   let checkTimeout = null;
@@ -551,6 +572,33 @@
     }
   }
 
+  /**
+   * Convert old time slot format to shift ID
+   * Backward compatibility: "Day 1 9:45-1:15" -> "D1A"
+   */
+  function convertToShiftId(slot) {
+    // If already a shift ID (D1A, D2B, etc.), return as-is
+    if (/^D[1-4][ABC]$/.test(slot)) {
+      return slot;
+    }
+
+    // Legacy format conversion map
+    const legacyMap = {
+      // Old time slots (9:30-1:15, 1:00-4:45, 4:30-8:30)
+      'Day 1 9:30-1:15': 'D1A', 'Day 1 1:00-4:45': 'D1B', 'Day 1 4:30-8:30': 'D1C',
+      'Day 2 9:30-1:15': 'D2A', 'Day 2 1:00-4:45': 'D2B', 'Day 2 4:30-8:30': 'D2C',
+      'Day 3 9:30-1:15': 'D3A', 'Day 3 1:00-4:45': 'D3B', 'Day 3 4:30-8:30': 'D3C',
+      'Day 4 9:30-1:15': 'D4A', 'Day 4 1:00-4:45': 'D4B', 'Day 4 4:30-8:30': 'D4C',
+      // New time slots (9:45-1:15, 1:00-4:45, 4:30-8:15)
+      'Day 1 9:45-1:15': 'D1A', 'Day 1 4:30-8:15': 'D1C',
+      'Day 2 9:45-1:15': 'D2A', 'Day 2 4:30-8:15': 'D2C',
+      'Day 3 9:45-1:15': 'D3A', 'Day 3 4:30-8:15': 'D3C',
+      'Day 4 9:45-1:15': 'D4A', 'Day 4 4:30-8:15': 'D4C'
+    };
+
+    return legacyMap[slot] || slot;
+  }
+
   function prefillForm(data) {
     console.log('prefillForm called with data:', data);
 
@@ -596,14 +644,17 @@
       // Then check the ones in the existing data
       let matchedCount = 0;
       data.availability.forEach(slot => {
-        console.log('Looking for checkbox with value:', slot);
-        const checkbox = Array.from(allCheckboxes).find(cb => cb.value === slot);
+        // Convert old format to shift ID if needed
+        const shiftId = convertToShiftId(slot);
+        console.log('Looking for checkbox with value:', slot, '-> converted to:', shiftId);
+
+        const checkbox = Array.from(allCheckboxes).find(cb => cb.value === shiftId);
         if (checkbox) {
           checkbox.checked = true;
           matchedCount++;
-          console.log('Checked checkbox for:', slot);
+          console.log('Checked checkbox for:', shiftId);
         } else {
-          console.warn('Could not find checkbox for slot:', slot);
+          console.warn('Could not find checkbox for slot:', slot, '(converted to:', shiftId + ')');
         }
       });
       console.log('Matched and checked', matchedCount, 'of', data.availability.length, 'slots');
@@ -736,12 +787,12 @@
     const container = document.getElementById('availabilityContainer');
     container.innerHTML = '';
 
-    DAYS.forEach((day, index) => {
+    DAYS.forEach((day, dayIndex) => {
       const dayDiv = document.createElement('div');
       dayDiv.className = 'day-group';
 
       const dayHeader = document.createElement('h3');
-      dayHeader.textContent = `${day} - ${DAY_LABELS[index]}`;
+      dayHeader.textContent = `${day} - ${DAY_LABELS[dayIndex]}`;
       dayDiv.appendChild(dayHeader);
 
       const checkboxGroup = document.createElement('div');
@@ -751,16 +802,19 @@
         const checkboxItem = document.createElement('div');
         checkboxItem.className = 'checkbox-item';
 
+        // Generate shift ID (e.g., "D1A", "D2B", etc.)
+        const shiftId = SHIFT_CONFIG.getShiftId(dayIndex, timeSlot.id);
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.id = `${day.replace(' ', '_')}_${timeSlot.id}`;
+        checkbox.id = `shift_${shiftId}`;
         checkbox.name = 'availability';
-        checkbox.value = `${day} ${timeSlot.label}`;
+        checkbox.value = shiftId; // Now stores "D1A" instead of "Day 1 9:45-1:15"
         checkbox.onchange = checkAvailabilityCount;
 
         const label = document.createElement('label');
         label.htmlFor = checkbox.id;
-        label.textContent = timeSlot.label;
+        label.textContent = timeSlot.label; // Display "9:45-1:15" to user
         label.className = '';
 
         checkboxItem.appendChild(checkbox);

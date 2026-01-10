@@ -285,9 +285,13 @@
       transform: translateX(-50%);
       background-color: #333;
       color: #fff;
-      padding: 6px 10px;
+      padding: 8px 12px;
       border-radius: 5px;
-      white-space: nowrap;
+      white-space: normal;
+      max-width: 400px;
+      width: max-content;
+      min-width: 120px;
+      text-align: center;
       opacity: 0;
       pointer-events: none;
       font-size: 0.85em;
@@ -410,8 +414,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px 24px;
-      border-bottom: 2px solid var(--border-light);
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-light);
     }
 
     body.dark .modal-header {
@@ -421,31 +425,7 @@
     .modal-header h3 {
       margin: 0;
       color: var(--accent-color);
-      font-size: 1.4rem;
-    }
-
-    .modal-close-btn {
-      background: none;
-      border: none;
-      font-size: 2rem;
-      cursor: pointer;
-      color: var(--text-color-light);
-      line-height: 1;
-      padding: 0;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: color 0.2s;
-    }
-
-    body.dark .modal-close-btn {
-      color: var(--text-color-dark);
-    }
-
-    .modal-close-btn:hover {
-      color: var(--accent-color);
+      font-size: 1.2rem;
     }
 
     .modal-body {
@@ -455,8 +435,8 @@
     }
 
     .modal-footer {
-      padding: 16px 24px;
-      border-top: 2px solid var(--border-light);
+      padding: 12px 20px;
+      border-top: 1px solid var(--border-light);
       display: flex;
       justify-content: flex-end;
     }
@@ -584,6 +564,14 @@
       const modal = document.getElementById('intakeDocumentModal');
       modal.style.display = 'none';
       updateIntakeDocumentBadge();
+    }
+
+    // Handle modal overlay click (close modal when clicking outside)
+    function handleModalOverlayClick(event) {
+      // Close modal only if clicking the overlay itself, not the modal content
+      if (event.target.id === 'intakeDocumentModal') {
+        closeIntakeDocumentModal();
+      }
     }
 
     // Render the document checklist in the modal
@@ -966,11 +954,10 @@
     </div>
   </div>
 
-  <div id="intakeDocumentModal" class="modal-overlay" style="display:none;">
+  <div id="intakeDocumentModal" class="modal-overlay" style="display:none;" onclick="handleModalOverlayClick(event)">
     <div class="modal-content">
       <div class="modal-header">
         <h3>📋 Document Checklist</h3>
-        <button class="modal-close-btn" onclick="closeIntakeDocumentModal()">&times;</button>
       </div>
       <div class="modal-body" id="intakeDocumentModalBody">
         <!-- Document categories will be rendered here by JavaScript -->

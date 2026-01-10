@@ -19,7 +19,11 @@
       "Bash(xargs:*)",
       "Bash(clasp:*)",
       "Bash(git restore:*)",
-      "Bash(cmd /c \"c:\\\\Users\\\\Ben Ma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\catbus_scripts\\\\upload.bat\")"
+      "Bash(cmd /c \"c:\\\\Users\\\\Ben Ma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\catbus_scripts\\\\upload.bat\")",
+      "Bash(cmd /c \"cd /d c:\\\\Users\\\\Ben Ma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\catbus_scripts && clasp push\")",
+      "Bash(dir \"c:\\\\Users\\\\Ben Ma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\catbus_scripts\\\\*.bat\")",
+      "Bash(dir \"c:\\\\Users\\\\Ben Ma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\*.bat\")",
+      "Bash(cmd /c \"dir /b \"\"c:\\\\Users\\\\Ben Ma\\\\Dropbox\\\\Tax Clinic\\\\Website\\\\*.bat\"\"\")"
     ]
   }
 }

@@ -108,7 +108,9 @@ function checkExistingVolunteer(email) {
             role: row[4],
             numShifts: row[5],
             consecutive: row[6],
-            availability: row[7] ? row[7].toString().split(', ') : [],
+            // Split by comma only (no space) to match storage format
+            // Handles both "D1A,D1B,D2C" (new shift IDs) and "Day 1 9:45-1:15, Day 1 1:00-4:45" (old format with spaces)
+            availability: row[7] ? row[7].toString().split(/,\s*/) : [],
             notes: row[8] || '',
             lastModified: lastModified
           }
@@ -179,7 +181,8 @@ function submitAvailabilityForm(formData) {
     const existingVolunteer = checkExistingVolunteer(formData.email);
 
     // Format availability as comma-separated string for storage
-    const availabilityString = formData.availability.join(', ');
+    // Now stores shift IDs like "D1A,D1B,D2C" instead of "Day 1 9:45-1:15, Day 1 1:00-4:45"
+    const availabilityString = formData.availability.join(',');
 
     // Prepare timestamps
     const now = new Date();

@@ -155,21 +155,11 @@ function getVolunteerScheduleByName(searchTerm) {
       return { shifts: [] };
     }
 
-    // Map shift IDs to human-readable format with actual dates
-    const shiftIdToLabel = {
-      'D1A': { day: dayLabels[0] || 'Day 1', time: '9:30-1:15' },
-      'D1B': { day: dayLabels[0] || 'Day 1', time: '1:00-4:45' },
-      'D1C': { day: dayLabels[0] || 'Day 1', time: '4:30-8:30' },
-      'D2A': { day: dayLabels[1] || 'Day 2', time: '9:30-1:15' },
-      'D2B': { day: dayLabels[1] || 'Day 2', time: '1:00-4:45' },
-      'D2C': { day: dayLabels[1] || 'Day 2', time: '4:30-8:30' },
-      'D3A': { day: dayLabels[2] || 'Day 3', time: '9:30-1:15' },
-      'D3B': { day: dayLabels[2] || 'Day 3', time: '1:00-4:45' },
-      'D3C': { day: dayLabels[2] || 'Day 3', time: '4:30-8:30' },
-      'D4A': { day: dayLabels[3] || 'Day 4', time: '9:30-1:15' },
-      'D4B': { day: dayLabels[3] || 'Day 4', time: '1:00-4:45' },
-      'D4C': { day: dayLabels[3] || 'Day 4', time: '4:30-8:30' }
-    };
+    // Helper function to get label for shift ID using SCHEDULE_CONFIG
+    function getShiftLabel(shiftId) {
+      const label = SCHEDULE_CONFIG.getShiftLabel(shiftId, dayLabels);
+      return label ? { day: label.day, time: label.time } : null;
+    }
 
     // Read volunteer assignments
     const shifts = [];
@@ -190,11 +180,12 @@ function getVolunteerScheduleByName(searchTerm) {
           const shiftIds = assignedShiftsString.split(',').map(s => s.trim());
 
           shiftIds.forEach(shiftId => {
-            if (shiftIdToLabel[shiftId]) {
+            const label = getShiftLabel(shiftId);
+            if (label) {
               shifts.push({
                 shiftId: shiftId,
-                day: shiftIdToLabel[shiftId].day,
-                time: shiftIdToLabel[shiftId].time
+                day: label.day,
+                time: label.time
               });
             }
           });
@@ -340,13 +331,14 @@ function getVolunteerScheduleByDay(day, filterRole = '') {
     const actualDayLabel = simplifyDateFormat(headerRow[dayColumn]?.toString().trim() || day);
     Logger.log(`Found day column ${dayColumn} for day: ${day}. Header value: ${actualDayLabel}`);
 
-    // Map row indices to time slots for that day
-    // Row 1 (index 0) is header, Row 2 (index 1) is 9:30-1:15, Row 3 (index 2) is 1:00-4:45, Row 4 (index 3) is 4:30-8:30
-    const timeSlotMap = {
-      1: `${actualDayLabel} 9:30-1:15`,   // Row 2 (index 1) - 9:30-1:15
-      2: `${actualDayLabel} 1:00-4:45`,   // Row 3 (index 2) - 1:00-4:45
-      3: `${actualDayLabel} 4:30-8:30`    // Row 4 (index 3) - 4:30-8:30
-    };
+    // Map row indices to time slots for that day using SCHEDULE_CONFIG
+    // Row 1 (index 0) is header, Row 2-4 (indices 1-3) are time slots A/B/C
+    const timeSlotMap = {};
+    ['A', 'B', 'C'].forEach((slotKey, index) => {
+      const rowIndex = index + 1; // Row 2 is index 1, etc.
+      const timeDisplay = SCHEDULE_CONFIG.TIME_SLOTS[slotKey].display;
+      timeSlotMap[rowIndex] = `${actualDayLabel} ${timeDisplay}`;
+    });
     
     const schedule = {};
     
