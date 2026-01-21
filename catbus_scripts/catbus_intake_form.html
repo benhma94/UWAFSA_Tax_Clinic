@@ -694,13 +694,18 @@
         errorBox.style.display = 'none';
       }
 
+      // Get appointment ID and auto-set high priority if provided
+      const appointmentId = document.getElementById('appointmentId').value.trim().toUpperCase();
+      const hasAppointment = appointmentId && /^P\d+$/.test(appointmentId);
+
       const formData = {
         householdsize: document.getElementById('householdsize').value,
         filingYears: [...filingYearCheckboxes].map(cb => cb.value),
         situations: [...document.querySelectorAll('input[name="situations"]:checked')].map(cb => cb.value),
-        notes: document.getElementById('notes').value,
+        notes: document.getElementById('notes').value + (hasAppointment ? ' [Pre-booked appointment]' : ''),
         needsSeniorReview: document.getElementById('needsSeniorReview').checked,
-        isHighPriority: document.getElementById('isHighPriority').checked,
+        isHighPriority: document.getElementById('isHighPriority').checked || hasAppointment,
+        appointmentId: hasAppointment ? appointmentId : null,
         documents: getSelectedDocuments()
       };
 
@@ -938,6 +943,12 @@
 
         <div class="form-group">
           <label><input type="checkbox" id="needsSeniorReview" name="needsSeniorReview"> Flag for senior review (please indicate in notes why this is the case)<span class="tooltip" data-tooltip="Couples/families are complex situations. Newcomers/immigrants are not necessarily complex situations unless they are U.S. Citizens. Use judgement accordingly based on provided guidance - panic/confusions/unpreparedness of the client does not warrant senior review.">?</span></label>
+        </div>
+
+        <div class="form-group">
+          <label for="appointmentId">Appointment ID (if client has one):</label>
+          <input type="text" id="appointmentId" name="appointmentId" placeholder="e.g., P001" style="max-width: 150px;">
+          <p style="font-size: 0.9em; color: #666; margin-top: 5px;">Enter the client's pre-booked appointment ID. This will be used as their Client ID and auto-mark them as high priority.</p>
         </div>
 
         <div class="form-group">

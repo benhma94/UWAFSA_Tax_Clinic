@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tax Clinic - Check Your Eligibility</title>
+    <link rel="icon" type="image/x-icon" href="https://images.squarespace-cdn.com/content/v1/58160637ebbd1a05830e8877/1498160425020-GEEC0HTGWGL1ZXQ1D4HP/favicon.ico?format=100w"/>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f7f7f7;
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: #fff;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        header img {
+            max-width: 150px;
+            height: auto;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+        }
+
+        .container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 650px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            color: #222;
+        }
+
+        h2 {
+            font-size: 1.4rem;
+            margin: 30px 0 20px 0;
+            color: #333;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+
+        .question {
+            margin-bottom: 25px;
+        }
+
+        .question > label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .question .hint {
+            font-weight: normal;
+            font-size: 0.9rem;
+            color: #666;
+            display: block;
+            margin-top: 5px;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .radio-group input[type="radio"] {
+            margin-right: 8px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Income table */
+        .income-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.95rem;
+        }
+
+        .income-table th, .income-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        .income-table th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+        }
+
+        .income-table tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+
+        /* Conditional question - hidden by default */
+        .conditional {
+            display: none;
+        }
+
+        /* Results Section */
+        .result {
+            display: none;
+            padding: 25px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .result.simple {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+
+        .result.complex {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+        }
+
+        .result.ineligible {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+
+        .result h2 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            border: none;
+            padding: 0;
+        }
+
+        .result.simple h2 {
+            color: #155724;
+        }
+
+        .result.complex h2 {
+            color: #856404;
+        }
+
+        .result.ineligible h2 {
+            color: #721c24;
+        }
+
+        .result p {
+            margin-bottom: 15px;
+        }
+
+        .result ul {
+            margin: 15px 0 15px 20px;
+        }
+
+        .result li {
+            margin-bottom: 8px;
+        }
+
+        .clinic-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        .clinic-info h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .clinic-info table {
+            width: 100%;
+            font-size: 0.9rem;
+        }
+
+        .clinic-info td {
+            padding: 5px 0;
+        }
+
+        .book-btn {
+            display: inline-block;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            background-color: #28a745;
+            border: none;
+            border-radius: 6px;
+            text-decoration: none;
+            margin-top: 15px;
+            transition: background-color 0.2s;
+        }
+
+        .book-btn:hover {
+            background-color: #218838;
+        }
+
+        .reasons-list {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+
+        .reasons-list h4 {
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+        }
+
+        .result.complex .reasons-list h4 {
+            color: #856404;
+        }
+
+        .result.ineligible .reasons-list h4 {
+            color: #721c24;
+        }
+
+        .note {
+            font-size: 0.9rem;
+            color: #666;
+            font-style: italic;
+            margin-top: 15px;
+        }
+
+        .reset-btn {
+            background-color: #6c757d;
+            margin-top: 15px;
+        }
+
+        .reset-btn:hover {
+            background-color: #545b62;
+        }
+
+        footer {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: #fff;
+            text-decoration: underline;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 10px;
+        }
+
+        .step {
+            padding: 8px 16px;
+            background-color: #e9ecef;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .step.active {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        .step.completed {
+            background-color: #28a745;
+            color: #fff;
+        }
+
+        #complexitySection {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .radio-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .step-indicator {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="http://uwafsa.com/">
+            <img src="https://images.squarespace-cdn.com/content/v1/58160637ebbd1a05830e8877/1495590981240-PJ1QF61AK6WCE3NLHKMV/18644378_1551509424861108_406526820_n.png" alt="AFSA Logo">
+        </a>
+    </header>
+
+    <main>
+        <div class="container">
+            <h1>AFSA Tax Clinic - Check Your Eligibility</h1>
+            <p class="subtitle">Answer a few questions to find out if we can help with your taxes and whether you should book an appointment or walk in.</p>
+
+            <div class="step-indicator">
+                <span class="step active" id="step1Indicator">1. Eligibility</span>
+                <span class="step" id="step2Indicator">2. Your Situation</span>
+            </div>
+
+            <form id="screeningForm">
+                <!-- STEP 1: ELIGIBILITY SCREENING -->
+                <div id="eligibilitySection">
+                    <h2>Step 1: Eligibility Check</h2>
+
+                    <div class="question">
+                        <label>Are you claiming tuition credits (T2202)?
+                            <span class="hint">This includes current year tuition or carryforward from previous years</span>
+                        </label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="tuition" value="yes" required onchange="toggleIncomeQuestion()"> Yes</label>
+                            <label><input type="radio" name="tuition" value="no" onchange="toggleIncomeQuestion()"> No</label>
+                        </div>
+                    </div>
+
+                    <div class="question conditional" id="incomeLimitQuestion">
+                        <label>Is your income above these limits?</label>
+                        <table class="income-table" id="incomeLimitTable">
+                            <tr>
+                                <th>Taxpayer Status</th>
+                                <th>Income Limit</th>
+                            </tr>
+                            <!-- Populated dynamically from CONFIG -->
+                        </table>
+                        <div class="radio-group">
+                            <label><input type="radio" name="incomeLimit" value="yes"> Yes, above limits</label>
+                            <label><input type="radio" name="incomeLimit" value="no"> No, within limits</label>
+                        </div>
+                    </div>
+
+                    <div class="question">
+                        <label>Do you have self-employment income or crypto transactions?
+                            <span class="hint">Includes DoorDash, Uber, freelance work, or selling crypto</span>
+                        </label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="selfEmployment" value="yes" required> Yes</label>
+                            <label><input type="radio" name="selfEmployment" value="no"> No</label>
+                        </div>
+                    </div>
+
+                    <div class="question">
+                        <label>Are you filing for bankruptcy or for a deceased person?</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="bankruptcy" value="yes" required> Yes</label>
+                            <label><input type="radio" name="bankruptcy" value="no"> No</label>
+                        </div>
+                    </div>
+
+                    <div class="question">
+                        <label>Do you have rental income?
+                            <span class="hint">Do you own real estate such as a condo or house that you rent out? This does not include subletting.</span>
+                        </label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="rentalIncome" value="yes" required> Yes</label>
+                            <label><input type="radio" name="rentalIncome" value="no"> No</label>
+                        </div>
+                    </div>
+
+                    <div class="question">
+                        <label>Do you have capital gains?
+                            <span class="hint">If you sold something during the year like real estate or stocks</span>
+                        </label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="capitalGains" value="yes" required> Yes</label>
+                            <label><input type="radio" name="capitalGains" value="no"> No</label>
+                        </div>
+                    </div>
+
+                    <div class="question">
+                        <label>Do you have foreign property over $100,000?
+                            <span class="hint">Includes rental properties or foreign stock portfolios (not personal homes)</span>
+                        </label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="foreignProperty" value="yes" required> Yes</label>
+                            <label><input type="radio" name="foreignProperty" value="no"> No</label>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="checkEligibility()">Check Eligibility</button>
+                </div>
+
+                <!-- STEP 2: COMPLEXITY SCREENING -->
+                <div id="complexitySection">
+                    <h2>Step 2: Your Tax Situation</h2>
+
+                    <div class="question">
+                        <label>
+                            How many tax years are you filing?
+                            <span class="hint">For example, if you're filing for 2025 and 2024, select "2"</span>
+                        </label>
+                        <select id="taxYears" required>
+                            <option value="">Select...</option>
+                            <option value="1">1 year</option>
+                            <option value="2">2 years</option>
+                            <option value="3">3 years</option>
+                            <option value="4">4 years</option>
+                            <option value="5">5 or more years</option>
+                        </select>
+                    </div>
+
+                    <div class="question">
+                        <label>Are you claiming any expenses related to children (e.g., daycare, childcare, etc.)?</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="children" value="no" required> No</label>
+                            <label><input type="radio" name="children" value="yes"> Yes</label>
+                        </div>
+                    </div>
+
+                    <div class="question">
+                        <label>
+                            Do you have foreign co-op income?
+                            <span class="hint">Income earned outside Canada after you first arrived in Canada (e.g., international co-op work term)</span>
+                        </label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="foreignIncome" value="no" required> No</label>
+                            <label><input type="radio" name="foreignIncome" value="yes"> Yes</label>
+                        </div>
+                    </div>
+
+                    <button type="submit">Check My Situation</button>
+                </div>
+            </form>
+
+            <!-- INELIGIBLE Result -->
+            <div id="ineligibleResult" class="result ineligible">
+                <h2>Unfortunately, we cannot assist with your tax situation</h2>
+                <p>Based on your answers, your tax situation falls outside what our volunteer clinic can handle.</p>
+
+                <p><strong>Alternatives:</strong></p>
+                <ul>
+                    <li>Visit a professional tax preparer</li>
+                    <li>Hire a Chartered Professional Accountant (CPA)</li>
+                    <li>Use tax software like Better Tax or Wealthsimple Tax on your own.</li>
+                </ul>
+
+                <p class="note">We apologize for any inconvenience. Our volunteers are trained for specific tax situations to ensure accuracy.</p>
+            </div>
+
+            <!-- Simple Case Result -->
+            <div id="simpleResult" class="result simple">
+                <h2>Great news! You can walk in.</h2>
+                <p>Based on your answers, your tax situation can be handled as a walk-in. No appointment needed!</p>
+
+                <div class="clinic-info">
+                    <h3>Clinic Dates &amp; Times</h3>
+                    <table id="simpleClinicDates">
+                        <!-- Populated dynamically from CONFIG -->
+                    </table>
+                    <p style="margin-top: 10px;"><strong>Location:</strong> <span id="simpleClinicLocation"></span></p>
+                </div>
+
+                <p class="note">Don't forget to bring your documents! Check our <a href="http://taxclinic.uwaterloo.ca" target="_blank">main page</a> for the full checklist.</p>
+            </div>
+
+            <!-- Complex Case Result -->
+            <div id="complexResult" class="result complex">
+                <h2>We recommend booking an appointment</h2>
+                <p>Based on your answers, your tax situation may require extra time. Booking an appointment ensures we can give you the attention you need.</p>
+
+                <a id="bookingLink" href="#" target="_blank" class="book-btn">Book an Appointment</a>
+
+                <p class="note">You can still walk in during clinic hours, but wait times may be longer for complex situations.</p>
+
+                <div class="clinic-info">
+                    <h3>Walk-in Hours (if you prefer)</h3>
+                    <table id="complexClinicDates">
+                        <!-- Populated dynamically from CONFIG -->
+                    </table>
+                    <p style="margin-top: 10px;"><strong>Location:</strong> <span id="complexClinicLocation"></span></p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>AFSA Tax Clinic | <a href="mailto:taxclinic@uwafsa.com">taxclinic@uwafsa.com</a> | <a href="http://taxclinic.uwaterloo.ca" target="_blank">Main Website</a></p>
+    </footer>
+
+    <script>
+        /**
+         * Configuration - MIRRORS Config.gs ELIGIBILITY_CONFIG
+         * When updating values here, also update catbus_scripts/Config.gs
+         * This duplication is necessary because HTML cannot directly access .gs files
+         */
+        const CONFIG = {
+            // Income thresholds for non-tuition filers
+            INCOME_LIMITS: {
+                INDIVIDUAL: 35000,
+                COUPLE: 45000,
+                PER_DEPENDANT: 2500
+            },
+
+            // Appointment booking Google Form URL
+            BOOKING_URL: 'https://forms.gle/yeHteMXsHYVBhdSF6',
+
+            // Clinic dates
+            CLINIC_DATES: [
+                'Saturday, March 21, 2026',
+                'Sunday, March 22, 2026',
+                'Saturday, March 28, 2026',
+                'Sunday, March 29, 2026'
+            ],
+
+            // Clinic operating hours for walk-ins
+            CLINIC_HOURS: '10:00 AM - 7:30 PM',
+
+            // Clinic location
+            CLINIC_LOCATION: 'TBD',
+
+            // Complexity thresholds
+            MAX_SIMPLE_TAX_YEARS: 4
+        };
+
+        // Initialize page with CONFIG values
+        function initializeFromConfig() {
+            // Set the booking link
+            document.getElementById('bookingLink').href = CONFIG.BOOKING_URL;
+
+            // Populate income limit table
+            const incomeTable = document.getElementById('incomeLimitTable');
+            const incomeRows = [
+                ['Individual', '$' + CONFIG.INCOME_LIMITS.INDIVIDUAL.toLocaleString()],
+                ['Couple', '$' + CONFIG.INCOME_LIMITS.COUPLE.toLocaleString()],
+                ['Each additional dependant', '+$' + CONFIG.INCOME_LIMITS.PER_DEPENDANT.toLocaleString()]
+            ];
+            incomeRows.forEach(([status, limit]) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${status}</td><td>${limit}</td>`;
+                incomeTable.appendChild(tr);
+            });
+
+            // Populate clinic date tables (simple and complex results)
+            const populateClinicTable = (tableId) => {
+                const table = document.getElementById(tableId);
+                CONFIG.CLINIC_DATES.forEach(date => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${date}</td><td>${CONFIG.CLINIC_HOURS}</td>`;
+                    table.appendChild(tr);
+                });
+            };
+            populateClinicTable('simpleClinicDates');
+            populateClinicTable('complexClinicDates');
+
+            // Set clinic locations
+            document.getElementById('simpleClinicLocation').textContent = CONFIG.CLINIC_LOCATION;
+            document.getElementById('complexClinicLocation').textContent = CONFIG.CLINIC_LOCATION;
+        }
+
+        // Run initialization when DOM is ready
+        initializeFromConfig();
+
+        // Toggle income question based on tuition answer
+        function toggleIncomeQuestion() {
+            const tuition = document.querySelector('input[name="tuition"]:checked')?.value;
+            const incomeQuestion = document.getElementById('incomeLimitQuestion');
+
+            if (tuition === 'no') {
+                incomeQuestion.style.display = 'block';
+            } else {
+                incomeQuestion.style.display = 'none';
+                // Clear the income limit selection when hidden
+                const incomeRadios = document.querySelectorAll('input[name="incomeLimit"]');
+                incomeRadios.forEach(radio => radio.checked = false);
+            }
+        }
+
+        // Check eligibility (Step 1)
+        function checkEligibility() {
+            const tuition = document.querySelector('input[name="tuition"]:checked')?.value;
+            const incomeLimit = document.querySelector('input[name="incomeLimit"]:checked')?.value;
+            const selfEmployment = document.querySelector('input[name="selfEmployment"]:checked')?.value;
+            const bankruptcy = document.querySelector('input[name="bankruptcy"]:checked')?.value;
+            const rentalIncome = document.querySelector('input[name="rentalIncome"]:checked')?.value;
+            const capitalGains = document.querySelector('input[name="capitalGains"]:checked')?.value;
+            const foreignProperty = document.querySelector('input[name="foreignProperty"]:checked')?.value;
+
+            // Validate all required questions are answered
+            if (!tuition || !selfEmployment || !bankruptcy || !rentalIncome || !capitalGains || !foreignProperty) {
+                alert('Please answer all questions before continuing.');
+                return;
+            }
+
+            // If no tuition, income limit question must be answered
+            if (tuition === 'no' && !incomeLimit) {
+                alert('Please answer the income limit question.');
+                return;
+            }
+
+            // Check for ineligibility
+            const ineligibleReasons = [];
+
+            if (tuition === 'no' && incomeLimit === 'yes') {
+                ineligibleReasons.push('Income exceeds our limits (and no tuition credits to claim)');
+            }
+
+            if (selfEmployment === 'yes') {
+                ineligibleReasons.push('Self-employment income or crypto transactions');
+            }
+
+            if (bankruptcy === 'yes') {
+                ineligibleReasons.push('Filing for bankruptcy or deceased person');
+            }
+
+            if (rentalIncome === 'yes') {
+                ineligibleReasons.push('Rental income');
+            }
+
+            if (capitalGains === 'yes') {
+                ineligibleReasons.push('Capital gains');
+            }
+
+            if (foreignProperty === 'yes') {
+                ineligibleReasons.push('Foreign property over $100,000');
+            }
+
+            if (ineligibleReasons.length > 0) {
+                // Show ineligible result (without listing specific reasons)
+                document.getElementById('screeningForm').style.display = 'none';
+                document.getElementById('ineligibleResult').style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                // Eligible - move to step 2
+                document.getElementById('eligibilitySection').style.display = 'none';
+                document.getElementById('complexitySection').style.display = 'block';
+                document.getElementById('step1Indicator').classList.remove('active');
+                document.getElementById('step1Indicator').classList.add('completed');
+                document.getElementById('step2Indicator').classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        // Form submission handler (Step 2 - Complexity check)
+        document.getElementById('screeningForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const taxYears = parseInt(document.getElementById('taxYears').value);
+            const hasChildren = document.querySelector('input[name="children"]:checked')?.value === 'yes';
+            const hasForeignIncome = document.querySelector('input[name="foreignIncome"]:checked')?.value === 'yes';
+
+            // Check complexity
+            const reasons = [];
+
+            if (taxYears >= 5) {
+                reasons.push('Filing for 5 or more tax years');
+            }
+
+            if (hasChildren) {
+                reasons.push('Filing taxes for children');
+            }
+
+            if (hasForeignIncome) {
+                reasons.push('Foreign co-op income to report');
+            }
+
+            const isComplex = reasons.length > 0;
+
+            // Hide form and show appropriate result
+            document.getElementById('screeningForm').style.display = 'none';
+
+            if (isComplex) {
+                document.getElementById('complexResult').style.display = 'block';
+            } else {
+                document.getElementById('simpleResult').style.display = 'block';
+            }
+
+            // Scroll to result
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Reset form function
+        function resetForm() {
+            document.getElementById('screeningForm').reset();
+            document.getElementById('screeningForm').style.display = 'block';
+            document.getElementById('eligibilitySection').style.display = 'block';
+            document.getElementById('complexitySection').style.display = 'none';
+            document.getElementById('incomeLimitQuestion').style.display = 'none';
+            document.getElementById('simpleResult').style.display = 'none';
+            document.getElementById('complexResult').style.display = 'none';
+            document.getElementById('ineligibleResult').style.display = 'none';
+
+            // Reset step indicators
+            document.getElementById('step1Indicator').classList.add('active');
+            document.getElementById('step1Indicator').classList.remove('completed');
+            document.getElementById('step2Indicator').classList.remove('active');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

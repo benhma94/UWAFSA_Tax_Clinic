@@ -149,6 +149,68 @@ function getSheet(sheetName) {
 }
 
 /**
+ * Appointment Booking Configuration
+ * Settings for complex case appointment bookings via Google Form
+ */
+const APPOINTMENT_CONFIG = {
+  // Sheet name for appointment bookings (form responses will be here)
+  SHEET_NAME: 'Appointment Bookings',
+
+  // Column mappings (0-indexed) - matches actual Google Form response columns
+  // Form fields: Timestamp, Email, Preferred Date, Preferred Time, Situations, Client ID
+  COLUMNS: {
+    TIMESTAMP: 0,
+    EMAIL: 1,
+    PREFERRED_DATE: 2,
+    PREFERRED_TIME: 3,
+    SITUATIONS: 4,
+    CLIENT_ID: 5,
+    CONFIRMATION_SENT: 6
+  },
+
+  // Client ID settings
+  CLIENT_ID_PREFIX: 'P', // Priority prefix
+  CLIENT_ID_PAD_LENGTH: 3 // P001, P002, etc.
+};
+
+/**
+ * Eligibility Configuration
+ * Centralized values for the pre-screening questionnaire
+ * NOTE: These values are mirrored in appointment_screening.html's CONFIG object.
+ * When updating these values, also update the HTML file.
+ */
+const ELIGIBILITY_CONFIG = {
+  // Income thresholds for non-tuition filers
+  INCOME_LIMITS: {
+    INDIVIDUAL: 35000,
+    COUPLE: 45000,
+    PER_DEPENDANT: 2500
+  },
+
+  // Appointment booking Google Form URL
+  BOOKING_FORM_URL: 'https://forms.gle/yeHteMXsHYVBhdSF6',
+
+  // Clinic dates (must match SCHEDULE_CONFIG.DEFAULT_DAY_LABELS)
+  CLINIC_DATES: [
+    'Saturday, March 21, 2026',
+    'Sunday, March 22, 2026',
+    'Saturday, March 28, 2026',
+    'Sunday, March 29, 2026'
+  ],
+
+  // Clinic operating hours for walk-ins
+  CLINIC_HOURS: '10:00 AM - 7:30 PM',
+
+  // Clinic location (TBD until confirmed)
+  CLINIC_LOCATION: 'TBD',
+
+  // Complexity thresholds
+  COMPLEXITY: {
+    MAX_SIMPLE_TAX_YEARS: 4  // 5+ years = complex case
+  }
+};
+
+/**
  * Schedule Configuration
  * Centralized source of truth for shift definitions and display mappings
  * This allows frontend to change time slots and day labels without touching backend code
