@@ -4,6 +4,54 @@
  */
 
 /**
+ * Gets volunteer tags from the Volunteer Tags sheet
+ * Falls back to hardcoded VOLUNTEER_TAGS if sheet doesn't exist
+ * @returns {Object} Map of volunteer name to custom tag
+ */
+function getVolunteerTagsFromSheet() {
+  try {
+    const ss = getSpreadsheet();
+    const sheetName = CONFIG.SHEETS.VOLUNTEER_TAGS || 'Volunteer Tags';
+    const sheet = ss.getSheetByName(sheetName);
+
+    if (!sheet) {
+      // Fall back to hardcoded VOLUNTEER_TAGS if sheet doesn't exist
+      return VOLUNTEER_TAGS || {};
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return VOLUNTEER_TAGS || {};
+
+    const data = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+    const tags = {};
+
+    for (const row of data) {
+      const name = row[0]?.toString().trim();
+      const tag = row[1]?.toString().trim();
+      if (name && tag) {
+        tags[name] = tag;
+        // Also add lowercase key for case-insensitive matching
+        tags[name.toLowerCase()] = tag;
+      }
+    }
+
+    // Merge with hardcoded tags (sheet takes priority)
+    const hardcodedTags = VOLUNTEER_TAGS || {};
+    Object.keys(hardcodedTags).forEach(key => {
+      if (!tags[key] && !tags[key.toLowerCase()]) {
+        tags[key] = hardcodedTags[key];
+        tags[key.toLowerCase()] = hardcodedTags[key];
+      }
+    });
+
+    return tags;
+  } catch (e) {
+    Logger.log('Error reading volunteer tags: ' + e.message);
+    return VOLUNTEER_TAGS || {};
+  }
+}
+
+/**
  * Gets a list of all volunteer names from the schedule
  * @returns {Array<string>} Array of volunteer names
  */
@@ -360,8 +408,16 @@ function getVolunteerScheduleByDay(day, filterRole = '') {
           });
         }
 
-        // Sort alphabetically
-        volunteers.sort((a, b) => a.localeCompare(b));
+        // Sort by role (Mentor first, then Filer, then Frontline), then alphabetically within role
+        const roleOrder = { 'Mentor': 1, 'Senior Mentor': 1, 'Filer': 2, 'Frontline': 3 };
+        volunteers.sort((a, b) => {
+          const roleA = volunteerRoles[a] || '';
+          const roleB = volunteerRoles[b] || '';
+          const orderA = roleOrder[roleA] || 99;
+          const orderB = roleOrder[roleB] || 99;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.localeCompare(b);
+        });
 
         schedule[timeSlot] = volunteers;
       } else {
@@ -369,10 +425,35 @@ function getVolunteerScheduleByDay(day, filterRole = '') {
       }
     }
     
+    // Build case-insensitive volunteer tags lookup
+    const volunteerTagsLookup = {};
+    const baseTags = getVolunteerTagsFromSheet();
+
+    // Create a lowercase lookup map for case-insensitive matching
+    Object.keys(baseTags).forEach(key => {
+      volunteerTagsLookup[key] = baseTags[key];
+      volunteerTagsLookup[key.toLowerCase()] = baseTags[key];
+    });
+
+    // Also add tags for all volunteers found in the schedule (match by lowercase)
+    const normalizedTags = {};
+    Object.keys(schedule).forEach(timeSlot => {
+      schedule[timeSlot].forEach(volunteer => {
+        const lowerName = volunteer.toLowerCase();
+        // Check both exact match and lowercase match
+        if (baseTags[volunteer]) {
+          normalizedTags[volunteer] = baseTags[volunteer];
+        } else if (volunteerTagsLookup[lowerName]) {
+          normalizedTags[volunteer] = volunteerTagsLookup[lowerName];
+        }
+      });
+    });
+
     // Return schedule with the actual day label for display
-    return { 
-      schedule: schedule, 
+    return {
+      schedule: schedule,
       volunteerRoles: volunteerRoles,
+      volunteerTags: normalizedTags,  // Include custom display tags (case-insensitive matched)
       dayLabel: actualDayLabel  // Include the actual day label for display
     };
   }, 'getVolunteerScheduleByDay');

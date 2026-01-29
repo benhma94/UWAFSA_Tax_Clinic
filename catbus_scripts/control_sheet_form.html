@@ -84,7 +84,7 @@
       font-weight: 500;
     }
 
-    input[list], select, input[type="text"], input[type="number"] {
+    select, input[type="text"], input[type="number"] {
       padding: 12px 16px;
       border-radius: 8px;
       width: 220px;
@@ -94,36 +94,84 @@
       box-sizing: border-box;
     }
 
-    body.light input[list], body.light select, body.light input[type="text"], body.light input[type="number"] {
+    body.light select, body.light input[type="text"], body.light input[type="number"] {
       background-color: var(--input-bg-light);
       color: var(--text-color-light);
       border-color: var(--border-light);
     }
 
-    body.dark input[list], body.dark select, body.dark input[type="text"], body.dark input[type="number"] {
+    body.dark select, body.dark input[type="text"], body.dark input[type="number"] {
       background-color: var(--input-bg-dark);
       color: var(--text-color-dark);
       border-color: var(--border-dark);
     }
 
-    /* Ensure datalist dropdowns match select styling */
-    input[list] {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 12px center;
-      background-size: 12px;
-      padding-right: 36px;
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
+    /* Autocomplete dropdown styles */
+    .autocomplete-container {
+      position: relative;
+      width: 220px;
     }
 
-    body.dark input[list] {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23f0f0f0' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
+    .autocomplete-container input[type="text"] {
+      width: 100%;
     }
 
-    input[list]::-webkit-calendar-picker-indicator {
+    .autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background-color: var(--input-bg-light);
+      border: 2px solid var(--border-light);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      max-height: 250px;
+      overflow-y: auto;
       display: none;
+      z-index: 1000;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark .autocomplete-dropdown {
+      background-color: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+
+    .autocomplete-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark .autocomplete-item {
+      border-bottom-color: var(--border-dark);
+    }
+
+    .autocomplete-item:hover {
+      background-color: rgba(142, 0, 0, 0.1);
+    }
+
+    body.dark .autocomplete-item:hover {
+      background-color: rgba(142, 0, 0, 0.2);
+    }
+
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+
+    .autocomplete-item.highlighted {
+      background-color: rgba(142, 0, 0, 0.15);
+    }
+
+    body.dark .autocomplete-item.highlighted {
+      background-color: rgba(142, 0, 0, 0.3);
+    }
+
+    .autocomplete-dropdown .no-matches {
+      padding: 10px 16px;
+      color: #999;
+      font-style: italic;
     }
 
     /* Reviewer inputs in table cells */
@@ -1258,9 +1306,134 @@
     .footer-copyright:hover {
       opacity: 0.8;
     }
+
+    /* Notification Toast for Internal Messaging */
+    .notification-toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--input-bg-light);
+      border-left: 4px solid var(--accent-color);
+      padding: 15px 20px;
+      padding-right: 35px;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      z-index: 2500;
+      max-width: 350px;
+      display: none;
+      animation: notificationSlideIn 0.3s ease;
+    }
+
+    @keyframes notificationSlideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .notification-toast.show {
+      display: block;
+    }
+
+    body.dark .notification-toast {
+      background: var(--input-bg-dark);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .notification-toast .notif-close-btn {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: #666;
+      padding: 0;
+      line-height: 1;
+    }
+
+    body.dark .notification-toast .notif-close-btn {
+      color: #aaa;
+    }
+
+    .notification-toast .notif-close-btn:hover {
+      color: var(--accent-color);
+    }
+
+    .notification-toast .notif-from {
+      font-weight: bold;
+      color: var(--accent-color);
+      margin-bottom: 5px;
+      font-size: 0.95em;
+    }
+
+    .notification-toast .notif-message {
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    body.dark .notification-toast .notif-message {
+      color: var(--text-color-dark);
+    }
+
+    .notification-toast .notif-reply-section {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .notification-toast .notif-reply-section input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      font-size: 13px;
+      background: var(--input-bg-light);
+      color: var(--text-color-light);
+    }
+
+    body.dark .notification-toast .notif-reply-section input {
+      background: var(--input-bg-dark);
+      color: var(--text-color-dark);
+      border-color: var(--border-dark);
+    }
+
+    .notification-toast .notif-reply-section input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    .notification-toast .notif-reply-btn {
+      padding: 8px 14px;
+      font-size: 13px;
+      border-radius: 4px;
+    }
+
+    .notification-toast .notif-dismiss-btn {
+      margin-top: 10px;
+      width: 100%;
+      padding: 8px;
+      font-size: 13px;
+      background: #888;
+    }
+
+    .notification-toast .notif-dismiss-btn:hover {
+      background: #666;
+    }
   </style>
 </head>
 <body class="light" onload="loadDropdowns()">
+  <!-- Message Notification Toast -->
+  <div class="notification-toast" id="messageNotification">
+    <button class="notif-close-btn" onclick="dismissNotification()">&times;</button>
+    <div class="notif-from" id="notificationFrom"></div>
+    <div class="notif-message" id="notificationMessage"></div>
+    <div class="notif-reply-section" id="notifReplySection" style="display: none;">
+      <input type="text" id="quickReplyInput" placeholder="Type a reply..." onkeypress="if(event.key==='Enter')sendQuickReply()">
+      <button class="notif-reply-btn" onclick="sendQuickReply()">Reply</button>
+    </div>
+    <button class="notif-dismiss-btn" onclick="dismissNotification()">Dismiss</button>
+  </div>
+
   <button class="checklist-toggle-btn" onclick="toggleDocumentPanel()" aria-label="Toggle document checklist">
     📋
     <span class="checklist-badge">0/25</span>
@@ -1276,8 +1449,10 @@
   <div class="form-row">
     <div>
       <label for="volunteer">Volunteer:</label><br>
-      <input id="volunteer" list="volunteerList" placeholder="Start typing volunteer name" oninput="updateClients(); checkFormReady();">
-      <datalist id="volunteerList"></datalist>
+      <div class="autocomplete-container">
+        <input type="text" id="volunteer" placeholder="Start typing volunteer name" autocomplete="off">
+        <div id="volunteerDropdown" class="autocomplete-dropdown"></div>
+      </div>
     </div>
     <div>
       <label for="client">Assigned Client:</label><br>
@@ -1479,6 +1654,9 @@
 
   <script defer>
     let volunteerMap = {};
+    let allVolunteerNames = [];
+    let filteredVolNames = [];
+    let volHighlightIndex = -1;
     let rowCount = 1;
     let currentClientData = null; // Store current client intake data
     let selectedFilesEmail = []; // Store files for email attachment
@@ -1525,18 +1703,108 @@
     function loadDropdowns() {
       google.script.run.withSuccessHandler(data => {
         volunteerMap = data;
-        const datalist = document.getElementById('volunteerList');
-        datalist.innerHTML = ''; // Clear existing
-        Object.keys(volunteerMap).sort().forEach(name => {
-          const option = document.createElement('option');
-          option.value = name;
-          datalist.appendChild(option);
-        });
+        allVolunteerNames = Object.keys(volunteerMap).sort();
         checkFormReady();
       }).getVolunteersAndClients();
+      setupVolunteerAutocomplete();
       setInterval(pollHelpStatus, 10000);
-      setInterval(pollReviewRequestStatus, 10000);
+      setInterval(pollMessages, 10000);
       document.getElementById('volunteer').focus();
+    }
+
+    function setupVolunteerAutocomplete() {
+      const input = document.getElementById('volunteer');
+      const dropdown = document.getElementById('volunteerDropdown');
+
+      input.addEventListener('input', function() {
+        const term = this.value.trim().toLowerCase();
+
+        if (term.length === 0) {
+          dropdown.style.display = 'none';
+          filteredVolNames = [];
+          updateClients();
+          checkFormReady();
+          return;
+        }
+
+        filteredVolNames = allVolunteerNames.filter(name =>
+          name.toLowerCase().includes(term)
+        );
+        volHighlightIndex = -1;
+
+        if (filteredVolNames.length === 0) {
+          dropdown.innerHTML = '<div class="no-matches">No volunteers found</div>';
+          dropdown.style.display = 'block';
+        } else {
+          const displayCount = Math.min(filteredVolNames.length, 10);
+          let html = '';
+          for (let i = 0; i < displayCount; i++) {
+            const name = filteredVolNames[i];
+            const escaped = name.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            html += '<div class="autocomplete-item" data-index="' + i + '" data-name="' + escaped + '" onclick="selectVolunteerFromDropdown(this.dataset.name)">' + highlightVolunteerMatch(name, term) + '</div>';
+          }
+          if (filteredVolNames.length > 10) {
+            html += '<div class="no-matches">... and ' + (filteredVolNames.length - 10) + ' more</div>';
+          }
+          dropdown.innerHTML = html;
+          dropdown.style.display = 'block';
+        }
+
+        updateClients();
+        checkFormReady();
+      });
+
+      input.addEventListener('keydown', function(e) {
+        if (dropdown.style.display === 'none' || filteredVolNames.length === 0) return;
+
+        const items = dropdown.querySelectorAll('.autocomplete-item');
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          volHighlightIndex = Math.min(volHighlightIndex + 1, items.length - 1);
+          updateVolHighlight(items);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          volHighlightIndex = Math.max(volHighlightIndex - 1, 0);
+          updateVolHighlight(items);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (volHighlightIndex >= 0 && volHighlightIndex < items.length) {
+            selectVolunteerFromDropdown(items[volHighlightIndex].dataset.name);
+          }
+        } else if (e.key === 'Escape') {
+          dropdown.style.display = 'none';
+          volHighlightIndex = -1;
+        }
+      });
+
+      document.addEventListener('click', function(e) {
+        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+          dropdown.style.display = 'none';
+          volHighlightIndex = -1;
+        }
+      });
+    }
+
+    function updateVolHighlight(items) {
+      items.forEach((item, idx) => {
+        item.classList.toggle('highlighted', idx === volHighlightIndex);
+      });
+    }
+
+    function highlightVolunteerMatch(text, term) {
+      if (!term) return text;
+      const regex = new RegExp('(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      return text.replace(regex, '<strong>$1</strong>');
+    }
+
+    function selectVolunteerFromDropdown(name) {
+      document.getElementById('volunteer').value = name;
+      document.getElementById('volunteerDropdown').style.display = 'none';
+      volHighlightIndex = -1;
+      filteredVolNames = [];
+      updateClients();
+      checkFormReady();
     }
 
     function updateClients() {
@@ -3130,6 +3398,82 @@
     window.addEventListener('load', function() {
       renderDocumentChecklist();
     });
+
+    // ===== INTERNAL MESSAGING SYSTEM =====
+    let currentNotification = null;
+
+    /**
+     * Polls for new messages - only when volunteer has a client selected
+     */
+    function pollMessages() {
+      const volunteer = document.getElementById('volunteer').value;
+      const client = document.getElementById('client').value;
+
+      // Only poll if volunteer has an active client
+      if (!volunteer || !client) return;
+
+      google.script.run
+        .withSuccessHandler(handleNewMessages)
+        .withFailureHandler(function(err) { console.log('Message poll error:', err); })
+        .getUnreadMessages(volunteer);
+    }
+
+    function handleNewMessages(messages) {
+      if (!messages || messages.length === 0) return;
+
+      // Show the most recent unread message
+      var latestMessage = messages[messages.length - 1];
+      showMessageNotification(latestMessage);
+    }
+
+    function showMessageNotification(message) {
+      currentNotification = message;
+
+      document.getElementById('notificationFrom').textContent = 'Message from ' + message.fromName;
+      document.getElementById('notificationMessage').textContent = message.message;
+
+      // Show reply option for chat messages only
+      var replySection = document.getElementById('notifReplySection');
+      replySection.style.display = message.messageType === 'chat' ? 'flex' : 'none';
+
+      document.getElementById('messageNotification').classList.add('show');
+    }
+
+    function dismissNotification() {
+      if (currentNotification) {
+        // Mark as read in backend
+        google.script.run.markMessageAsRead(currentNotification.rowIndex);
+      }
+
+      document.getElementById('messageNotification').classList.remove('show');
+      currentNotification = null;
+
+      // Check for more messages after a short delay
+      setTimeout(pollMessages, 500);
+    }
+
+    function sendQuickReply() {
+      var input = document.getElementById('quickReplyInput');
+      var reply = input.value.trim();
+      var volunteer = document.getElementById('volunteer').value;
+
+      if (!reply || !currentNotification || !volunteer) return;
+
+      input.disabled = true;
+
+      google.script.run
+        .withSuccessHandler(function() {
+          input.value = '';
+          input.disabled = false;
+          dismissNotification();
+        })
+        .withFailureHandler(function(err) {
+          input.disabled = false;
+          console.error('Reply error:', err);
+          alert('Failed to send reply');
+        })
+        .replyToMessage(volunteer, reply, currentNotification.conversationId);
+    }
   </script>
 <div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
 </body>

@@ -36,6 +36,8 @@ function doGet(e) {
     case 'signin':
     case 'signinout':
       return doGetVolunteerSignInOut();
+    case 'messaging':
+      return doGet_Messaging(e);
     default:
       return doGetClientIntake(); // Default fallback to intake
   }

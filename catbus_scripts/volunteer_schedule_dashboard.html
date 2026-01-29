@@ -372,6 +372,40 @@
       background-color: rgba(155, 89, 182, 0.25);
     }
 
+    .volunteer-tag {
+      display: inline-block;
+      padding: 3px 10px;
+      margin-left: 8px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-style: italic;
+      font-weight: 500;
+      background: linear-gradient(135deg, rgba(255, 193, 7, 0.15) 0%, rgba(255, 152, 0, 0.15) 100%);
+      color: #b8860b;
+      border: 1px dashed rgba(255, 152, 0, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .volunteer-tag::before {
+      content: '✨ ';
+      font-style: normal;
+    }
+
+    .volunteer-tag:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2);
+    }
+
+    body.dark .volunteer-tag {
+      background: linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 152, 0, 0.25) 100%);
+      color: #ffc107;
+      border-color: rgba(255, 193, 7, 0.5);
+    }
+
+    body.dark .volunteer-tag:hover {
+      box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+    }
+
     .footer-copyright {
       position: fixed;
       bottom: 10px;
@@ -553,9 +587,9 @@
   // Schedule configuration - Frontend display settings
   const SHIFT_CONFIG = {
     TIME_SLOTS: {
-      'A': { display: '9:45-1:15', label: 'Morning' },
-      'B': { display: '1:00-4:45', label: 'Afternoon' },
-      'C': { display: '4:30-8:15', label: 'Evening' }
+      'A': { display: '9:45 AM - 1:15 PM', label: 'Morning' },
+      'B': { display: '1:00 PM - 4:45 PM', label: 'Afternoon' },
+      'C': { display: '4:30 PM - 8:15 PM', label: 'Evening' }
     }
   };
 
@@ -854,8 +888,9 @@
       return;
     }
 
-    // Build volunteer role map from result
+    // Build volunteer role map and custom tags from result
     const volunteerRoles = result.volunteerRoles || {};
+    const volunteerTags = result.volunteerTags || {};
 
     // Initialize all time slots with empty arrays (will be populated from schedule)
     const timeSlots = {};
@@ -902,8 +937,10 @@
         timeSlots[timeSlot].forEach(volunteer => {
           const role = volunteerRoles[volunteer] || 'N/A';
           const roleClass = role.toLowerCase();
+          const customTag = volunteerTags[volunteer] || '';
+          const tagHtml = customTag ? `<span class="volunteer-tag">${customTag}</span>` : '';
           html += `<li class="volunteer-item">
-            <strong>${volunteer}</strong> <span class="role-badge ${roleClass}">${role}</span>
+            <strong>${volunteer}</strong>${tagHtml} <span class="role-badge ${roleClass}">${role}</span>
           </li>`;
         });
         html += '</ul>';

@@ -29,7 +29,11 @@ const CONFIG = {
     VOLUNTEER_LIST: 'Volunteer List',
     SIGNOUT: 'SignOut',
     SCHEDULE_AVAILABILITY: 'Schedule Availability', // Form responses for volunteer availability
-    SCHEDULE_OUTPUT: 'Schedule Output' // Generated schedule
+    SCHEDULE_OUTPUT: 'Schedule Output', // Generated schedule
+    PRODUCT_CODES: 'Product Codes', // Product codes for distribution
+    PRODUCT_CODE_DISTRIBUTION_LOG: 'Product Code Distribution Log', // Distribution tracking
+    VOLUNTEER_TAGS: 'Volunteer Tags', // Custom display tags for volunteers
+    MESSAGES: 'Messages' // Internal messaging between managers and volunteers
   },
   
   // Column Mappings (0-indexed)
@@ -182,9 +186,9 @@ const APPOINTMENT_CONFIG = {
 const ELIGIBILITY_CONFIG = {
   // Income thresholds for non-tuition filers
   INCOME_LIMITS: {
-    INDIVIDUAL: 35000,
-    COUPLE: 45000,
-    PER_DEPENDANT: 2500
+    INDIVIDUAL: 40000,
+    COUPLE: 50000,
+    PER_DEPENDANT: 5000
   },
 
   // Appointment booking Google Form URL
@@ -222,9 +226,9 @@ const SCHEDULE_CONFIG = {
 
   // Time slot definitions (for display only - backend only uses A/B/C)
   TIME_SLOTS: {
-    'A': { start: '9:45', end: '1:15', display: '9:45-1:15', label: 'Morning' },
-    'B': { start: '1:00', end: '4:45', display: '1:00-4:45', label: 'Afternoon' },
-    'C': { start: '4:30', end: '8:15', display: '4:30-8:15', label: 'Evening' }
+    'A': { start: '9:45', end: '1:15', display: '9:45 AM - 1:15 PM', label: 'Morning' },
+    'B': { start: '1:00', end: '4:30', display: '1:00 PM - 4:30 PM', label: 'Afternoon' },
+    'C': { start: '4:15', end: '8:00', display: '4:15 PM - 8:00 PM', label: 'Evening' }
   },
 
   // Default day labels (can be overridden in schedule generation)
@@ -306,4 +310,68 @@ const SCHEDULE_CONFIG = {
   isValidShiftId: function(shiftId) {
     return this.SHIFTS.hasOwnProperty(shiftId);
   }
+};
+
+/**
+ * Product Code Distribution Configuration
+ * Settings for distributing product codes to volunteers via email
+ */
+const PRODUCT_CODE_CONFIG = {
+  // Product codes sheet (in main CATBUS spreadsheet)
+  SHEET_NAME: 'Product Codes',
+
+  // Column mappings (0-indexed)
+  COLUMNS: {
+    YEAR: 0,           // Column A: Year (e.g., 2026)
+    KEY: 1,            // Column B: Product code/key
+    TIMES_USED: 2      // Column C: Number of times used
+  },
+
+  // Distribution tracking sheet
+  DISTRIBUTION_LOG_SHEET: 'Product Code Distribution Log',
+
+  // Email settings
+  EMAIL_SUBJECT: 'Your Tax Clinic Product Code'
+};
+
+/**
+ * Internal Messaging Configuration
+ * Settings for manager-volunteer messaging system
+ */
+const MESSAGING_CONFIG = {
+  // Sheet name for messages
+  SHEET_NAME: 'Messages',
+
+  // Column mappings (0-indexed)
+  COLUMNS: {
+    TIMESTAMP: 0,
+    FROM_NAME: 1,
+    FROM_ROLE: 2,
+    TO_NAME: 3,
+    TO_SESSION_ID: 4,
+    MESSAGE: 5,
+    MESSAGE_TYPE: 6,
+    CONVERSATION_ID: 7,
+    STATUS: 8,
+    READ_AT: 9
+  },
+
+  // Polling interval for checking new messages (milliseconds)
+  POLL_INTERVAL_MS: 10000, // 10 seconds
+
+  // Maximum messages to return in queries
+  MAX_MESSAGES_TO_SHOW: 50,
+
+  // Auto-archive messages older than this many days
+  MESSAGE_RETENTION_DAYS: 7
+};
+
+/**
+ * Custom Volunteer Tags
+ * Fun display tags for specific volunteers (shown in schedule viewer only)
+ * Map volunteer full name to their custom tag
+ */
+const VOLUNTEER_TAGS = {
+  // Example: 'John Smith': 'The Tax Wizard',
+  'Ben Ma': "Unpaid Tax Slave"
 };

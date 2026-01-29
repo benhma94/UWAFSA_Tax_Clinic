@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --accent-color: rgb(142, 0, 0);
+      --bg-color-light: #f5f5f5;
+      --text-color-light: #1a1a1a;
+      --input-bg-light: #ffffff;
+      --border-light: #e0e0e0;
+      --bg-color-dark: #1e1e1e;
+      --text-color-dark: #f0f0f0;
+      --input-bg-dark: #2a2a2a;
+      --border-dark: #444;
+    }
+
+    body {
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: var(--bg-color-light);
+      color: var(--text-color-light);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body.dark {
+      background: var(--bg-color-dark);
+      color: var(--text-color-dark);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: var(--accent-color);
+      margin: 0;
+      font-size: 1.8em;
+    }
+
+    .toggle-theme {
+      cursor: pointer;
+      font-size: 1.4em;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+      height: calc(100vh - 120px);
+    }
+
+    .volunteer-list {
+      background: var(--input-bg-light);
+      border-radius: 12px;
+      border: 1px solid var(--border-light);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.dark .volunteer-list {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+
+    .volunteer-list-header {
+      padding: 15px 20px;
+      background: var(--accent-color);
+      color: white;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .refresh-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .refresh-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .volunteer-list-content {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .volunteer-item {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-light);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    body.dark .volunteer-item {
+      border-bottom-color: var(--border-dark);
+    }
+
+    .volunteer-item:hover {
+      background: rgba(142, 0, 0, 0.05);
+    }
+
+    body.dark .volunteer-item:hover {
+      background: rgba(142, 0, 0, 0.15);
+    }
+
+    .volunteer-item.selected {
+      background: rgba(142, 0, 0, 0.1);
+      border-left: 4px solid var(--accent-color);
+    }
+
+    body.dark .volunteer-item.selected {
+      background: rgba(142, 0, 0, 0.2);
+    }
+
+    .volunteer-item .name {
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .volunteer-item .client-id {
+      font-size: 0.85em;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    body.dark .volunteer-item .client-id {
+      color: #999;
+    }
+
+    .unread-badge {
+      background: #e74c3c;
+      color: white;
+      border-radius: 12px;
+      padding: 2px 10px;
+      font-size: 0.75em;
+      font-weight: bold;
+    }
+
+    .chat-panel {
+      background: var(--input-bg-light);
+      border-radius: 12px;
+      border: 1px solid var(--border-light);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    body.dark .chat-panel {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+
+    .chat-header {
+      padding: 15px 20px;
+      background: var(--accent-color);
+      color: white;
+      font-weight: 600;
+      border-radius: 12px 12px 0 0;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .message-bubble {
+      padding: 12px 16px;
+      border-radius: 18px;
+      max-width: 70%;
+      word-wrap: break-word;
+    }
+
+    .message-bubble.sent {
+      background: var(--accent-color);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-bubble.received {
+      background: #e9ecef;
+      color: #333;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    body.dark .message-bubble.received {
+      background: #3a3a3a;
+      color: #f0f0f0;
+    }
+
+    .message-time {
+      font-size: 0.7em;
+      opacity: 0.7;
+      margin-top: 4px;
+    }
+
+    .chat-input {
+      padding: 15px 20px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      gap: 10px;
+    }
+
+    body.dark .chat-input {
+      border-top-color: var(--border-dark);
+    }
+
+    .chat-input input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid var(--border-light);
+      border-radius: 24px;
+      font-size: 14px;
+      background: var(--input-bg-light);
+      color: var(--text-color-light);
+    }
+
+    body.dark .chat-input input {
+      background: #333;
+      border-color: var(--border-dark);
+      color: var(--text-color-dark);
+    }
+
+    .chat-input input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    .chat-input button {
+      padding: 12px 24px;
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .chat-input button:hover {
+      background: #a00000;
+      transform: translateY(-1px);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #666;
+    }
+
+    body.dark .empty-state {
+      color: #999;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid var(--accent-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .footer-copyright {
+      position: fixed;
+      bottom: 10px;
+      right: 20px;
+      font-size: 11px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body class="light">
+  <header>
+    <h1>CATBUS Messaging</h1>
+    <span class="toggle-theme" onclick="toggleTheme()">☀️</span>
+  </header>
+
+  <div class="layout">
+    <div class="volunteer-list">
+      <div class="volunteer-list-header">
+        <span>Active Volunteers</span>
+        <button class="refresh-btn" onclick="loadActiveVolunteers()">Refresh</button>
+      </div>
+      <div class="volunteer-list-content" id="volunteerListContent">
+        <div class="empty-state">
+          <div class="loading"></div>
+          <p>Loading volunteers...</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-panel">
+      <div class="chat-header" id="chatHeader">Select a volunteer to start messaging</div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="empty-state">
+          <div class="empty-state-icon">💬</div>
+          <p>Select a volunteer from the list to view or start a conversation.</p>
+          <p style="font-size: 0.9em; opacity: 0.7;">Only volunteers with active clients are shown.</p>
+        </div>
+      </div>
+      <div class="chat-input" id="chatInput" style="display: none;">
+        <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendMessage()">
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-copyright">CATBUS Messaging - UW AFSA Tax Clinic</div>
+
+<script>
+  let activeVolunteers = [];
+  let currentRecipient = null;
+  let currentConversationId = null;
+  let refreshInterval = null;
+  let chatRefreshInterval = null;
+
+  // Initialize on load
+  window.onload = () => {
+    loadThemePreference();
+    loadActiveVolunteers();
+
+    // Refresh volunteer list every 15 seconds
+    refreshInterval = setInterval(loadActiveVolunteers, 15000);
+
+    // Refresh current chat every 5 seconds
+    chatRefreshInterval = setInterval(refreshCurrentChat, 5000);
+  };
+
+  function toggleTheme() {
+    const body = document.body;
+    const toggle = document.querySelector('.toggle-theme');
+    if (body.classList.contains('dark')) {
+      body.classList.replace('dark', 'light');
+      toggle.textContent = '☀️';
+      localStorage.setItem('messagingDarkMode', 'false');
+    } else {
+      body.classList.replace('light', 'dark');
+      toggle.textContent = '🌙';
+      localStorage.setItem('messagingDarkMode', 'true');
+    }
+  }
+
+  function loadThemePreference() {
+    const darkMode = localStorage.getItem('messagingDarkMode');
+    if (darkMode === 'true') {
+      document.body.classList.replace('light', 'dark');
+      document.querySelector('.toggle-theme').textContent = '🌙';
+    }
+  }
+
+  function loadActiveVolunteers() {
+    console.log('loadActiveVolunteers called');
+    google.script.run
+      .withSuccessHandler(volunteers => {
+        console.log('SUCCESS handler fired. volunteers:', JSON.stringify(volunteers));
+        console.log('Type:', typeof volunteers, 'IsArray:', Array.isArray(volunteers), 'Length:', volunteers ? volunteers.length : 'null');
+        activeVolunteers = volunteers || [];
+        displayVolunteerList(volunteers);
+      })
+      .withFailureHandler(err => {
+        console.error('FAILURE handler fired. Error loading volunteers:', err);
+        document.getElementById('volunteerListContent').innerHTML =
+          '<div class="empty-state"><p>Error loading volunteers</p></div>';
+      })
+      .getVolunteersWithActiveClients();
+  }
+
+  function displayVolunteerList(volunteers) {
+    const container = document.getElementById('volunteerListContent');
+
+    if (!volunteers || volunteers.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">👤</div>
+          <p>No volunteers with active clients</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Get unread counts
+    google.script.run
+      .withSuccessHandler(unreadCounts => {
+        let html = '';
+        volunteers.forEach(v => {
+          const unread = unreadCounts[v.name] || 0;
+          const unreadBadge = unread > 0 ? `<span class="unread-badge">${unread}</span>` : '';
+          const selected = currentRecipient === v.name ? 'selected' : '';
+          html += `
+            <div class="volunteer-item ${selected}" onclick="selectVolunteer('${escapeHtml(v.name)}')">
+              <div class="name">
+                <span>${escapeHtml(v.name)}</span>
+                ${unreadBadge}
+              </div>
+              <div class="client-id">Client: ${escapeHtml(v.clientId)}</div>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+      })
+      .withFailureHandler(() => {
+        // Show list without unread counts
+        let html = '';
+        volunteers.forEach(v => {
+          const selected = currentRecipient === v.name ? 'selected' : '';
+          html += `
+            <div class="volunteer-item ${selected}" onclick="selectVolunteer('${escapeHtml(v.name)}')">
+              <div class="name">${escapeHtml(v.name)}</div>
+              <div class="client-id">Client: ${escapeHtml(v.clientId)}</div>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+      })
+      .getUnreadCountsByVolunteer();
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function selectVolunteer(name) {
+    currentRecipient = name;
+    document.getElementById('chatHeader').textContent = 'Chat with ' + name;
+    document.getElementById('chatInput').style.display = 'flex';
+    document.getElementById('messageInput').focus();
+    loadConversation(name);
+    loadActiveVolunteers(); // Refresh list to update selection highlight
+  }
+
+  function loadConversation(volunteerName) {
+    document.getElementById('chatMessages').innerHTML =
+      '<div class="empty-state"><div class="loading"></div><p>Loading messages...</p></div>';
+
+    google.script.run
+      .withSuccessHandler(messages => {
+        displayMessages(messages);
+        if (messages && messages.length > 0) {
+          currentConversationId = messages[0].conversationId;
+        } else {
+          currentConversationId = null;
+        }
+      })
+      .withFailureHandler(err => {
+        console.error('Error loading conversation:', err);
+        document.getElementById('chatMessages').innerHTML =
+          '<div class="empty-state"><p>Error loading messages</p></div>';
+      })
+      .getConversationWithVolunteer(volunteerName);
+  }
+
+  function displayMessages(messages) {
+    const container = document.getElementById('chatMessages');
+
+    if (!messages || messages.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">✉️</div>
+          <p>No messages yet. Send the first message!</p>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '';
+    messages.forEach(msg => {
+      const bubbleClass = msg.fromRole === 'Manager' ? 'sent' : 'received';
+      const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+      const date = new Date(msg.timestamp).toLocaleDateString();
+      html += `
+        <div class="message-bubble ${bubbleClass}">
+          <div>${escapeHtml(msg.message)}</div>
+          <div class="message-time">${date} ${time}</div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+
+    if (!message || !currentRecipient) return;
+
+    input.value = '';
+    input.disabled = true;
+
+    google.script.run
+      .withSuccessHandler(result => {
+        input.disabled = false;
+        if (result.success) {
+          currentConversationId = result.conversationId;
+          loadConversation(currentRecipient);
+        } else {
+          alert('Failed to send message');
+        }
+        input.focus();
+      })
+      .withFailureHandler(err => {
+        input.disabled = false;
+        console.error('Error sending message:', err);
+        alert('Failed to send message: ' + err.message);
+        input.focus();
+      })
+      .sendMessage(currentRecipient, message, 'chat', currentConversationId);
+  }
+
+  function refreshCurrentChat() {
+    if (currentRecipient) {
+      // Silently refresh without showing loading state
+      google.script.run
+        .withSuccessHandler(messages => {
+          // Only update if we're still viewing the same conversation
+          if (currentRecipient) {
+            displayMessages(messages);
+          }
+        })
+        .getConversationWithVolunteer(currentRecipient);
+    }
+  }
+</script>
+</body>
+</html>

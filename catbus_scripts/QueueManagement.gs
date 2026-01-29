@@ -323,6 +323,14 @@ function removeClientFromQueue(clientId, reason) {
       }
     }
 
+    // Add to assignment sheet to remove from queue (marked as complete so volunteer isn't blocked)
+    assignmentSheet.appendRow([
+      new Date(),                          // Timestamp
+      clientId,                            // Client ID
+      'REMOVED',                           // Volunteer (special marker)
+      'complete'                           // Completed status
+    ]);
+
     // Record removal in Tax Return Tracker with INCOMPLETE status
     trackerSheet.appendRow([
       new Date(),                          // Timestamp

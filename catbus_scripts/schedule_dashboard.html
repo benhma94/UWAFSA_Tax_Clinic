@@ -248,6 +248,59 @@
       gap: 10px;
     }
 
+    .targets-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .targets-table th,
+    .targets-table td {
+      padding: 8px 12px;
+      text-align: center;
+      border: 1px solid var(--border-light);
+    }
+
+    body.dark .targets-table th,
+    body.dark .targets-table td {
+      border-color: var(--border-dark);
+    }
+
+    .targets-table th {
+      background-color: var(--accent-color);
+      color: white;
+      font-weight: 500;
+    }
+
+    .targets-table td:first-child {
+      text-align: left;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .targets-table input[type="number"] {
+      width: 60px;
+      padding: 6px;
+      text-align: center;
+    }
+
+    .targets-table tr:nth-child(even) {
+      background-color: rgba(0, 0, 0, 0.03);
+    }
+
+    body.dark .targets-table tr:nth-child(even) {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    .day-divider {
+      background-color: rgba(142, 0, 0, 0.1) !important;
+      font-weight: bold;
+    }
+
+    body.dark .day-divider {
+      background-color: rgba(142, 0, 0, 0.2) !important;
+    }
+
     .loading {
       display: inline-block;
       width: 16px;
@@ -310,40 +363,109 @@
   </header>
 
   <div class="form-section">
-    <h2>Schedule Configuration</h2>
+    <h2>Per-Shift Role Minimums</h2>
+    <div class="help-text" style="margin-bottom: 15px;">Set minimum number of volunteers per role for each shift. The scheduler will try to meet these minimums but will still generate a schedule even if minimums cannot be fully met.</div>
 
-    <div class="form-group">
-      <label for="outputSheet">Output Schedule Sheet Name:</label>
-      <input type="text" id="outputSheet" placeholder="Shift Schedule" value="Shift Schedule">
-      <div class="help-text">Name for the generated schedule sheet (will be created or overwritten in the CATBUS spreadsheet)</div>
-    </div>
+    <table class="targets-table" id="shiftTargetsTable">
+      <thead>
+        <tr>
+          <th>Shift</th>
+          <th>Filers</th>
+          <th>Mentors</th>
+          <th>Frontline</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Day 1 -->
+        <tr>
+          <td id="shift-D1A-label">Sat Mar 21 - Morning</td>
+          <td><input type="number" id="D1A-filer" value="1" min="0"></td>
+          <td><input type="number" id="D1A-mentor" value="1" min="0"></td>
+          <td><input type="number" id="D1A-frontline" value="1" min="0"></td>
+        </tr>
+        <tr>
+          <td id="shift-D1B-label">Sat Mar 21 - Afternoon</td>
+          <td><input type="number" id="D1B-filer" value="1" min="0"></td>
+          <td><input type="number" id="D1B-mentor" value="1" min="0"></td>
+          <td><input type="number" id="D1B-frontline" value="1" min="0"></td>
+        </tr>
+        <tr>
+          <td id="shift-D1C-label">Sat Mar 21 - Evening</td>
+          <td><input type="number" id="D1C-filer" value="1" min="0"></td>
+          <td><input type="number" id="D1C-mentor" value="1" min="0"></td>
+          <td><input type="number" id="D1C-frontline" value="1" min="0"></td>
+        </tr>
+        <!-- Day 2 -->
+        <tr>
+          <td id="shift-D2A-label">Sun Mar 22 - Morning</td>
+          <td><input type="number" id="D2A-filer" value="1" min="0"></td>
+          <td><input type="number" id="D2A-mentor" value="1" min="0"></td>
+          <td><input type="number" id="D2A-frontline" value="1" min="0"></td>
+        </tr>
+        <tr>
+          <td id="shift-D2B-label">Sun Mar 22 - Afternoon</td>
+          <td><input type="number" id="D2B-filer" value="1" min="0"></td>
+          <td><input type="number" id="D2B-mentor" value="1" min="0"></td>
+          <td><input type="number" id="D2B-frontline" value="1" min="0"></td>
+        </tr>
+        <tr>
+          <td id="shift-D2C-label">Sun Mar 22 - Evening</td>
+          <td><input type="number" id="D2C-filer" value="1" min="0"></td>
+          <td><input type="number" id="D2C-mentor" value="1" min="0"></td>
+          <td><input type="number" id="D2C-frontline" value="1" min="0"></td>
+        </tr>
+        <!-- Day 3 -->
+        <tr>
+          <td id="shift-D3A-label">Sat Mar 28 - Morning</td>
+          <td><input type="number" id="D3A-filer" value="1" min="0"></td>
+          <td><input type="number" id="D3A-mentor" value="1" min="0"></td>
+          <td><input type="number" id="D3A-frontline" value="1" min="0"></td>
+        </tr>
+        <tr>
+          <td id="shift-D3B-label">Sat Mar 28 - Afternoon</td>
+          <td><input type="number" id="D3B-filer" value="1" min="0"></td>
+          <td><input type="number" id="D3B-mentor" value="1" min="0"></td>
+          <td><input type="number" id="D3B-frontline" value="1" min="0"></td>
+        </tr>
+        <tr>
+          <td id="shift-D3C-label">Sat Mar 28 - Evening</td>
+          <td><input type="number" id="D3C-filer" value="1" min="0"></td>
+          <td><input type="number" id="D3C-mentor" value="1" min="0"></td>
+          <td><input type="number" id="D3C-frontline" value="1" min="0"></td>
+        </tr>
+        <!-- Day 4 -->
+        <tr>
+          <td id="shift-D4A-label">Sun Mar 29 - Morning</td>
+          <td><input type="number" id="D4A-filer" value="1" min="0"></td>
+          <td><input type="number" id="D4A-mentor" value="1" min="0"></td>
+          <td><input type="number" id="D4A-frontline" value="1" min="0"></td>
+        </tr>
+        <tr>
+          <td id="shift-D4B-label">Sun Mar 29 - Afternoon</td>
+          <td><input type="number" id="D4B-filer" value="1" min="0"></td>
+          <td><input type="number" id="D4B-mentor" value="1" min="0"></td>
+          <td><input type="number" id="D4B-frontline" value="1" min="0"></td>
+        </tr>
+        <tr>
+          <td id="shift-D4C-label">Sun Mar 29 - Evening</td>
+          <td><input type="number" id="D4C-filer" value="1" min="0"></td>
+          <td><input type="number" id="D4C-mentor" value="1" min="0"></td>
+          <td><input type="number" id="D4C-frontline" value="1" min="0"></td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
   <div class="form-section">
-    <h2>Schedule Options</h2>
-    
+    <h2>Day Labels</h2>
     <div class="form-group">
-      <label for="minVolunteers">Minimum Volunteers per Shift:</label>
-      <input type="number" id="minVolunteers" value="1" min="1">
-      <div class="help-text">Minimum number of volunteers required for each shift</div>
-    </div>
-
-    <div class="form-group">
-      <label for="maxVolunteers">Maximum Volunteers per Shift:</label>
-      <input type="number" id="maxVolunteers" value="999" min="1">
-      <div class="help-text">Maximum number of volunteers allowed per shift</div>
-    </div>
-
-
-    <div class="form-group">
-      <label>Day Labels (4 days):</label>
       <div class="day-labels-group">
         <input type="text" id="day1" placeholder="Day 1" value="Saturday March 21 2026">
         <input type="text" id="day2" placeholder="Day 2" value="Sunday March 22 2026">
         <input type="text" id="day3" placeholder="Day 3" value="Saturday March 28 2026">
         <input type="text" id="day4" placeholder="Day 4" value="Sunday March 29 2026">
       </div>
-      <div class="help-text">Custom labels for the 4 days (e.g., Saturday, Sunday, Monday, Tuesday)</div>
+      <div class="help-text">Custom labels for the 4 days in the generated schedule output</div>
     </div>
   </div>
 
@@ -405,45 +527,39 @@
     messageBox.style.display = 'none';
   }
 
+  // All shift IDs for iteration
+  const SHIFT_IDS = ['D1A', 'D1B', 'D1C', 'D2A', 'D2B', 'D2C', 'D3A', 'D3B', 'D3C', 'D4A', 'D4B', 'D4C'];
+
   function generateSchedule() {
-    const outputSheet = document.getElementById('outputSheet').value.trim();
-    const minVolunteers = parseInt(document.getElementById('minVolunteers').value) || 1;
-    const maxVolunteers = parseInt(document.getElementById('maxVolunteers').value) || 999;
+    const outputSheet = 'Shift Schedule'; // Hardcoded output sheet name
     const prioritizeConsecutive = true; // Always prioritize consecutive shifts
     const day1 = document.getElementById('day1').value.trim() || 'Saturday March 21 2026';
     const day2 = document.getElementById('day2').value.trim() || 'Sunday March 22 2026';
     const day3 = document.getElementById('day3').value.trim() || 'Saturday March 28 2026';
     const day4 = document.getElementById('day4').value.trim() || 'Sunday March 29 2026';
 
-    // Validation
-    if (!outputSheet) {
-      showMessage('Please enter an output sheet name', 'error');
-      return;
-    }
-
-    if (minVolunteers < 1) {
-      showMessage('Minimum volunteers must be at least 1', 'error');
-      return;
-    }
-
-    if (maxVolunteers < minVolunteers) {
-      showMessage('Maximum volunteers must be greater than or equal to minimum', 'error');
-      return;
+    // Collect per-shift role minimums from the table
+    const shiftMinimums = {};
+    for (const shiftId of SHIFT_IDS) {
+      shiftMinimums[shiftId] = {
+        filer: parseInt(document.getElementById(`${shiftId}-filer`).value) || 1,
+        mentor: parseInt(document.getElementById(`${shiftId}-mentor`).value) || 1,
+        frontline: parseInt(document.getElementById(`${shiftId}-frontline`).value) || 1
+      };
     }
 
     const generateBtn = document.getElementById('generateBtn');
     const originalText = generateBtn.textContent;
     generateBtn.disabled = true;
     generateBtn.innerHTML = '<span class="loading"></span> Generating Schedule...';
-    
+
     hideMessage();
     document.getElementById('statsBox').style.display = 'none';
 
     const options = {
-      minVolunteersPerShift: minVolunteers,
-      maxVolunteersPerShift: maxVolunteers,
       prioritizeConsecutive: prioritizeConsecutive,
-      dayLabels: [day1, day2, day3, day4]
+      dayLabels: [day1, day2, day3, day4],
+      shiftMinimums: shiftMinimums
     };
 
     google.script.run
@@ -472,9 +588,11 @@
   function displayStats(result) {
     const statsBox = document.getElementById('statsBox');
     const statsContent = document.getElementById('statsContent');
-    
+
     const summary = result.summary || {};
-    
+    const roleDistribution = summary.roleDistribution || {};
+    const shortfalls = summary.shortfalls || [];
+
     let html = `
       <div class="stat-item">
         <span class="stat-label">Total Shifts:</span>
@@ -483,10 +601,6 @@
       <div class="stat-item">
         <span class="stat-label">Shifts with Assignments:</span>
         <span class="stat-value">${summary.shiftsFilled || 0}</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-label">Shifts at Minimum:</span>
-        <span class="stat-value">${summary.shiftsAtMinimum || 0}</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">Total Volunteers:</span>
@@ -498,20 +612,58 @@
       </div>
     `;
 
+    // Add role distribution if available
+    if (roleDistribution.filers !== undefined || roleDistribution.mentors !== undefined || roleDistribution.frontline !== undefined) {
+      html += `
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-light);">
+          <h4 style="margin: 0 0 10px 0;">Volunteers by Role</h4>
+          <div class="stat-item">
+            <span class="stat-label">Filers:</span>
+            <span class="stat-value">${roleDistribution.filers || 0}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Mentors:</span>
+            <span class="stat-value">${roleDistribution.mentors || 0}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Frontline:</span>
+            <span class="stat-value">${roleDistribution.frontline || 0}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Add shortfalls section if any shifts are under-staffed
+    if (shortfalls && shortfalls.length > 0) {
+      html += `
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-light);">
+          <h4 style="margin: 0 0 10px 0; color: var(--error-color);">⚠️ Shifts Under Minimum</h4>
+      `;
+      shortfalls.forEach(sf => {
+        html += `
+          <div class="stat-item" style="background-color: rgba(231, 76, 60, 0.1); padding: 8px; border-radius: 4px; margin-bottom: 5px;">
+            <span class="stat-label">${sf.shiftId}: ${sf.role}</span>
+            <span class="stat-value" style="color: var(--error-color);">${sf.actual} / ${sf.target}</span>
+          </div>
+        `;
+      });
+      html += '</div>';
+    }
+
     // Add volunteer breakdown if available
     if (result.volunteers && result.volunteers.length > 0) {
       html += '<div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-light);"><h3>Volunteer Assignments</h3>';
-      
+
       result.volunteers.forEach(vol => {
-        const statusClass = vol.assignedCount === 0 ? 'warning' : vol.assignedCount > vol.maxShifts ? 'error' : 'success';
+        const roleLabel = vol.roleCategory ? ` (${vol.roleCategory})` : '';
         html += `
           <div class="stat-item">
-            <span class="stat-label">${vol.name}</span>
+            <span class="stat-label">${vol.name}${roleLabel}</span>
             <span class="stat-value">${vol.assignedCount} / ${vol.maxShifts} shifts</span>
           </div>
         `;
       });
-      
+
       html += '</div>';
     }
 

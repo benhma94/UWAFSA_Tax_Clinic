@@ -594,6 +594,9 @@
       reason = customText;
     }
 
+    // Save clientId before closing modal (closeRemoveClientModal sets clientToRemove to null)
+    const clientId = clientToRemove;
+
     // Close modal immediately
     closeRemoveClientModal();
 
@@ -601,7 +604,7 @@
     google.script.run
       .withSuccessHandler(handleRemoveSuccess)
       .withFailureHandler(handleRemoveError)
-      .removeClientFromQueue(clientToRemove, reason);
+      .removeClientFromQueue(clientId, reason);
   }
 
   function handleRemoveSuccess(result) {
