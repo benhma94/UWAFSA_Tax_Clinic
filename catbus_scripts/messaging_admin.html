@@ -339,6 +339,7 @@
 
   <div class="footer-copyright">CATBUS Messaging - UW AFSA Tax Clinic</div>
 
+<?!= include('shared_scripts') ?>
 <script>
   let activeVolunteers = [];
   let currentRecipient = null;
@@ -348,7 +349,6 @@
 
   // Initialize on load
   window.onload = () => {
-    loadThemePreference();
     loadActiveVolunteers();
 
     // Refresh volunteer list every 15 seconds
@@ -358,27 +358,6 @@
     chatRefreshInterval = setInterval(refreshCurrentChat, 5000);
   };
 
-  function toggleTheme() {
-    const body = document.body;
-    const toggle = document.querySelector('.toggle-theme');
-    if (body.classList.contains('dark')) {
-      body.classList.replace('dark', 'light');
-      toggle.textContent = '☀️';
-      localStorage.setItem('messagingDarkMode', 'false');
-    } else {
-      body.classList.replace('light', 'dark');
-      toggle.textContent = '🌙';
-      localStorage.setItem('messagingDarkMode', 'true');
-    }
-  }
-
-  function loadThemePreference() {
-    const darkMode = localStorage.getItem('messagingDarkMode');
-    if (darkMode === 'true') {
-      document.body.classList.replace('light', 'dark');
-      document.querySelector('.toggle-theme').textContent = '🌙';
-    }
-  }
 
   function loadActiveVolunteers() {
     console.log('loadActiveVolunteers called');

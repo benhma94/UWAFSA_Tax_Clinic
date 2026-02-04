@@ -583,13 +583,14 @@
     </div>
   </div>
 
+<?!= include('shared_scripts') ?>
 <script>
   // Schedule configuration - Frontend display settings
   const SHIFT_CONFIG = {
     TIME_SLOTS: {
       'A': { display: '9:45 AM - 1:15 PM', label: 'Morning' },
-      'B': { display: '1:00 PM - 4:45 PM', label: 'Afternoon' },
-      'C': { display: '4:30 PM - 8:15 PM', label: 'Evening' }
+      'B': { display: '1:00 PM - 4:30 PM', label: 'Afternoon' },
+      'C': { display: '4:15 PM - 8:00 PM', label: 'Evening' }
     }
   };
 
@@ -597,30 +598,7 @@
   let filteredVolunteers = [];
   let highlightedIndex = -1;
 
-  function toggleTheme() {
-    const body = document.body;
-    const toggle = document.querySelector('.toggle-theme');
-    if (body.classList.contains('dark')) {
-      body.classList.replace('dark', 'light');
-      toggle.textContent = '☀️';
-      localStorage.setItem('darkMode', 'false');
-    } else {
-      body.classList.replace('light', 'dark');
-      toggle.textContent = '🌙';
-      localStorage.setItem('darkMode', 'true');
-    }
-  }
-
-  function loadThemePreference() {
-    const darkMode = localStorage.getItem('darkMode');
-    if (darkMode === 'true') {
-      document.body.classList.replace('light', 'dark');
-      document.querySelector('.toggle-theme').textContent = '🌙';
-    }
-  }
-
   window.addEventListener('load', () => {
-    loadThemePreference();
     loadVolunteerNames();
     loadDayLabels();
     setupAutocomplete();

@@ -8,7 +8,8 @@
  * @returns {HtmlOutput} The HTML output for the schedule dashboard
  */
 function doGetScheduleDashboard() {
-  return HtmlService.createHtmlOutputFromFile('schedule_dashboard')
+  return HtmlService.createTemplateFromFile('schedule_dashboard')
+    .evaluate()
     .setTitle('Tax Clinic Schedule Generator')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

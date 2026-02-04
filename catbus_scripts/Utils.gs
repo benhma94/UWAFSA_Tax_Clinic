@@ -4,6 +4,14 @@
  */
 
 /**
+ * Includes an HTML file's content for use with GAS templated HTML
+ * Used in HTML files as: <?!= include('shared_scripts') ?>
+ */
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+/**
  * Wraps a function in error handling with retry logic for rate limits
  * @param {Function} operation - The function to execute
  * @param {string} context - Context description for logging

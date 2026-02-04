@@ -1652,6 +1652,7 @@
     </div>
   </div>
 
+  <?!= include('shared_scripts') ?>
   <script defer>
     let volunteerMap = {};
     let allVolunteerNames = [];
@@ -1663,29 +1664,6 @@
     let currentEmailRowId = null; // Store current row ID for email receipt
     let currentEmailRowCount = null; // Store current row count for email receipt
 
-    function toggleTheme() {
-      const body = document.body;
-      const toggle = document.querySelector('.toggle-theme');
-      if (body.classList.contains('dark')) {
-        body.classList.replace('dark', 'light');
-        toggle.textContent = '☀️';
-        localStorage.setItem('darkMode', 'false');
-      } else {
-        body.classList.replace('light', 'dark');
-        toggle.textContent = '🌙';
-        localStorage.setItem('darkMode', 'true');
-      }
-    }
-
-    function loadThemePreference() {
-      const darkMode = localStorage.getItem('darkMode');
-      if (darkMode === 'true') {
-        document.body.classList.replace('light', 'dark');
-        document.querySelector('.toggle-theme').textContent = '🌙';
-      }
-    }
-
-    window.addEventListener('load', loadThemePreference);
 
     function checkFormReady() {
       const volunteer = document.getElementById('volunteer').value.trim();

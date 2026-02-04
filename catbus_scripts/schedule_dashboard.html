@@ -248,50 +248,6 @@
       gap: 10px;
     }
 
-    .targets-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-
-    .targets-table th,
-    .targets-table td {
-      padding: 8px 12px;
-      text-align: center;
-      border: 1px solid var(--border-light);
-    }
-
-    body.dark .targets-table th,
-    body.dark .targets-table td {
-      border-color: var(--border-dark);
-    }
-
-    .targets-table th {
-      background-color: var(--accent-color);
-      color: white;
-      font-weight: 500;
-    }
-
-    .targets-table td:first-child {
-      text-align: left;
-      font-weight: 500;
-      white-space: nowrap;
-    }
-
-    .targets-table input[type="number"] {
-      width: 60px;
-      padding: 6px;
-      text-align: center;
-    }
-
-    .targets-table tr:nth-child(even) {
-      background-color: rgba(0, 0, 0, 0.03);
-    }
-
-    body.dark .targets-table tr:nth-child(even) {
-      background-color: rgba(255, 255, 255, 0.03);
-    }
-
     .day-divider {
       background-color: rgba(142, 0, 0, 0.1) !important;
       font-weight: bold;
@@ -363,100 +319,6 @@
   </header>
 
   <div class="form-section">
-    <h2>Per-Shift Role Minimums</h2>
-    <div class="help-text" style="margin-bottom: 15px;">Set minimum number of volunteers per role for each shift. The scheduler will try to meet these minimums but will still generate a schedule even if minimums cannot be fully met.</div>
-
-    <table class="targets-table" id="shiftTargetsTable">
-      <thead>
-        <tr>
-          <th>Shift</th>
-          <th>Filers</th>
-          <th>Mentors</th>
-          <th>Frontline</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Day 1 -->
-        <tr>
-          <td id="shift-D1A-label">Sat Mar 21 - Morning</td>
-          <td><input type="number" id="D1A-filer" value="1" min="0"></td>
-          <td><input type="number" id="D1A-mentor" value="1" min="0"></td>
-          <td><input type="number" id="D1A-frontline" value="1" min="0"></td>
-        </tr>
-        <tr>
-          <td id="shift-D1B-label">Sat Mar 21 - Afternoon</td>
-          <td><input type="number" id="D1B-filer" value="1" min="0"></td>
-          <td><input type="number" id="D1B-mentor" value="1" min="0"></td>
-          <td><input type="number" id="D1B-frontline" value="1" min="0"></td>
-        </tr>
-        <tr>
-          <td id="shift-D1C-label">Sat Mar 21 - Evening</td>
-          <td><input type="number" id="D1C-filer" value="1" min="0"></td>
-          <td><input type="number" id="D1C-mentor" value="1" min="0"></td>
-          <td><input type="number" id="D1C-frontline" value="1" min="0"></td>
-        </tr>
-        <!-- Day 2 -->
-        <tr>
-          <td id="shift-D2A-label">Sun Mar 22 - Morning</td>
-          <td><input type="number" id="D2A-filer" value="1" min="0"></td>
-          <td><input type="number" id="D2A-mentor" value="1" min="0"></td>
-          <td><input type="number" id="D2A-frontline" value="1" min="0"></td>
-        </tr>
-        <tr>
-          <td id="shift-D2B-label">Sun Mar 22 - Afternoon</td>
-          <td><input type="number" id="D2B-filer" value="1" min="0"></td>
-          <td><input type="number" id="D2B-mentor" value="1" min="0"></td>
-          <td><input type="number" id="D2B-frontline" value="1" min="0"></td>
-        </tr>
-        <tr>
-          <td id="shift-D2C-label">Sun Mar 22 - Evening</td>
-          <td><input type="number" id="D2C-filer" value="1" min="0"></td>
-          <td><input type="number" id="D2C-mentor" value="1" min="0"></td>
-          <td><input type="number" id="D2C-frontline" value="1" min="0"></td>
-        </tr>
-        <!-- Day 3 -->
-        <tr>
-          <td id="shift-D3A-label">Sat Mar 28 - Morning</td>
-          <td><input type="number" id="D3A-filer" value="1" min="0"></td>
-          <td><input type="number" id="D3A-mentor" value="1" min="0"></td>
-          <td><input type="number" id="D3A-frontline" value="1" min="0"></td>
-        </tr>
-        <tr>
-          <td id="shift-D3B-label">Sat Mar 28 - Afternoon</td>
-          <td><input type="number" id="D3B-filer" value="1" min="0"></td>
-          <td><input type="number" id="D3B-mentor" value="1" min="0"></td>
-          <td><input type="number" id="D3B-frontline" value="1" min="0"></td>
-        </tr>
-        <tr>
-          <td id="shift-D3C-label">Sat Mar 28 - Evening</td>
-          <td><input type="number" id="D3C-filer" value="1" min="0"></td>
-          <td><input type="number" id="D3C-mentor" value="1" min="0"></td>
-          <td><input type="number" id="D3C-frontline" value="1" min="0"></td>
-        </tr>
-        <!-- Day 4 -->
-        <tr>
-          <td id="shift-D4A-label">Sun Mar 29 - Morning</td>
-          <td><input type="number" id="D4A-filer" value="1" min="0"></td>
-          <td><input type="number" id="D4A-mentor" value="1" min="0"></td>
-          <td><input type="number" id="D4A-frontline" value="1" min="0"></td>
-        </tr>
-        <tr>
-          <td id="shift-D4B-label">Sun Mar 29 - Afternoon</td>
-          <td><input type="number" id="D4B-filer" value="1" min="0"></td>
-          <td><input type="number" id="D4B-mentor" value="1" min="0"></td>
-          <td><input type="number" id="D4B-frontline" value="1" min="0"></td>
-        </tr>
-        <tr>
-          <td id="shift-D4C-label">Sun Mar 29 - Evening</td>
-          <td><input type="number" id="D4C-filer" value="1" min="0"></td>
-          <td><input type="number" id="D4C-mentor" value="1" min="0"></td>
-          <td><input type="number" id="D4C-frontline" value="1" min="0"></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="form-section">
     <h2>Day Labels</h2>
     <div class="form-group">
       <div class="day-labels-group">
@@ -490,31 +352,8 @@
     <div id="statsContent"></div>
   </div>
 
+<?!= include('shared_scripts') ?>
 <script>
-  function toggleTheme() {
-    const body = document.body;
-    const toggle = document.querySelector('.toggle-theme');
-    if (body.classList.contains('dark')) {
-      body.classList.replace('dark', 'light');
-      toggle.textContent = '☀️';
-      localStorage.setItem('darkMode', 'false');
-    } else {
-      body.classList.replace('light', 'dark');
-      toggle.textContent = '🌙';
-      localStorage.setItem('darkMode', 'true');
-    }
-  }
-
-  function loadThemePreference() {
-    const darkMode = localStorage.getItem('darkMode');
-    if (darkMode === 'true') {
-      document.body.classList.replace('light', 'dark');
-      document.querySelector('.toggle-theme').textContent = '🌙';
-    }
-  }
-
-  window.addEventListener('load', loadThemePreference);
-
   function showMessage(message, type = 'info') {
     const messageBox = document.getElementById('messageBox');
     messageBox.textContent = message;
@@ -527,9 +366,6 @@
     messageBox.style.display = 'none';
   }
 
-  // All shift IDs for iteration
-  const SHIFT_IDS = ['D1A', 'D1B', 'D1C', 'D2A', 'D2B', 'D2C', 'D3A', 'D3B', 'D3C', 'D4A', 'D4B', 'D4C'];
-
   function generateSchedule() {
     const outputSheet = 'Shift Schedule'; // Hardcoded output sheet name
     const prioritizeConsecutive = true; // Always prioritize consecutive shifts
@@ -537,16 +373,6 @@
     const day2 = document.getElementById('day2').value.trim() || 'Sunday March 22 2026';
     const day3 = document.getElementById('day3').value.trim() || 'Saturday March 28 2026';
     const day4 = document.getElementById('day4').value.trim() || 'Sunday March 29 2026';
-
-    // Collect per-shift role minimums from the table
-    const shiftMinimums = {};
-    for (const shiftId of SHIFT_IDS) {
-      shiftMinimums[shiftId] = {
-        filer: parseInt(document.getElementById(`${shiftId}-filer`).value) || 1,
-        mentor: parseInt(document.getElementById(`${shiftId}-mentor`).value) || 1,
-        frontline: parseInt(document.getElementById(`${shiftId}-frontline`).value) || 1
-      };
-    }
 
     const generateBtn = document.getElementById('generateBtn');
     const originalText = generateBtn.textContent;
@@ -558,8 +384,7 @@
 
     const options = {
       prioritizeConsecutive: prioritizeConsecutive,
-      dayLabels: [day1, day2, day3, day4],
-      shiftMinimums: shiftMinimums
+      dayLabels: [day1, day2, day3, day4]
     };
 
     google.script.run
@@ -650,21 +475,66 @@
       html += '</div>';
     }
 
-    // Add volunteer breakdown if available
-    if (result.volunteers && result.volunteers.length > 0) {
-      html += '<div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-light);"><h3>Volunteer Assignments</h3>';
+    // Add stacked bar charts for volunteer distribution per day
+    if (result.shiftRoleCounts) {
+      const slotKeys = ['A', 'B', 'C'];
+      const slotLabels = ['Morning', 'Afternoon', 'Evening'];
+      const roleColors = { filer: '#9b59b6', mentor: '#3498db', frontline: '#2ecc71' };
+      const dayLabels = (result.summary && result.summary.dayLabels) || ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
 
-      result.volunteers.forEach(vol => {
-        const roleLabel = vol.roleCategory ? ` (${vol.roleCategory})` : '';
-        html += `
-          <div class="stat-item">
-            <span class="stat-label">${vol.name}${roleLabel}</span>
-            <span class="stat-value">${vol.assignedCount} / ${vol.maxShifts} shifts</span>
-          </div>
-        `;
-      });
-
+      html += '<div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-light);"><h3>Shift Distribution</h3>';
+      html += '<div style="display: flex; gap: 8px; margin-bottom: 15px; font-size: 13px;">';
+      html += '<span><span style="display:inline-block;width:12px;height:12px;background:#9b59b6;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Filer</span>';
+      html += '<span><span style="display:inline-block;width:12px;height:12px;background:#3498db;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Mentor</span>';
+      html += '<span><span style="display:inline-block;width:12px;height:12px;background:#2ecc71;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Frontline</span>';
       html += '</div>';
+      html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">';
+
+      for (let dayIdx = 0; dayIdx < 4; dayIdx++) {
+        // Find max total for this day to scale bars
+        let maxTotal = 0;
+        for (const sk of slotKeys) {
+          const shiftId = 'D' + (dayIdx + 1) + sk;
+          const c = result.shiftRoleCounts[shiftId] || { filer: 0, mentor: 0, frontline: 0 };
+          const total = c.filer + c.mentor + c.frontline;
+          if (total > maxTotal) maxTotal = total;
+        }
+        if (maxTotal === 0) maxTotal = 1;
+
+        html += '<div style="background: rgba(0,0,0,0.03); border-radius: 8px; padding: 12px;">';
+        html += '<div style="font-weight: 600; margin-bottom: 10px; font-size: 14px;">' + dayLabels[dayIdx] + '</div>';
+
+        for (let si = 0; si < 3; si++) {
+          const shiftId = 'D' + (dayIdx + 1) + slotKeys[si];
+          const c = result.shiftRoleCounts[shiftId] || { filer: 0, mentor: 0, frontline: 0 };
+          const total = c.filer + c.mentor + c.frontline;
+
+          html += '<div style="margin-bottom: 8px;">';
+          html += '<div style="font-size: 12px; color: #666; margin-bottom: 3px;">' + slotLabels[si] + ' (' + total + ')</div>';
+          html += '<div style="display: flex; height: 22px; border-radius: 4px; overflow: hidden; background: rgba(0,0,0,0.08);">';
+
+          if (total > 0) {
+            const pctFiler = (c.filer / maxTotal) * 100;
+            const pctMentor = (c.mentor / maxTotal) * 100;
+            const pctFrontline = (c.frontline / maxTotal) * 100;
+
+            if (c.filer > 0) {
+              html += '<div style="width:' + pctFiler + '%;background:' + roleColors.filer + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Filers: ' + c.filer + '">' + c.filer + '</div>';
+            }
+            if (c.mentor > 0) {
+              html += '<div style="width:' + pctMentor + '%;background:' + roleColors.mentor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Mentors: ' + c.mentor + '">' + c.mentor + '</div>';
+            }
+            if (c.frontline > 0) {
+              html += '<div style="width:' + pctFrontline + '%;background:' + roleColors.frontline + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Frontline: ' + c.frontline + '">' + c.frontline + '</div>';
+            }
+          }
+
+          html += '</div></div>';
+        }
+        html += '</div>';
+      }
+
+      html += '</div></div>';
     }
 
     statsContent.innerHTML = html;

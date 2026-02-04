@@ -9,7 +9,8 @@
  * @returns {HtmlOutput} The HTML page
  */
 function doGet_Messaging(e) {
-  return HtmlService.createHtmlOutputFromFile('messaging_admin')
+  return HtmlService.createTemplateFromFile('messaging_admin')
+    .evaluate()
     .setTitle('CATBUS Messaging')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

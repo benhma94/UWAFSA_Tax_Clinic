@@ -8,7 +8,8 @@
  * @returns {HtmlOutput} The HTML output for the intake form
  */
 function doGetClientIntake() {
-  return HtmlService.createHtmlOutputFromFile('catbus_intake_form')
+  return HtmlService.createTemplateFromFile('catbus_intake_form')
+    .evaluate()
     .setTitle('AFSA Tax Clinic Intake Form')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

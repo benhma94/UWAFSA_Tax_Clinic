@@ -372,6 +372,7 @@
 
   <div id="messageBox"></div>
 
+<?!= include('shared_scripts') ?>
 <script>
   // Schedule configuration - Frontend display settings
   const SHIFT_CONFIG = {
@@ -406,29 +407,6 @@
   let checkTimeout = null;
   window.CURRENT_EMAIL_TO_CHECK = ''; // Global variable for sandbox workaround
 
-  function toggleTheme() {
-    const body = document.body;
-    const toggle = document.querySelector('.toggle-theme');
-    if (body.classList.contains('dark')) {
-      body.classList.replace('dark', 'light');
-      toggle.textContent = '☀️';
-      localStorage.setItem('darkMode', 'false');
-    } else {
-      body.classList.replace('light', 'dark');
-      toggle.textContent = '🌙';
-      localStorage.setItem('darkMode', 'true');
-    }
-  }
-
-  function loadThemePreference() {
-    const darkMode = localStorage.getItem('darkMode');
-    if (darkMode === 'true') {
-      document.body.classList.replace('light', 'dark');
-      document.querySelector('.toggle-theme').textContent = '🌙';
-    }
-  }
-
-  window.addEventListener('load', loadThemePreference);
 
   function showMessage(message, type = 'info') {
     const messageBox = document.getElementById('messageBox');
@@ -667,121 +645,6 @@
     checkAvailabilityCount();
     console.log('Form prefill complete');
   }
-
-  /**
-   * TEST FUNCTION - Call this from browser console to test backend connectivity
-   * Example: testBackendConnection('ben.ma.94@live.com')
-   */
-  window.testBackendConnection = function(email) {
-    console.log('=== BACKEND CONNECTION TEST ===');
-    console.log('Testing with email:', email || 'ben.ma.94@live.com');
-
-    const testEmail = email || 'ben.ma.94@live.com';
-
-    console.log('Calling google.script.run.checkExistingVolunteer...');
-    google.script.run
-      .withSuccessHandler(result => {
-        console.log('SUCCESS! Server returned:', result);
-        console.log('Type of result:', typeof result);
-        console.log('Result stringified:', JSON.stringify(result, null, 2));
-
-        if (result === null) {
-          console.error('❌ PROBLEM: Result is null - backend returned null instead of data object');
-        } else if (result && result.exists) {
-          console.log('✅ SUCCESS: Found volunteer data!');
-          console.log('   - First Name:', result.data.firstName);
-          console.log('   - Last Name:', result.data.lastName);
-          console.log('   - Email:', result.data.email);
-          console.log('   - Role:', result.data.role);
-          console.log('   - Availability slots:', result.data.availability ? result.data.availability.length : 0);
-        } else if (result && !result.exists) {
-          console.log('⚠️ No volunteer found with that email (result.exists = false)');
-        } else {
-          console.warn('⚠️ Unexpected result structure:', result);
-        }
-      })
-      .withFailureHandler(error => {
-        console.error('❌ FAILURE! Error from server:', error);
-        console.error('Error type:', typeof error);
-        console.error('Error message:', error.message || error);
-      })
-      .checkExistingVolunteer(testEmail);
-
-    console.log('Request sent. Waiting for response...');
-    console.log('=== END TEST ===');
-  };
-
-  /**
-   * SIMPLE ECHO TEST - Verifies parameter passing works at all
-   * Example: testEcho('hello')
-   */
-  window.testEcho = function(message) {
-    console.log('=== ECHO TEST ===');
-    console.log('Sending message:', message || 'test message');
-
-    const testMessage = message || 'test message';
-
-    console.log('Calling google.script.run.echoTest...');
-    google.script.run
-      .withSuccessHandler(result => {
-        console.log('✅ SUCCESS! Server echoed back:', result);
-        console.log('   - Received:', result.received);
-        console.log('   - Type:', result.type);
-        console.log('   - Timestamp:', result.timestamp);
-
-        if (result.received === testMessage) {
-          console.log('✅ PARAMETER PASSING WORKS! Message matches what we sent.');
-        } else {
-          console.error('❌ PROBLEM: Message mismatch!');
-          console.error('   - Sent:', testMessage);
-          console.error('   - Got back:', result.received);
-        }
-      })
-      .withFailureHandler(error => {
-        console.error('❌ FAILURE! Error from server:', error);
-      })
-      .echoTest(testMessage);
-
-    console.log('Echo request sent. Waiting for response...');
-    console.log('=== END ECHO TEST ===');
-  };
-
-  /**
-   * DEBUG TEST - Step-by-step debugging of checkExistingVolunteer
-   * Example: testDebug('ben.ma.94@live.com')
-   */
-  window.testDebug = function(email) {
-    console.log('=== DEBUG TEST ===');
-    console.log('Testing with email:', email || 'ben.ma.94@live.com');
-
-    const testEmail = email || 'ben.ma.94@live.com';
-
-    console.log('Calling google.script.run.debugCheckExistingVolunteer...');
-    google.script.run
-      .withSuccessHandler(result => {
-        console.log('✅ DEBUG RESULT:', result);
-        console.log('Step reached:', result.step);
-        console.log('Email:', result.email);
-        console.log('Email type:', result.emailType);
-        if (result.error) {
-          console.error('❌ Error:', result.error);
-        }
-        if (result.normalizedEmail) {
-          console.log('Normalized email:', result.normalizedEmail);
-        }
-        if (result.firstRowEmail) {
-          console.log('First row email:', result.firstRowEmail);
-          console.log('Match:', result.match);
-        }
-      })
-      .withFailureHandler(error => {
-        console.error('❌ FAILURE! Error from server:', error);
-      })
-      .debugCheckExistingVolunteer(testEmail);
-
-    console.log('Debug request sent. Waiting for response...');
-    console.log('=== END DEBUG TEST ===');
-  };
 
   function buildAvailabilityGrid() {
     const container = document.getElementById('availabilityContainer');

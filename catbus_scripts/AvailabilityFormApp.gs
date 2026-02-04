@@ -8,7 +8,8 @@
  * @returns {HtmlOutput} The HTML output for the availability form
  */
 function doGetAvailabilityForm() {
-  return HtmlService.createHtmlOutputFromFile('availability_form')
+  return HtmlService.createTemplateFromFile('availability_form')
+    .evaluate()
     .setTitle('Volunteer Availability Form')
     .setSandboxMode(HtmlService.SandboxMode.IFRAME)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);

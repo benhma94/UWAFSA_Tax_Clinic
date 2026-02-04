@@ -4,17 +4,15 @@
  */
 
 const CONFIG = {
-  // Spreadsheet ID - Update this if you need to change spreadsheets
   SPREADSHEET_ID: '1W669LwuA8IpB03BlmhwnUkkupMZW2Cg0I_6cvSp0pwI',
 
-  // External Spreadsheet for Volunteer Data
   EXTERNAL_SPREADSHEETS: {
     CONSOLIDATED_VOLUNTEERS: {
       ID: '1HvJ3HFwcQySPaRMk0_5XIDo7qcjnhiah4DEM23Dknqg',
       SHEET_NAME: 'Consolidated List',
       COLUMNS: {
-        ROLE: 0,        // Column A - Role (e.g., "Mentor")
-        NAME: 7         // Column H - Volunteer names
+        ROLE: 0,
+        NAME: 7
       }
     }
   },
@@ -90,10 +88,9 @@ const CONFIG = {
     }
   },
   
-  // Sign-In/Out Configuration
   SIGN_IN_OUT: {
-    STATION_COUNT: 150, // Number of stations (1-150)
-    EXCEPTION_STATIONS: ['Mentor', 'Senior Mentor', 'Receptionist'] // Stations always available
+    STATION_COUNT: 150,
+    EXCEPTION_STATIONS: ['Mentor', 'Senior Mentor', 'Receptionist']
   },
   
   // Help Request Status Values

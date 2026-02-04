@@ -408,30 +408,3 @@ function setupAppointmentFormTrigger() {
   Logger.log('Form submit trigger created successfully!');
 }
 
-// ============================================================================
-// APPOINTMENT PRE-LOADING FUNCTIONS (DEPRECATED)
-// These functions have been replaced by manual Appointment ID lookup in the intake form.
-// Appointment clients now provide their P-ID at check-in, which is simpler and more reliable.
-// ============================================================================
-
-// NOTE: The following functions have been removed:
-// - preloadUpcomingAppointments() - No longer needed; receptionists enter appointment ID manually
-// - parseAppointmentTime() - Was only used by preloadUpcomingAppointments
-// - setupAppointmentPreloadTrigger() - No longer needed
-// - deleteAppointmentPreloadTrigger() - Run this once to clean up any existing trigger, then remove
-
-/**
- * One-time cleanup function to remove the preload trigger if it exists.
- * Run this once after deploying this update, then this function can be removed.
- */
-function cleanupPreloadTrigger() {
-  const triggers = ScriptApp.getProjectTriggers();
-  let found = false;
-  triggers.forEach(trigger => {
-    if (trigger.getHandlerFunction() === 'preloadUpcomingAppointments') {
-      ScriptApp.deleteTrigger(trigger);
-      Logger.log('Preload trigger deleted');
-      found = true;
-    }
-  });
-}

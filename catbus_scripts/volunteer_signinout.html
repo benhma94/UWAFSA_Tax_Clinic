@@ -472,6 +472,7 @@
 
   <div id="messageBox"></div>
 
+<?!= include('shared_scripts') ?>
 <script>
   let refreshInterval = null;
   let allSessions = []; // Store all sessions for filtering
@@ -479,29 +480,6 @@
   let filteredVolunteers = []; // Filtered volunteers for autocomplete
   let highlightedIndex = -1; // Currently highlighted autocomplete item
 
-  function toggleTheme() {
-    const body = document.body;
-    const toggle = document.querySelector('.toggle-theme');
-    if (body.classList.contains('dark')) {
-      body.classList.replace('dark', 'light');
-      toggle.textContent = '☀️';
-      localStorage.setItem('darkMode', 'false');
-    } else {
-      body.classList.replace('light', 'dark');
-      toggle.textContent = '🌙';
-      localStorage.setItem('darkMode', 'true');
-    }
-  }
-
-  function loadThemePreference() {
-    const darkMode = localStorage.getItem('darkMode');
-    if (darkMode === 'true') {
-      document.body.classList.replace('light', 'dark');
-      document.querySelector('.toggle-theme').textContent = '🌙';
-    }
-  }
-
-  window.addEventListener('load', loadThemePreference);
 
   /**
    * Loads volunteer data from consolidated sheet for autocomplete

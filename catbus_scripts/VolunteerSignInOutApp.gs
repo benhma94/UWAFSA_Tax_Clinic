@@ -8,7 +8,8 @@
  * @returns {HtmlOutput} The HTML output for the sign-in/out interface
  */
 function doGetVolunteerSignInOut() {
-  return HtmlService.createHtmlOutputFromFile('volunteer_signinout')
+  return HtmlService.createTemplateFromFile('volunteer_signinout')
+    .evaluate()
     .setTitle('Volunteer Sign-In / Sign-Out')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

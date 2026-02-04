@@ -318,6 +318,7 @@
     }
 
   </style>
+  <?!= include('shared_scripts') ?>
   <script>
   let clientQueue = [];
   let volunteers = [];
@@ -326,30 +327,6 @@
   let isPageVisible = true;
   let lastUpdateTime = null;
 
-  function toggleTheme() {
-    const body = document.body;
-    const toggle = document.querySelector('.toggle-theme');
-    if (body.classList.contains('dark')) {
-      body.classList.replace('dark', 'light');
-      toggle.textContent = '☀️';
-      localStorage.setItem('darkMode', 'false');
-    } else {
-      body.classList.replace('light', 'dark');
-      toggle.textContent = '🌙';
-      localStorage.setItem('darkMode', 'true');
-    }
-  }
-
-  // Load saved theme preference on page load
-  function loadThemePreference() {
-    const darkMode = localStorage.getItem('darkMode');
-    const body = document.body;
-    const toggle = document.querySelector('.toggle-theme');
-    if (darkMode === 'true') {
-      body.classList.replace('light', 'dark');
-      toggle.textContent = '🌙';
-    }
-  }
 
   function updateLastUpdatedTime() {
     const timeElement = document.getElementById('lastUpdated');
@@ -621,7 +598,6 @@
   }
 
   window.onload = function() {
-    loadThemePreference();
     loadQueue();
     updateLastUpdatedTime();
   };

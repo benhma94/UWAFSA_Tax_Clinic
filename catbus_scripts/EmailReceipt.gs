@@ -89,7 +89,6 @@ function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
 }
 
 /**
-/**
  * Formats a number as currency in accounting format ($X,XXX.XX)
  * @param {number} amount - Amount to format
  * @returns {string} Formatted currency string

@@ -8,7 +8,8 @@
  * @returns {HtmlOutput} The HTML output for the admin dashboard
  */
 function doGetAdminDashboard() {
-  return HtmlService.createHtmlOutputFromFile('admin_dashboard')
+  return HtmlService.createTemplateFromFile('admin_dashboard')
+    .evaluate()
     .setTitle('Live Help Request Dashboard')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

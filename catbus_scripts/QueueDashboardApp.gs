@@ -15,15 +15,6 @@ function doGetQueueDashboard() {
 }
 
 /**
- * Helper function for including HTML files (if needed)
- * @param {string} filename - Name of the HTML file to include
- * @returns {string} Content of the HTML file
- */
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
-}
-
-/**
  * Gets queue data with caching for improved performance
  * @returns {Object} Object containing queue and volunteers data
  */

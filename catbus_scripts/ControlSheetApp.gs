@@ -8,7 +8,8 @@
  * @returns {HtmlOutput} The HTML output for the control sheet form
  */
 function doGetControlSheet() {
-  return HtmlService.createHtmlOutputFromFile('control_sheet_form')
+  return HtmlService.createTemplateFromFile('control_sheet_form')
+    .evaluate()
     .setTitle('AFSA Tax Clinic Control Sheet')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

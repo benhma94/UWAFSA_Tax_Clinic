@@ -59,32 +59,26 @@ function getAllVolunteerNames() {
   return safeExecute(() => {
     const sheet = getScheduleSheet();
     const data = sheet.getDataRange().getValues();
-    
-    // Find volunteer assignments section
-    let assignmentsStartRow = -1;
-    for (let i = 0; i < data.length; i++) {
-      if (data[i][0] && data[i][0].toString().toUpperCase().includes('VOLUNTEER ASSIGNMENTS')) {
-        assignmentsStartRow = i + 2; // Skip header row
-        break;
+
+    // Extract unique volunteer names from the schedule grid (rows 2-4, columns B-E)
+    // Each cell contains comma-separated volunteer names
+    const nameSet = {};
+
+    for (let rowIdx = 1; rowIdx <= 3 && rowIdx < data.length; rowIdx++) {
+      for (let colIdx = 1; colIdx <= 4 && colIdx < data[rowIdx].length; colIdx++) {
+        const cellValue = data[rowIdx][colIdx]?.toString().trim() || '';
+        if (cellValue && cellValue !== '(unfilled)') {
+          cellValue.split(',').forEach(name => {
+            const trimmed = name.trim();
+            if (trimmed) {
+              nameSet[trimmed] = true;
+            }
+          });
+        }
       }
     }
-    
-    if (assignmentsStartRow === -1) {
-      return [];
-    }
-    
-    const volunteerNames = [];
-    
-    // Read all volunteer names
-    for (let i = assignmentsStartRow; i < data.length; i++) {
-      const name = data[i][0]?.toString().trim() || '';
-      
-      if (name && name !== '(none)' && !name.toLowerCase().includes('summary')) {
-        volunteerNames.push(name);
-      }
-    }
-    
-    return volunteerNames.sort();
+
+    return Object.keys(nameSet).sort();
   }, 'getAllVolunteerNames');
 }
 
@@ -122,49 +116,46 @@ function getDayLabels() {
 }
 
 /**
- * Gets the schedule sheet - tries to find the schedule sheet by looking for "VOLUNTEER ASSIGNMENTS" header
+ * Gets the schedule sheet - tries to find the schedule sheet by looking for "Time / Day" header
  * @returns {Sheet} The schedule sheet, or null if not found
  */
 function getScheduleSheet() {
   const ss = getSpreadsheet();
-  
+
+  // Helper: verify a sheet is a schedule sheet by checking for "Time / Day" header
+  function isScheduleSheet(sheet) {
+    try {
+      const data = sheet.getDataRange().getValues();
+      if (data.length > 0 && data[0][0] && data[0][0].toString().trim() === 'Time / Day') {
+        return true;
+      }
+    } catch (e) {
+      // Ignore read errors
+    }
+    return false;
+  }
+
   // First, try common schedule sheet names
-  const commonNames = ['Tax Clinic Shifts 2026', 'Tax Clinic Shifts 2025', 'Schedule Output', CONFIG.SHEETS.SCHEDULE_OUTPUT];
+  const commonNames = ['Shift Schedule', 'Tax Clinic Shifts 2026', 'Tax Clinic Shifts 2025', 'Schedule Output', CONFIG.SHEETS.SCHEDULE_OUTPUT];
   for (const name of commonNames) {
     try {
       const sheet = ss.getSheetByName(name);
-      if (sheet) {
-        // Verify it's a schedule sheet by checking for "VOLUNTEER ASSIGNMENTS"
-        const data = sheet.getDataRange().getValues();
-        for (let i = 0; i < Math.min(50, data.length); i++) {
-          if (data[i][0] && data[i][0].toString().toUpperCase().includes('VOLUNTEER ASSIGNMENTS')) {
-            return sheet;
-          }
-        }
+      if (sheet && isScheduleSheet(sheet)) {
+        return sheet;
       }
     } catch (e) {
-      // Continue to next name
       continue;
     }
   }
-  
-  // If not found by name, look through all sheets for one with "VOLUNTEER ASSIGNMENTS"
+
+  // If not found by name, scan all sheets
   const sheets = ss.getSheets();
   for (const sheet of sheets) {
-    try {
-      const data = sheet.getDataRange().getValues();
-      // Check first 50 rows for the volunteer assignments header
-      for (let i = 0; i < Math.min(50, data.length); i++) {
-        if (data[i][0] && data[i][0].toString().toUpperCase().includes('VOLUNTEER ASSIGNMENTS')) {
-          return sheet;
-        }
-      }
-    } catch (e) {
-      // Skip sheets that can't be read
-      continue;
+    if (isScheduleSheet(sheet)) {
+      return sheet;
     }
   }
-  
+
   // If still not found, throw an error
   throw new Error('No schedule sheet found. Please generate a schedule first using the Assignment tool.');
 }
@@ -177,8 +168,6 @@ function getScheduleSheet() {
 function getVolunteerScheduleByName(searchTerm) {
   return safeExecute(() => {
     const sheet = getScheduleSheet();
-
-    // Read the schedule data
     const data = sheet.getDataRange().getValues();
 
     // Get day labels from header row (columns 1-4)
@@ -186,80 +175,44 @@ function getVolunteerScheduleByName(searchTerm) {
     const dayLabels = [];
     for (let i = 1; i <= 4 && i < headerRow.length; i++) {
       const dayLabel = headerRow[i]?.toString().trim() || `Day ${i}`;
-      // Parse the date to simplify format (e.g., "Saturday March 21" -> "Sat, Mar 21")
       dayLabels.push(simplifyDateFormat(dayLabel));
     }
 
-    // Find volunteer assignments section
-    let assignmentsStartRow = -1;
-    for (let i = 0; i < data.length; i++) {
-      if (data[i][0] && data[i][0].toString().includes('VOLUNTEER ASSIGNMENTS')) {
-        assignmentsStartRow = i + 2; // Skip header row
-        break;
-      }
-    }
-
-    if (assignmentsStartRow === -1) {
-      return { shifts: [] };
-    }
-
-    // Helper function to get label for shift ID using SCHEDULE_CONFIG
-    function getShiftLabel(shiftId) {
-      const label = SCHEDULE_CONFIG.getShiftLabel(shiftId, dayLabels);
-      return label ? { day: label.day, time: label.time } : null;
-    }
-
-    // Read volunteer assignments
+    // Search through the schedule grid (rows 2-4, columns B-E) for the volunteer name
+    const slotKeys = ['A', 'B', 'C'];
     const shifts = [];
     let volunteerName = '';
 
-    for (let i = assignmentsStartRow; i < data.length; i++) {
-      const name = data[i][0]?.toString().trim() || '';
-      const assignedShiftsString = data[i][4]?.toString().trim() || ''; // Column E (index 4)
+    for (let rowIdx = 1; rowIdx <= 3 && rowIdx < data.length; rowIdx++) {
+      for (let colIdx = 1; colIdx <= 4 && colIdx < data[rowIdx].length; colIdx++) {
+        const cellValue = data[rowIdx][colIdx]?.toString().trim() || '';
+        if (!cellValue || cellValue === '(unfilled)') continue;
 
-      if (!name || name === '(none)') continue;
-
-      // Check if name matches search term
-      if (name.toLowerCase().includes(searchTerm.toLowerCase())) {
-        volunteerName = name;
-
-        // Parse assigned shifts
-        if (assignedShiftsString && assignedShiftsString !== '(none)') {
-          const shiftIds = assignedShiftsString.split(',').map(s => s.trim());
-
-          shiftIds.forEach(shiftId => {
-            const label = getShiftLabel(shiftId);
+        // Check each name in the comma-separated cell
+        const names = cellValue.split(',').map(n => n.trim()).filter(n => n);
+        for (const name of names) {
+          if (name.toLowerCase().includes(searchTerm.toLowerCase())) {
+            volunteerName = name;
+            // Map position to shift ID: row 1=A, 2=B, 3=C; col 1=D1, 2=D2, 3=D3, 4=D4
+            const shiftId = `D${colIdx}${slotKeys[rowIdx - 1]}`;
+            const label = SCHEDULE_CONFIG.getShiftLabel(shiftId, dayLabels);
             if (label) {
-              shifts.push({
-                shiftId: shiftId,
-                day: label.day,
-                time: label.time
-              });
+              shifts.push({ shiftId, day: label.day, time: label.time });
             }
-          });
+          }
         }
       }
     }
 
     // Sort shifts by day and time
     shifts.sort((a, b) => {
-      // Extract day number from shift ID for sorting
-      const getDayNum = (shiftId) => parseInt(shiftId.charAt(1));
-      const getTimeNum = (shiftId) => shiftId.charCodeAt(2) - 65; // A=0, B=1, C=2
-
-      const aDayNum = getDayNum(a.shiftId);
-      const bDayNum = getDayNum(b.shiftId);
-
-      if (aDayNum !== bDayNum) {
-        return aDayNum - bDayNum;
-      }
-      return getTimeNum(a.shiftId) - getTimeNum(b.shiftId);
+      const aDayNum = parseInt(a.shiftId.charAt(1));
+      const bDayNum = parseInt(b.shiftId.charAt(1));
+      if (aDayNum !== bDayNum) return aDayNum - bDayNum;
+      return a.shiftId.charCodeAt(2) - b.shiftId.charCodeAt(2);
     });
 
-    return {
-      volunteerName: volunteerName,
-      shifts: shifts
-    };
+    return { volunteerName, shifts };
   }, 'getVolunteerScheduleByName');
 }
 
@@ -306,28 +259,24 @@ function getVolunteerScheduleByDay(day, filterRole = '') {
     // Read the schedule grid (first few rows)
     const data = sheet.getDataRange().getValues();
     
-    // Build volunteer role map from volunteer assignments section
+    // Build volunteer role map from the Schedule Availability sheet
     const volunteerRoles = {};
-    let assignmentsStartRow = -1;
-    
-    // Find volunteer assignments section
-    for (let i = 0; i < data.length; i++) {
-      if (data[i][0] && data[i][0].toString().toUpperCase().includes('VOLUNTEER ASSIGNMENTS')) {
-        assignmentsStartRow = i + 2; // Skip header row
-        break;
-      }
-    }
-    
-    // Read volunteer roles if assignments section exists
-    if (assignmentsStartRow > 0) {
-      for (let i = assignmentsStartRow; i < data.length; i++) {
-        const name = data[i][0]?.toString().trim() || '';
-        const role = data[i][1]?.toString().trim() || ''; // Column B (index 1) is Role
-        
-        if (name && role && name !== '(none)' && role !== 'N/A') {
-          volunteerRoles[name] = role;
+    try {
+      const ss = getSpreadsheet();
+      const availSheet = ss.getSheetByName(CONFIG.SHEETS.SCHEDULE_AVAILABILITY);
+      if (availSheet && availSheet.getLastRow() > 1) {
+        const availData = availSheet.getRange(2, 1, availSheet.getLastRow() - 1, 5).getValues();
+        for (const row of availData) {
+          const firstName = row[1]?.toString().trim() || '';
+          const lastName = row[2]?.toString().trim() || '';
+          const role = row[4]?.toString().trim() || '';
+          if (firstName && lastName && role) {
+            volunteerRoles[`${firstName} ${lastName}`] = role;
+          }
         }
       }
+    } catch (e) {
+      Logger.log('Warning: Could not read volunteer roles from availability sheet: ' + e.message);
     }
     
     // Find the day column in the header row

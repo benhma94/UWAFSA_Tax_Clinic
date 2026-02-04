@@ -23,8 +23,6 @@ function getVolunteersAndClients() {
       const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, lastRow - 1);
       const startRow = Math.max(2, lastRow - checkRows + 1);
       
-      // Read all columns starting from TIMESTAMP to ensure correct mapping
-      // Columns: TIMESTAMP (0), CLIENT_ID (1), VOLUNTEER (2), COMPLETED (3)
       const data = sheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, 
                                    checkRows, 4).getValues();
       
@@ -44,7 +42,6 @@ function getVolunteersAndClients() {
       // Check older rows if needed (unlikely but possible)
       if (lastRow > CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK) {
         const olderRows = lastRow - CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK;
-        // Read all columns starting from TIMESTAMP to ensure correct mapping
         const olderData = sheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, 
                                           olderRows, 4).getValues();
         for (let i = 0; i < olderData.length; i++) {
@@ -243,6 +240,48 @@ function getMentorList() {
 }
 
 /**
+ * Finds the row number of a volunteer+client assignment in the Client Assignment sheet
+ * Searches recent rows first (optimized), then older rows if not found
+ * @param {Sheet} assignSheet - The Client Assignment sheet
+ * @param {string} volunteer - Volunteer name
+ * @param {string} clientID - Client ID
+ * @returns {number} Row number (1-indexed) or -1 if not found
+ */
+function findAssignmentRow(assignSheet, volunteer, clientID) {
+  const lastRow = assignSheet.getLastRow();
+  if (lastRow <= 1) return -1;
+
+  const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, lastRow - 1);
+  const startRow = Math.max(2, lastRow - checkRows + 1);
+
+  const assignData = assignSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1,
+                                           checkRows, 4).getValues();
+
+  for (let i = 0; i < assignData.length; i++) {
+    const c = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
+    const v = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
+    if (v === volunteer && c === clientID) {
+      return startRow + i;
+    }
+  }
+
+  if (lastRow > CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK) {
+    const olderRows = lastRow - CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK;
+    const olderData = assignSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1,
+                                            olderRows, 4).getValues();
+    for (let i = 0; i < olderData.length; i++) {
+      const c = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
+      const v = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
+      if (v === volunteer && c === clientID) {
+        return i + 2;
+      }
+    }
+  }
+
+  return -1;
+}
+
+/**
  * Finalizes returns and stores per-tax-year data to the tracker
  * @param {string} volunteer - Volunteer name
  * @param {string} client - Client ID
@@ -309,65 +348,16 @@ function finalizeReturnsAndStore(volunteer, client, rows) {
     
     // 1. Mark client as Complete in 'Client Assignment'
     const assignSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
-    const lastRow = assignSheet.getLastRow();
-    
-    let marked = false;
-    if (lastRow > 1) {
-      // Optimization: Check only recent assignments (last N rows) - most are recent
-      const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, lastRow - 1);
-      const startRow = Math.max(2, lastRow - checkRows + 1);
-      
-      // Read all columns starting from TIMESTAMP to ensure correct mapping
-      // Columns: TIMESTAMP (0), CLIENT_ID (1), VOLUNTEER (2), COMPLETED (3)
-      const assignData = assignSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, 
-                                               checkRows, 4).getValues();
-      
-      for (let i = 0; i < assignData.length; i++) {
-        const c = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
-        const v = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
-        
-        Logger.log(`Checking assignment ${i}: Volunteer="${v}", Client="${c}" vs looking for Volunteer="${volunteer}", Client="${clientID}"`);
-        
-        // Compare trimmed values
-        if (v === volunteer && c === clientID) {
-          const rowNum = startRow + i;
-          assignSheet.getRange(rowNum, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1)
-            .setValue('Complete');
-          marked = true;
-          Logger.log(`Found and marked assignment at row ${rowNum}`);
-          break;
-        }
-      }
-      
-      // If not found in recent rows, check older rows (unlikely but possible)
-      if (!marked && lastRow > CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK) {
-        const olderRows = lastRow - CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK;
-        // Read all columns starting from TIMESTAMP to ensure correct mapping
-        const olderData = assignSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, 
-                                               olderRows, 4).getValues();
-        for (let i = 0; i < olderData.length; i++) {
-          const c = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
-          const v = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
-          
-          Logger.log(`Checking older assignment ${i}: Volunteer="${v}", Client="${c}" vs looking for Volunteer="${volunteer}", Client="${clientID}"`);
-          
-          if (v === volunteer && c === clientID) {
-            const rowNum = i + 2;
-            assignSheet.getRange(rowNum, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1)
-              .setValue('Complete');
-            marked = true;
-            Logger.log(`Found and marked older assignment at row ${rowNum}`);
-            break;
-          }
-        }
-      }
-    }
-    
-    if (!marked) {
-      Logger.log(`Assignment not found - Volunteer: "${volunteer}", Client: "${clientID}"`);
+    const assignRowNum = findAssignmentRow(assignSheet, volunteer, clientID);
+
+    if (assignRowNum > 0) {
+      assignSheet.getRange(assignRowNum, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1)
+        .setValue('Complete');
+      Logger.log(`Marked assignment complete at row ${assignRowNum}`);
+    } else {
       throw new Error(`Assignment not found for volunteer ${volunteer} and client ${clientID}`);
     }
-    
+
     // 2. Append tax year data directly to 'Tax Return Tracker'
     const trackerSheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
     
@@ -463,55 +453,14 @@ function cancelClientAndStore(volunteer, client, rows) {
     
     // Mark client as Complete in 'Client Assignment' (same as finalization)
     const assignSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
-    const lastRow = assignSheet.getLastRow();
-    
-    let marked = false;
-    if (lastRow > 1) {
-      const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, lastRow - 1);
-      const startRow = Math.max(2, lastRow - checkRows + 1);
-      
-      const assignData = assignSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, 
-                                               checkRows, 4).getValues();
-      
-      for (let i = 0; i < assignData.length; i++) {
-        const c = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
-        const v = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
-        
-        if (v === volunteer && c === clientID) {
-          const rowNum = startRow + i;
-          assignSheet.getRange(rowNum, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1)
-            .setValue('Complete');
-          marked = true;
-          Logger.log(`Found and marked assignment at row ${rowNum} for cancellation`);
-          break;
-        }
-      }
-      
-      // Check older rows if needed
-      if (!marked && lastRow > CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK) {
-        const olderRows = lastRow - CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK;
-        const olderData = assignSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, 
-                                               olderRows, 4).getValues();
-        for (let i = 0; i < olderData.length; i++) {
-          const c = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
-          const v = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
-          
-          if (v === volunteer && c === clientID) {
-            const rowNum = i + 2;
-            assignSheet.getRange(rowNum, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1)
-              .setValue('Complete');
-            marked = true;
-            Logger.log(`Found and marked older assignment at row ${rowNum} for cancellation`);
-            break;
-          }
-        }
-      }
-    }
-    
-    if (!marked) {
-      Logger.log(`Assignment not found - Volunteer: "${volunteer}", Client: "${clientID}"`);
-      // Don't throw error - still record the cancellation
-      Logger.log('Proceeding with cancellation recording despite assignment not found');
+    const assignRowNum = findAssignmentRow(assignSheet, volunteer, clientID);
+
+    if (assignRowNum > 0) {
+      assignSheet.getRange(assignRowNum, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1)
+        .setValue('Complete');
+      Logger.log(`Marked assignment complete at row ${assignRowNum} for cancellation`);
+    } else {
+      Logger.log(`Assignment not found for ${volunteer}/${clientID}, proceeding with cancellation recording`);
     }
     
     // Append to 'Tax Return Tracker' with INCOMPLETE='Yes'

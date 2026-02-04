@@ -8,7 +8,8 @@
  * @returns {HtmlOutput} The HTML output for the schedule viewer
  */
 function doGetVolunteerScheduleViewer() {
-  return HtmlService.createHtmlOutputFromFile('volunteer_schedule_dashboard')
+  return HtmlService.createTemplateFromFile('volunteer_schedule_dashboard')
+    .evaluate()
     .setTitle('Volunteer Schedule Viewer')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
