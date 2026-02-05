@@ -4,50 +4,66 @@
  */
 
 /**
- * Gets volunteer tags from the Volunteer Tags sheet
- * Falls back to hardcoded VOLUNTEER_TAGS if sheet doesn't exist
- * @returns {Object} Map of volunteer name to custom tag
+ * Gets volunteer tags from the Volunteer Tags sheet (3-column format)
+ * Column A: Name, Column B: Role Override (e.g., "Senior Mentor" or blank), Column C: Display Flair
+ * Falls back to hardcoded VOLUNTEER_TAGS for display flairs if sheet doesn't exist
+ * @returns {Object} { roleOverrides: {name: role}, displayTags: {name: tag} }
  */
 function getVolunteerTagsFromSheet() {
+  const emptyResult = { roleOverrides: {}, displayTags: {} };
+
   try {
     const ss = getSpreadsheet();
     const sheetName = CONFIG.SHEETS.VOLUNTEER_TAGS || 'Volunteer Tags';
     const sheet = ss.getSheetByName(sheetName);
 
-    if (!sheet) {
-      // Fall back to hardcoded VOLUNTEER_TAGS if sheet doesn't exist
-      return VOLUNTEER_TAGS || {};
-    }
+    const roleOverrides = {};
+    const displayTags = {};
 
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return VOLUNTEER_TAGS || {};
+    if (sheet && sheet.getLastRow() >= 2) {
+      const lastRow = sheet.getLastRow();
+      const numCols = Math.min(sheet.getLastColumn(), 3);
+      const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
 
-    const data = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
-    const tags = {};
+      for (const row of data) {
+        const name = row[0]?.toString().trim();
+        if (!name) continue;
 
-    for (const row of data) {
-      const name = row[0]?.toString().trim();
-      const tag = row[1]?.toString().trim();
-      if (name && tag) {
-        tags[name] = tag;
-        // Also add lowercase key for case-insensitive matching
-        tags[name.toLowerCase()] = tag;
+        const roleOverride = (row[1] || '').toString().trim();
+        const flair = (row[2] || '').toString().trim();
+
+        if (roleOverride) {
+          roleOverrides[name] = roleOverride;
+          roleOverrides[name.toLowerCase()] = roleOverride;
+        }
+
+        if (flair) {
+          displayTags[name] = flair;
+          displayTags[name.toLowerCase()] = flair;
+        }
       }
     }
 
-    // Merge with hardcoded tags (sheet takes priority)
+    // Merge hardcoded VOLUNTEER_TAGS into display tags (sheet takes priority)
     const hardcodedTags = VOLUNTEER_TAGS || {};
     Object.keys(hardcodedTags).forEach(key => {
-      if (!tags[key] && !tags[key.toLowerCase()]) {
-        tags[key] = hardcodedTags[key];
-        tags[key.toLowerCase()] = hardcodedTags[key];
+      if (!displayTags[key] && !displayTags[key.toLowerCase()]) {
+        displayTags[key] = hardcodedTags[key];
+        displayTags[key.toLowerCase()] = hardcodedTags[key];
       }
     });
 
-    return tags;
+    return { roleOverrides, displayTags };
   } catch (e) {
     Logger.log('Error reading volunteer tags: ' + e.message);
-    return VOLUNTEER_TAGS || {};
+    // Fall back to hardcoded tags for display only
+    const displayTags = {};
+    const hardcodedTags = VOLUNTEER_TAGS || {};
+    Object.keys(hardcodedTags).forEach(key => {
+      displayTags[key] = hardcodedTags[key];
+      displayTags[key.toLowerCase()] = hardcodedTags[key];
+    });
+    return { roleOverrides: {}, displayTags };
   }
 }
 
@@ -375,8 +391,9 @@ function getVolunteerScheduleByDay(day, filterRole = '') {
     }
     
     // Build case-insensitive volunteer tags lookup
+    const tagData = getVolunteerTagsFromSheet();
+    const baseTags = tagData.displayTags || {};
     const volunteerTagsLookup = {};
-    const baseTags = getVolunteerTagsFromSheet();
 
     // Create a lowercase lookup map for case-insensitive matching
     Object.keys(baseTags).forEach(key => {

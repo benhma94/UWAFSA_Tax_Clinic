@@ -618,7 +618,7 @@
   }
 
   /**
-   * Selects a volunteer from autocomplete and preloads station if Mentor
+   * Selects a volunteer from autocomplete and preloads station based on role
    */
   function selectVolunteer(name, role) {
     const input = document.getElementById('volunteerName');
@@ -629,18 +629,30 @@
     dropdown.style.display = 'none';
     highlightedIndex = -1;
 
-    // Auto-preload "Mentor" station if role is "Mentor"
-    if (role && role.trim() === 'Mentor') {
-      const mentorOption = Array.from(stationSelect.options).find(
-        opt => opt.value === 'Mentor'
-      );
+    // Map role to station name (case-insensitive)
+    const roleLower = (role || '').trim().toLowerCase();
+    let station = '';
 
-      if (mentorOption) {
-        stationSelect.value = 'Mentor';
-        console.log('Auto-selected Mentor station for', name);
+    if (roleLower === 'senior mentor') {
+      station = 'Senior Mentor';
+    } else if (roleLower === 'mentor') {
+      station = 'Mentor';
+    } else if (roleLower === 'frontline') {
+      station = 'Frontline';
+    } else if (roleLower === 'internal services') {
+      station = 'Internal Services';
+    }
+
+    if (station) {
+      const option = Array.from(stationSelect.options).find(
+        opt => opt.value === station
+      );
+      if (option) {
+        stationSelect.value = station;
+        console.log(`Auto-selected ${station} station for`, name);
       }
     } else {
-      // Reset to placeholder "Select station..." option
+      // Filer or unknown role - reset to placeholder
       stationSelect.value = '';
     }
   }

@@ -101,8 +101,8 @@ function submitAvailabilityForm(formData) {
     }
 
     // Validate role-specific requirements
-    if (formData.role === 'Mentor') {
-      // Mentors can request any number of shifts (1-12)
+    if (formData.role === 'Mentor' || formData.role === 'Internal Services') {
+      // Mentors and Internal Services can request any number of shifts (1-12)
       if (!formData.numShifts || formData.numShifts < 1 || formData.numShifts > 12) {
         throw new Error('Number of shifts must be between 1 and 12');
       }

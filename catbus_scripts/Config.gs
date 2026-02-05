@@ -90,7 +90,7 @@ const CONFIG = {
   
   SIGN_IN_OUT: {
     STATION_COUNT: 150,
-    EXCEPTION_STATIONS: ['Mentor', 'Senior Mentor', 'Receptionist']
+    EXCEPTION_STATIONS: ['Mentor', 'Senior Mentor', 'Frontline', 'Internal Services']
   },
   
   // Help Request Status Values

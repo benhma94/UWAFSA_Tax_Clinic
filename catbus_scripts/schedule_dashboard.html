@@ -454,6 +454,10 @@
             <span class="stat-label">Frontline:</span>
             <span class="stat-value">${roleDistribution.frontline || 0}</span>
           </div>
+          <div class="stat-item">
+            <span class="stat-label">Internal Services:</span>
+            <span class="stat-value">${roleDistribution.internalServices || 0}</span>
+          </div>
         </div>
       `;
     }
@@ -479,7 +483,7 @@
     if (result.shiftRoleCounts) {
       const slotKeys = ['A', 'B', 'C'];
       const slotLabels = ['Morning', 'Afternoon', 'Evening'];
-      const roleColors = { filer: '#9b59b6', mentor: '#3498db', frontline: '#2ecc71' };
+      const roleColors = { filer: '#9b59b6', mentor: '#3498db', frontline: '#2ecc71', internalServices: '#e74c3c' };
       const dayLabels = (result.summary && result.summary.dayLabels) || ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
 
       html += '<div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-light);"><h3>Shift Distribution</h3>';
@@ -487,6 +491,7 @@
       html += '<span><span style="display:inline-block;width:12px;height:12px;background:#9b59b6;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Filer</span>';
       html += '<span><span style="display:inline-block;width:12px;height:12px;background:#3498db;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Mentor</span>';
       html += '<span><span style="display:inline-block;width:12px;height:12px;background:#2ecc71;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Frontline</span>';
+      html += '<span><span style="display:inline-block;width:12px;height:12px;background:#e74c3c;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Internal Services</span>';
       html += '</div>';
       html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">';
 
@@ -495,8 +500,8 @@
         let maxTotal = 0;
         for (const sk of slotKeys) {
           const shiftId = 'D' + (dayIdx + 1) + sk;
-          const c = result.shiftRoleCounts[shiftId] || { filer: 0, mentor: 0, frontline: 0 };
-          const total = c.filer + c.mentor + c.frontline;
+          const c = result.shiftRoleCounts[shiftId] || { filer: 0, mentor: 0, frontline: 0, internalServices: 0 };
+          const total = c.filer + c.mentor + c.frontline + c.internalServices;
           if (total > maxTotal) maxTotal = total;
         }
         if (maxTotal === 0) maxTotal = 1;
@@ -506,8 +511,8 @@
 
         for (let si = 0; si < 3; si++) {
           const shiftId = 'D' + (dayIdx + 1) + slotKeys[si];
-          const c = result.shiftRoleCounts[shiftId] || { filer: 0, mentor: 0, frontline: 0 };
-          const total = c.filer + c.mentor + c.frontline;
+          const c = result.shiftRoleCounts[shiftId] || { filer: 0, mentor: 0, frontline: 0, internalServices: 0 };
+          const total = c.filer + c.mentor + c.frontline + c.internalServices;
 
           html += '<div style="margin-bottom: 8px;">';
           html += '<div style="font-size: 12px; color: #666; margin-bottom: 3px;">' + slotLabels[si] + ' (' + total + ')</div>';
@@ -517,6 +522,7 @@
             const pctFiler = (c.filer / maxTotal) * 100;
             const pctMentor = (c.mentor / maxTotal) * 100;
             const pctFrontline = (c.frontline / maxTotal) * 100;
+            const pctInternal = (c.internalServices / maxTotal) * 100;
 
             if (c.filer > 0) {
               html += '<div style="width:' + pctFiler + '%;background:' + roleColors.filer + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Filers: ' + c.filer + '">' + c.filer + '</div>';
@@ -526,6 +532,9 @@
             }
             if (c.frontline > 0) {
               html += '<div style="width:' + pctFrontline + '%;background:' + roleColors.frontline + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Frontline: ' + c.frontline + '">' + c.frontline + '</div>';
+            }
+            if (c.internalServices > 0) {
+              html += '<div style="width:' + pctInternal + '%;background:' + roleColors.internalServices + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Internal Services: ' + c.internalServices + '">' + c.internalServices + '</div>';
             }
           }
 

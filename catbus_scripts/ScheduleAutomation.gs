@@ -19,6 +19,9 @@ function classifyRole(role) {
   if (roleLower.includes('frontline') || roleLower.includes('front line') || roleLower.includes('receptionist')) {
     return 'frontline';
   }
+  if (roleLower.includes('internal services')) {
+    return 'internalServices';
+  }
   return 'filer'; // Default
 }
 
@@ -215,6 +218,18 @@ function areShiftsConsecutive(shift1, shift2) {
 }
 
 /**
+ * Checks if adding a new shift would create a consecutive pair with any existing shifts
+ * @param {string} newShift - Shift ID to check (e.g., 'D1B')
+ * @param {Array<string>} existingShifts - Already-assigned shift IDs
+ * @returns {boolean} True if newShift is consecutive with any existing shift
+ */
+function wouldCreateConsecutive(newShift, existingShifts) {
+  return existingShifts.some(existing =>
+    areShiftsConsecutive(existing, newShift) || areShiftsConsecutive(newShift, existing)
+  );
+}
+
+/**
  * Generates an optimized schedule from volunteer availability
  * @param {string} spreadsheetId - Spreadsheet ID containing availability responses
  * @param {string} availabilitySheetName - Name of sheet with availability responses
@@ -254,7 +269,7 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
     // Initialize role tracking per shift
     const shiftRoleCounts = {};
     SHIFT_IDS.forEach(shiftId => {
-      shiftRoleCounts[shiftId] = { filer: 0, mentor: 0, frontline: 0 };
+      shiftRoleCounts[shiftId] = { filer: 0, mentor: 0, frontline: 0, internalServices: 0 };
     });
 
     // Track assignments per volunteer
@@ -291,6 +306,19 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
     for (const shiftId of SHIFT_IDS) {
       const counts = shiftRoleCounts[shiftId];
       Logger.log(`${shiftId} after role minimums: filers=${counts.filer}, mentors=${counts.mentor}, frontline=${counts.frontline}`);
+    }
+
+    // PHASE 1.5: Assign Internal Services volunteers to ALL their available shifts (guaranteed)
+    const internalServicesVols = sortedVolunteers.filter(v => v.roleCategory === 'internalServices');
+    for (const volunteer of internalServicesVols) {
+      for (const shiftId of volunteer.availability) {
+        if (!schedule[shiftId].includes(volunteer.fullName)) {
+          schedule[shiftId].push(volunteer.fullName);
+          volunteerAssignments[volunteer.fullName].push(shiftId);
+          shiftRoleCounts[shiftId].internalServices++;
+        }
+      }
+      Logger.log(`Internal Services: ${volunteer.fullName} assigned to ${volunteerAssignments[volunteer.fullName].length} shifts`);
     }
 
     // PHASE 2: Assign volunteers who prefer consecutive shifts
@@ -405,7 +433,7 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
 
     // Round-robin: repeatedly assign one volunteer to the (shift, role) pair with the
     // largest deficit vs. the cross-shift average, ensuring even role distribution
-    const roles = ['filer', 'mentor', 'frontline'];
+    const roles = ['filer', 'mentor', 'frontline', 'internalServices'];
     let madeAssignment = true;
     while (madeAssignment) {
       madeAssignment = false;
@@ -468,9 +496,12 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
       // Pick the best volunteer for this shift, preferring the target role
       // Enforce filer hard cap: exclude filers if shift is at the cap
       let candidates = shiftToVolunteers[bestShift].filter(v =>
+        v.roleCategory !== 'internalServices' && // Already fully assigned in Phase 1.5
         volunteerAssignments[v.fullName].length < v.maxShifts &&
         !schedule[bestShift].includes(v.fullName) &&
-        (v.roleCategory !== 'filer' || shiftRoleCounts[bestShift].filer < FILER_HARD_CAP)
+        (v.roleCategory !== 'filer' || shiftRoleCounts[bestShift].filer < FILER_HARD_CAP) &&
+        // Avoid creating consecutive shifts for volunteers who don't want them
+        (v.preferConsecutive || !wouldCreateConsecutive(bestShift, volunteerAssignments[v.fullName]))
       );
 
       // Prefer candidates matching the target role
@@ -523,6 +554,9 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
       if (counts.frontline < ROLE_MIN_PER_SHIFT) {
         shortfalls.push({ shiftId, role: 'Frontline', target: ROLE_MIN_PER_SHIFT, actual: counts.frontline });
       }
+      if (counts.internalServices < ROLE_MIN_PER_SHIFT) {
+        shortfalls.push({ shiftId, role: 'Internal Services', target: ROLE_MIN_PER_SHIFT, actual: counts.internalServices });
+      }
     }
 
     if (shortfalls.length > 0) {
@@ -546,7 +580,8 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
         roleDistribution: {
           filers: volunteers.filter(v => v.roleCategory === 'filer').length,
           mentors: volunteers.filter(v => v.roleCategory === 'mentor').length,
-          frontline: volunteers.filter(v => v.roleCategory === 'frontline').length
+          frontline: volunteers.filter(v => v.roleCategory === 'frontline').length,
+          internalServices: volunteers.filter(v => v.roleCategory === 'internalServices').length
         }
       },
       volunteers: volunteers.map(v => ({
@@ -653,15 +688,15 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
         const dayStartRow = allData.length + 1; // 1-indexed row in sheet
 
         // Header row for this day's chart data
-        const chartHeader = [days[dayIdx], 'Filers', 'Mentors', 'Frontline'];
+        const chartHeader = [days[dayIdx], 'Filers', 'Mentors', 'Frontline', 'Internal Services'];
         while (chartHeader.length < headers.length) chartHeader.push('');
         allData.push(chartHeader);
 
         // Data rows for each shift
         for (let slotIdx = 0; slotIdx < 3; slotIdx++) {
           const shiftId = `D${dayIdx + 1}${slotKeys[slotIdx]}`;
-          const counts = scheduleResult.shiftRoleCounts[shiftId] || { filer: 0, mentor: 0, frontline: 0 };
-          const row = [shiftLabels[slotIdx], counts.filer, counts.mentor, counts.frontline];
+          const counts = scheduleResult.shiftRoleCounts[shiftId] || { filer: 0, mentor: 0, frontline: 0, internalServices: 0 };
+          const row = [shiftLabels[slotIdx], counts.filer, counts.mentor, counts.frontline, counts.internalServices];
           while (row.length < headers.length) row.push('');
           allData.push(row);
         }

@@ -17,6 +17,7 @@
       --mentor-color: #3498db;
       --frontline-color: #2ecc71;
       --filer-color: #9b59b6;
+      --internal-services-color: #e74c3c;
       --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.1);
       --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
@@ -372,6 +373,16 @@
       background-color: rgba(155, 89, 182, 0.25);
     }
 
+    .role-badge.internalservices {
+      background-color: rgba(231, 76, 60, 0.15);
+      color: var(--internal-services-color);
+      border: 1px solid var(--internal-services-color);
+    }
+
+    body.dark .role-badge.internalservices {
+      background-color: rgba(231, 76, 60, 0.25);
+    }
+
     .volunteer-tag {
       display: inline-block;
       padding: 3px 10px;
@@ -573,6 +584,7 @@
         <option value="Mentor">Mentor</option>
         <option value="Frontline">Frontline</option>
         <option value="Filer">Filer</option>
+        <option value="Internal Services">Internal Services</option>
       </select>
       <div class="help-text">Leave as "All Roles" to see everyone scheduled</div>
     </div>
@@ -914,7 +926,7 @@
         html += '<ul style="list-style: none; padding-left: 0;">';
         timeSlots[timeSlot].forEach(volunteer => {
           const role = volunteerRoles[volunteer] || 'N/A';
-          const roleClass = role.toLowerCase();
+          const roleClass = role.toLowerCase().replace(/\s+/g, '');
           const customTag = volunteerTags[volunteer] || '';
           const tagHtml = customTag ? `<span class="volunteer-tag">${customTag}</span>` : '';
           html += `<li class="volunteer-item">

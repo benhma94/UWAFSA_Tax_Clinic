@@ -245,63 +245,53 @@ function getSignInStats() {
 function getConsolidatedVolunteerData() {
   return safeExecute(() => {
     try {
-      const externalConfig = CONFIG.EXTERNAL_SPREADSHEETS.CONSOLIDATED_VOLUNTEERS;
-      Logger.log(`Opening external spreadsheet: ${externalConfig.ID}`);
-      Logger.log(`Looking for sheet: ${externalConfig.SHEET_NAME}`);
+      // Read from Schedule Availability sheet (volunteer shift sign-up data)
+      const sheet = getSheet(CONFIG.SHEETS.SCHEDULE_AVAILABILITY);
+      const lastRow = sheet.getLastRow();
 
-      const ss = SpreadsheetApp.openById(externalConfig.ID);
-      const sheet = ss.getSheetByName(externalConfig.SHEET_NAME);
-
-      if (!sheet) {
-        Logger.log(`Sheet "${externalConfig.SHEET_NAME}" not found in external spreadsheet`);
-        Logger.log(`Available sheets: ${ss.getSheets().map(s => s.getName()).join(', ')}`);
+      if (lastRow <= 1) {
+        Logger.log('Schedule Availability sheet has no data rows');
         return [];
       }
 
-      const data = sheet.getDataRange().getValues();
-      Logger.log(`Sheet has ${data.length} rows`);
-
-      // Log first few rows to debug
-      if (data.length > 0) {
-        Logger.log(`Header row (row 0): ${JSON.stringify(data[0])}`);
-      }
-      if (data.length > 1) {
-        Logger.log(`Sample data row (row 1): ${JSON.stringify(data[1])}`);
-        Logger.log(`  - Column A (index 0): "${data[1][0]}"`);
-        Logger.log(`  - Column H (index 7): "${data[1][7]}"`);
-      }
+      // Columns: A=Timestamp, B=FirstName, C=LastName, D=Email, E=Role
+      const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+      Logger.log(`Schedule Availability has ${data.length} rows`);
 
       const volunteers = [];
 
-      // Skip header row (index 0), start from row 1
-      for (let i = 1; i < data.length; i++) {
-        const role = data[i][externalConfig.COLUMNS.ROLE]?.toString().trim() || '';
-        const name = data[i][externalConfig.COLUMNS.NAME]?.toString().trim() || '';
+      for (let i = 0; i < data.length; i++) {
+        const firstName = data[i][1]?.toString().trim() || '';
+        const lastName = data[i][2]?.toString().trim() || '';
+        const role = data[i][4]?.toString().trim() || '';
 
-        // Only include rows with valid names
-        if (name && name.length > 0) {
+        if (firstName && lastName) {
           volunteers.push({
-            name: name,
+            name: `${firstName} ${lastName}`,
             role: role || 'N/A'
           });
+        }
+      }
+
+      // Apply role overrides from Volunteer Tags sheet (e.g., Mentor → Senior Mentor)
+      const tagData = getVolunteerTagsFromSheet();
+      const roleOverrides = tagData.roleOverrides || {};
+
+      for (const volunteer of volunteers) {
+        const override = roleOverrides[volunteer.name] || roleOverrides[volunteer.name.toLowerCase()];
+        if (override) {
+          volunteer.role = override;
         }
       }
 
       // Sort by name for consistent ordering
       volunteers.sort((a, b) => a.name.localeCompare(b.name));
 
-      Logger.log(`Loaded ${volunteers.length} volunteers from consolidated sheet`);
-      if (volunteers.length > 0) {
-        Logger.log(`Sample volunteer: ${JSON.stringify(volunteers[0])}`);
-      }
-
+      Logger.log(`Loaded ${volunteers.length} volunteers from Schedule Availability`);
       return volunteers;
 
     } catch (error) {
-      Logger.log(`Error accessing external spreadsheet: ${error.message}`);
-      Logger.log(`Error stack: ${error.stack}`);
-      // Return empty array if external sheet is not accessible
-      // This allows the form to still work without autocomplete
+      Logger.log(`Error reading Schedule Availability: ${error.message}`);
       return [];
     }
   }, 'getConsolidatedVolunteerData');
