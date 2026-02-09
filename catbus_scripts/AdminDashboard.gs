@@ -4,6 +4,20 @@
  */
 
 /**
+ * Gets all admin dashboard data in a single call
+ * Reduces round-trips from 4 to 1
+ * @returns {Object} All dashboard datasets
+ */
+function getAdminDashboardData() {
+  return {
+    helpRequests: getLiveHelpRequestsCached(),
+    reviewRequests: getLiveReviewRequestsCached(),
+    returnSummary: getReturnSummaryCached(),
+    performanceMetrics: getVolunteerPerformanceMetrics()
+  };
+}
+
+/**
  * Gets return completion summary with caching
  * @returns {Object} Summary with totalCompleted, completedToday, and hourlyCounts
  */

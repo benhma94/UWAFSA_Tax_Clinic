@@ -331,6 +331,16 @@
     </div>
   </div>
 
+  <div class="form-section">
+    <div class="form-group" style="margin-bottom: 0;">
+      <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+        <input type="checkbox" id="notifyChanges" style="width: 18px; height: 18px; cursor: pointer;">
+        <span>Inform volunteers of schedule changes via email</span>
+      </label>
+      <div class="help-text" style="margin-left: 28px;">If enabled, volunteers whose shifts changed from the previous schedule will receive an email notification</div>
+    </div>
+  </div>
+
   <div style="display: flex; gap: 10px; margin-bottom: 20px;">
     <button class="btn-primary" onclick="generateSchedule()" id="generateBtn" style="flex: 1; padding: 15px; font-size: 16px;">
       Generate Schedule
@@ -382,9 +392,12 @@
     hideMessage();
     document.getElementById('statsBox').style.display = 'none';
 
+    const notifyChanges = document.getElementById('notifyChanges').checked;
+
     const options = {
       prioritizeConsecutive: prioritizeConsecutive,
-      dayLabels: [day1, day2, day3, day4]
+      dayLabels: [day1, day2, day3, day4],
+      notifyChanges: notifyChanges
     };
 
     google.script.run
@@ -436,6 +449,16 @@
         <span class="stat-value">${summary.totalAssignments || 0}</span>
       </div>
     `;
+
+    // Add notifications sent count if available
+    if (result.notificationsSent !== undefined) {
+      html += `
+        <div class="stat-item" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-light);">
+          <span class="stat-label">📧 Change Notifications Sent:</span>
+          <span class="stat-value">${result.notificationsSent}</span>
+        </div>
+      `;
+    }
 
     // Add role distribution if available
     if (roleDistribution.filers !== undefined || roleDistribution.mentors !== undefined || roleDistribution.frontline !== undefined) {
@@ -546,9 +569,184 @@
       html += '</div></div>';
     }
 
+    // Add Senior Mentor and First-Time Mentor designation sections
+    const mentors = (result.volunteers || []).filter(v => v.roleCategory === 'mentor');
+    if (mentors.length > 0) {
+      const previousSeniors = new Set(result.previousSeniorMentors || []);
+
+      // Store data for dynamic first-time list updates
+      window._allMentorNames = mentors.map(m => m.name).sort((a, b) => a.localeCompare(b));
+      window._previousFirstTimers = new Set(result.previousFirstTimeMentors || []);
+
+      html += `
+        <div id="seniorMentorSection" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-light);">
+          <h3 style="margin-bottom: 5px;">Designate Senior Mentors</h3>
+          <p style="color: #666; font-size: 13px; margin-bottom: 15px;">
+            Select mentors who should be designated as seniors. This is internal only - they will display as "Mentor" on the public schedule.
+          </p>
+          <div id="mentorCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-bottom: 15px;">
+      `;
+
+      for (const name of window._allMentorNames) {
+        const isChecked = previousSeniors.has(name) ? 'checked' : '';
+        html += `
+          <label style="display: flex; align-items: center; gap: 8px; padding: 8px; background: rgba(0,0,0,0.03); border-radius: 4px; cursor: pointer;">
+            <input type="checkbox" class="senior-checkbox" data-name="${escapeHtml(name)}" ${isChecked} onchange="updateFirstTimeMentorList()" style="width: 16px; height: 16px;">
+            <span>${escapeHtml(name)}</span>
+          </label>
+        `;
+      }
+
+      html += `
+          </div>
+
+          <h3 style="margin-bottom: 5px; margin-top: 20px;">Designate First-Time Mentors</h3>
+          <p style="color: #666; font-size: 13px; margin-bottom: 15px;">
+            Select mentors who are first-time and need to report to a senior. Experienced mentors left unchecked will work independently.
+          </p>
+          <div id="firstTimeMentorCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-bottom: 15px;">
+          </div>
+
+          <button class="btn-primary" onclick="saveMentorDesignations()" id="saveTeamsBtn" style="padding: 10px 20px;">
+            Save & Compute Teams
+          </button>
+          <div id="teamResults" style="margin-top: 15px; display: none;"></div>
+        </div>
+      `;
+    }
+
     statsContent.innerHTML = html;
     statsBox.style.display = 'block';
+
+    // Build initial first-time mentor list after DOM is rendered
+    if (mentors.length > 0) {
+      updateFirstTimeMentorList();
+    }
+
     statsBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  /**
+   * Dynamically rebuilds the first-time mentor checkbox list,
+   * excluding anyone checked as a senior mentor above.
+   */
+  function updateFirstTimeMentorList() {
+    const container = document.getElementById('firstTimeMentorCheckboxes');
+    if (!container) return;
+
+    // Get currently checked seniors
+    const seniorNames = new Set();
+    document.querySelectorAll('.senior-checkbox:checked').forEach(cb => {
+      seniorNames.add(cb.dataset.name);
+    });
+
+    // Remember which first-timers are currently checked (preserve state across rebuilds)
+    const currentlyChecked = new Set();
+    document.querySelectorAll('.firsttime-checkbox:checked').forEach(cb => {
+      currentlyChecked.add(cb.dataset.name);
+    });
+
+    // Build list of non-senior mentors
+    const nonSeniors = (window._allMentorNames || []).filter(name => !seniorNames.has(name));
+
+    if (nonSeniors.length === 0) {
+      container.innerHTML = '<p style="color: #999; font-size: 13px;">All mentors are designated as seniors.</p>';
+      return;
+    }
+
+    let html = '';
+    for (const name of nonSeniors) {
+      // Pre-check if previously designated or currently checked
+      const isChecked = (currentlyChecked.has(name) || (window._previousFirstTimers && window._previousFirstTimers.has(name))) ? 'checked' : '';
+      html += `
+        <label style="display: flex; align-items: center; gap: 8px; padding: 8px; background: rgba(255, 152, 0, 0.06); border-radius: 4px; cursor: pointer;">
+          <input type="checkbox" class="firsttime-checkbox" data-name="${escapeHtml(name)}" ${isChecked} style="width: 16px; height: 16px;">
+          <span>${escapeHtml(name)}</span>
+        </label>
+      `;
+    }
+
+    container.innerHTML = html;
+
+    // Clear previousFirstTimers after first render so subsequent senior checkbox
+    // changes don't keep re-checking them
+    window._previousFirstTimers = null;
+  }
+
+  function saveMentorDesignations() {
+    const seniors = [];
+    document.querySelectorAll('.senior-checkbox:checked').forEach(cb => {
+      seniors.push(cb.dataset.name);
+    });
+
+    const firstTimers = [];
+    document.querySelectorAll('.firsttime-checkbox:checked').forEach(cb => {
+      firstTimers.push(cb.dataset.name);
+    });
+
+    if (seniors.length === 0) {
+      showMessage('Please select at least one senior mentor', 'error');
+      return;
+    }
+
+    if (firstTimers.length === 0) {
+      showMessage('Please select at least one first-time mentor to assign to seniors', 'error');
+      return;
+    }
+
+    const saveBtn = document.getElementById('saveTeamsBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Computing Teams...';
+
+    google.script.run
+      .withSuccessHandler(result => {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save & Compute Teams';
+
+        if (result.success) {
+          displayTeamResults(result);
+          showMessage(`Teams computed: ${result.totalAssignments} first-time mentor pairings`, 'success');
+        } else {
+          showMessage('Error: ' + result.error, 'error');
+        }
+      })
+      .withFailureHandler(error => {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save & Compute Teams';
+        showMessage('Error computing teams: ' + (error.message || error), 'error');
+      })
+      .computeAndSaveTeams(seniors, firstTimers);
+  }
+
+  function displayTeamResults(result) {
+    const teamResults = document.getElementById('teamResults');
+    if (!teamResults) return;
+
+    let html = `
+      <div style="background: rgba(46, 204, 113, 0.1); padding: 15px; border-radius: 8px; border: 1px solid rgba(46, 204, 113, 0.3);">
+        <h4 style="margin: 0 0 10px 0; color: #27ae60;">Teams Computed Successfully</h4>
+        <p style="margin: 0 0 5px 0;"><strong>Senior Mentors:</strong> ${(result.seniorMentors || []).map(n => escapeHtml(n)).join(', ')}</p>
+        <p style="margin: 0 0 10px 0;"><strong>First-Time Mentors:</strong> ${(result.firstTimeMentors || []).map(n => escapeHtml(n)).join(', ')}</p>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+    `;
+
+    for (const [day, stats] of Object.entries(result.summary)) {
+      html += `
+        <div style="background: white; padding: 10px; border-radius: 4px;">
+          <strong>${escapeHtml(day)}</strong><br>
+          <span style="color: #27ae60;">${stats.assigned} assigned</span>
+          ${stats.unassigned > 0 ? `<span style="color: #e74c3c;"> | ${stats.unassigned} unassigned</span>` : ''}
+        </div>
+      `;
+    }
+
+    html += `
+        </div>
+      </div>
+    `;
+
+    teamResults.innerHTML = html;
+    teamResults.style.display = 'block';
   }
 
   function runDiagnostic(retryCount = 0) {

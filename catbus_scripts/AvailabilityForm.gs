@@ -126,53 +126,61 @@ function submitAvailabilityForm(formData) {
       throw new Error(`You selected ${formData.availability.length} time slot${formData.availability.length !== 1 ? 's' : ''} but requested ${formData.numShifts} shift${formData.numShifts !== 1 ? 's' : ''}. Please select at least ${formData.numShifts} time slot${formData.numShifts !== 1 ? 's' : ''} to meet your requested number of shifts.`);
     }
 
-    // Get or create the availability sheet
-    const sheet = getOrCreateAvailabilitySheet();
+    // Lock to prevent race condition on concurrent submissions for the same email
+    const lock = LockService.getScriptLock();
+    lock.waitLock(10000);
 
-    // Check if volunteer already exists
-    const existingVolunteer = checkExistingVolunteer(formData.email);
+    try {
+      // Get or create the availability sheet
+      const sheet = getOrCreateAvailabilitySheet();
 
-    // Format availability as comma-separated string for storage
-    // Now stores shift IDs like "D1A,D1B,D2C" instead of "Day 1 9:45-1:15, Day 1 1:00-4:45"
-    const availabilityString = formData.availability.join(',');
+      // Check if volunteer already exists
+      const existingVolunteer = checkExistingVolunteer(formData.email);
 
-    // Prepare timestamps
-    const now = new Date();
-    const timestamp = existingVolunteer.exists ? existingVolunteer.data.timestamp || now : now;
-    const lastModified = now;
+      // Format availability as comma-separated string for storage
+      // Now stores shift IDs like "D1A,D1B,D2C" instead of "Day 1 9:45-1:15, Day 1 1:00-4:45"
+      const availabilityString = formData.availability.join(',');
 
-    // Prepare row data (with Last Modified column)
-    const row = [
-      timestamp,
-      formData.firstName.trim(),
-      formData.lastName.trim(),
-      formData.email.trim(),
-      formData.role,
-      formData.numShifts,
-      formData.consecutive || 'No',
-      availabilityString,
-      formData.notes || '',
-      lastModified
-    ];
+      // Prepare timestamps
+      const now = new Date();
+      const timestamp = existingVolunteer.exists ? existingVolunteer.data.timestamp || now : now;
+      const lastModified = now;
 
-    let isUpdate = false;
+      // Prepare row data (with Last Modified column)
+      const row = [
+        timestamp,
+        formData.firstName.trim(),
+        formData.lastName.trim(),
+        formData.email.trim(),
+        formData.role,
+        formData.numShifts,
+        formData.consecutive || 'No',
+        availabilityString,
+        formData.notes || '',
+        lastModified
+      ];
 
-    if (existingVolunteer.exists) {
-      // Update existing row
-      sheet.getRange(existingVolunteer.rowIndex, 1, 1, row.length).setValues([row]);
-      Logger.log(`Availability updated: ${formData.firstName} ${formData.lastName} (${formData.email})`);
-      isUpdate = true;
-    } else {
-      // Append new row
-      sheet.appendRow(row);
-      Logger.log(`Availability submitted: ${formData.firstName} ${formData.lastName} (${formData.email})`);
+      let isUpdate = false;
+
+      if (existingVolunteer.exists) {
+        // Update existing row
+        sheet.getRange(existingVolunteer.rowIndex, 1, 1, row.length).setValues([row]);
+        Logger.log(`Availability updated: ${formData.firstName} ${formData.lastName} (${formData.email})`);
+        isUpdate = true;
+      } else {
+        // Append new row
+        sheet.appendRow(row);
+        Logger.log(`Availability submitted: ${formData.firstName} ${formData.lastName} (${formData.email})`);
+      }
+
+      return {
+        success: true,
+        message: isUpdate ? 'Availability updated successfully' : 'Availability submitted successfully',
+        isUpdate: isUpdate
+      };
+    } finally {
+      lock.releaseLock();
     }
-
-    return {
-      success: true,
-      message: isUpdate ? 'Availability updated successfully' : 'Availability submitted successfully',
-      isUpdate: isUpdate
-    };
   }, 'submitAvailabilityForm');
 }
 

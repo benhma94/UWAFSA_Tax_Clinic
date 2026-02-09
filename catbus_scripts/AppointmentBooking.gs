@@ -49,10 +49,15 @@ function onAppointmentFormSubmit(e) {
     // Update the form response row with the client ID
     updateFormResponseWithClientId(e.range, clientId);
 
-    // Send confirmation email
-    sendAppointmentConfirmation(appointmentData);
-
-    Logger.log(`Appointment booked: ${clientId} for ${appointmentData.email} on ${appointmentData.preferredDate} at ${appointmentData.preferredTime}`);
+    // Send confirmation email and track status
+    try {
+      sendAppointmentConfirmation(appointmentData);
+      updateConfirmationStatus(e.range, 'Sent');
+      Logger.log(`Appointment booked: ${clientId} for ${appointmentData.email} on ${appointmentData.preferredDate} at ${appointmentData.preferredTime}`);
+    } catch (emailError) {
+      updateConfirmationStatus(e.range, 'Failed');
+      Logger.log(`Email failed for ${clientId}: ${emailError.message}`);
+    }
 
   } catch (error) {
     Logger.log('Error processing appointment form submission: ' + error.message);
@@ -151,6 +156,30 @@ function updateFormResponseWithClientId(responseRange, clientId) {
 
   } catch (error) {
     Logger.log('Error updating form response with client ID: ' + error.message);
+  }
+}
+
+/**
+ * Updates the confirmation email status on the form response row
+ * @param {Range} responseRange - Range of the form response row
+ * @param {string} status - 'Sent' or 'Failed'
+ */
+function updateConfirmationStatus(responseRange, status) {
+  try {
+    const sheet = responseRange.getSheet();
+    const row = responseRange.getRow();
+
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    let statusCol = headers.indexOf('Confirmation Sent') + 1;
+
+    if (statusCol === 0) {
+      statusCol = sheet.getLastColumn() + 1;
+      sheet.getRange(1, statusCol).setValue('Confirmation Sent');
+    }
+
+    sheet.getRange(row, statusCol).setValue(status);
+  } catch (error) {
+    Logger.log('Error updating confirmation status: ' + error.message);
   }
 }
 

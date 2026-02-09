@@ -422,10 +422,10 @@
 
         card.innerHTML = `
           ${priorityBadge}
-          <div class="mobile-card-title">${client.clientId}</div>
-          <div class="mobile-card-info">⏱️ Wait Time: ${client.waitTime}</div>
+          <div class="mobile-card-title">${escapeHtml(client.clientId)}</div>
+          <div class="mobile-card-info">⏱️ Wait Time: ${escapeHtml(client.waitTime)}</div>
           <div style="margin-top: 10px; text-align: center;">
-            <button onclick="openRemoveClientModal('${client.clientId}')"
+            <button onclick="openRemoveClientModal('${escapeHtml(client.clientId)}')"
                     style="background-color:#c0392b; color:white; border:none; padding:8px 16px; border-radius:5px; cursor:pointer; font-weight:600; width:100%;">
               🗑️ Remove from Queue
             </button>
@@ -452,10 +452,10 @@
           : '';
 
         row.innerHTML = `
-          <td>${priorityBadge}${client.clientId}</td>
-          <td>${client.waitTime}</td>
+          <td>${priorityBadge}${escapeHtml(client.clientId)}</td>
+          <td>${escapeHtml(client.waitTime)}</td>
           <td style="text-align: center;">
-            <button onclick="openRemoveClientModal('${client.clientId}')"
+            <button onclick="openRemoveClientModal('${escapeHtml(client.clientId)}')"
                     style="background-color:#c0392b; color:white; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; font-weight:600; font-size:0.85em;">
               🗑️ Remove
             </button>
@@ -475,11 +475,11 @@
     clientSelect.innerHTML = '<option value="">Select Client</option>';
 
     volunteers.forEach(name => {
-      volunteerSelect.innerHTML += `<option value="${name}">${name}</option>`;
+      volunteerSelect.innerHTML += `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
     });
 
     clientQueue.forEach(c => {
-      clientSelect.innerHTML += `<option value="${c.clientId}">${c.clientId}</option>`;
+      clientSelect.innerHTML += `<option value="${escapeHtml(c.clientId)}">${escapeHtml(c.clientId)}</option>`;
     });
   }
 

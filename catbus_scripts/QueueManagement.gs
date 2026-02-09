@@ -77,79 +77,87 @@ function assignClientToVolunteer(clientId, volunteerName) {
     if (!validateClientID(clientId)) {
       throw new Error(`Invalid client ID format: ${clientId}`);
     }
-    
-    const intakeSheet = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
-    const assignmentSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
-    
-    // Optimization: Only read client ID column to verify existence
-    const intakeLastRow = intakeSheet.getLastRow();
-    let found = false;
-    if (intakeLastRow > 1) {
-      const clientIdCol = CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID + 1;
-      const intakeData = intakeSheet.getRange(2, clientIdCol, intakeLastRow - 1, 1).getValues();
-      for (let i = 0; i < intakeData.length; i++) {
-        const currentClientId = intakeData[i][0]?.toString().trim();
-        if (currentClientId === clientId) {
-          found = true;
-          break;
-        }
-      }
-    }
-    
-    if (!found) {
-      throw new Error(`Client ID ${clientId} not found in intake`);
-    }
-    
-    // Optimization: Check only recent assignments (last N rows) for conflicts
-    // Most assignments are recent, so this is much faster than reading entire sheet
-    // IMPORTANT: Each volunteer can only have ONE active client at a time
-    const assignmentLastRow = assignmentSheet.getLastRow();
-    if (assignmentLastRow > 1) {
-      const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, assignmentLastRow - 1);
-      const startRow = Math.max(2, assignmentLastRow - checkRows + 1);
-      // Read Volunteer, Client ID, and Completed columns
-      const assignmentData = assignmentSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER, 
-                                                       checkRows, 3).getValues();
-      
-      for (let i = 0; i < assignmentData.length; i++) {
-        const assignedVolunteer = assignmentData[i][0]?.toString().trim();
-        const assignedClient = assignmentData[i][1]?.toString().trim();
-        const completed = assignmentData[i][2]?.toString().trim().toLowerCase();
-        
-        // Check if client is already assigned to someone else
-        if (assignedClient === clientId && completed !== 'complete') {
-          throw new Error(`Client ${clientId} is already assigned to ${assignedVolunteer}`);
-        }
-        
-        // IMPORTANT: Check if volunteer already has an active client (one client at a time rule)
-        if (assignedVolunteer === volunteerName && completed !== 'complete') {
-          throw new Error(`${volunteerName} is already assigned to client ${assignedClient}. Please complete that assignment first.`);
-        }
-      }
-      
-      // If not found in recent rows, check older rows for volunteer's active assignment
-      if (assignmentLastRow > CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK) {
-        const olderRows = assignmentLastRow - CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK;
-        const olderData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER, 
-                                                    olderRows, 3).getValues();
-        for (let i = 0; i < olderData.length; i++) {
-          const assignedVolunteer = olderData[i][0]?.toString().trim();
-          const completed = olderData[i][2]?.toString().trim().toLowerCase();
-          
-          if (assignedVolunteer === volunteerName && completed !== 'complete') {
-            const assignedClient = olderData[i][1]?.toString().trim();
-            throw new Error(`${volunteerName} is already assigned to client ${assignedClient}. Please complete that assignment first.`);
+
+    // Lock to prevent race condition on concurrent assignment attempts
+    const lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+
+    try {
+      const intakeSheet = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
+      const assignmentSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+
+      // Optimization: Only read client ID column to verify existence
+      const intakeLastRow = intakeSheet.getLastRow();
+      let found = false;
+      if (intakeLastRow > 1) {
+        const clientIdCol = CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID + 1;
+        const intakeData = intakeSheet.getRange(2, clientIdCol, intakeLastRow - 1, 1).getValues();
+        for (let i = 0; i < intakeData.length; i++) {
+          const currentClientId = intakeData[i][0]?.toString().trim();
+          if (currentClientId === clientId) {
+            found = true;
+            break;
           }
         }
       }
+
+      if (!found) {
+        throw new Error(`Client ID ${clientId} not found in intake`);
+      }
+
+      // Optimization: Check only recent assignments (last N rows) for conflicts
+      // Most assignments are recent, so this is much faster than reading entire sheet
+      // IMPORTANT: Each volunteer can only have ONE active client at a time
+      const assignmentLastRow = assignmentSheet.getLastRow();
+      if (assignmentLastRow > 1) {
+        const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, assignmentLastRow - 1);
+        const startRow = Math.max(2, assignmentLastRow - checkRows + 1);
+        // Read Volunteer, Client ID, and Completed columns
+        const assignmentData = assignmentSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER,
+                                                         checkRows, 3).getValues();
+
+        for (let i = 0; i < assignmentData.length; i++) {
+          const assignedVolunteer = assignmentData[i][0]?.toString().trim();
+          const assignedClient = assignmentData[i][1]?.toString().trim();
+          const completed = assignmentData[i][2]?.toString().trim().toLowerCase();
+
+          // Check if client is already assigned to someone else
+          if (assignedClient === clientId && completed !== 'complete') {
+            throw new Error(`Client ${clientId} is already assigned to ${assignedVolunteer}`);
+          }
+
+          // IMPORTANT: Check if volunteer already has an active client (one client at a time rule)
+          if (assignedVolunteer === volunteerName && completed !== 'complete') {
+            throw new Error(`${volunteerName} is already assigned to client ${assignedClient}. Please complete that assignment first.`);
+          }
+        }
+
+        // If not found in recent rows, check older rows for volunteer's active assignment
+        if (assignmentLastRow > CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK) {
+          const olderRows = assignmentLastRow - CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK;
+          const olderData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER,
+                                                      olderRows, 3).getValues();
+          for (let i = 0; i < olderData.length; i++) {
+            const assignedVolunteer = olderData[i][0]?.toString().trim();
+            const completed = olderData[i][2]?.toString().trim().toLowerCase();
+
+            if (assignedVolunteer === volunteerName && completed !== 'complete') {
+              const assignedClient = olderData[i][1]?.toString().trim();
+              throw new Error(`${volunteerName} is already assigned to client ${assignedClient}. Please complete that assignment first.`);
+            }
+          }
+        }
+      }
+
+      // Log assignment
+      assignmentSheet.appendRow([
+        new Date(),
+        clientId,
+        volunteerName
+      ]);
+    } finally {
+      lock.releaseLock();
     }
-    
-    // Log assignment
-    assignmentSheet.appendRow([
-      new Date(),
-      clientId,
-      volunteerName
-    ]);
 
     // Invalidate cache since queue data changed
     invalidateMultiple([
@@ -157,7 +165,6 @@ function assignClientToVolunteer(clientId, volunteerName) {
       CACHE_CONFIG.KEYS.VOLUNTEER_LIST
     ]);
 
-    logAudit('Client Assigned', `Client: ${clientId}, Volunteer: ${volunteerName}`);
     return true;
   }, 'assignClientToVolunteer');
 }
@@ -219,16 +226,10 @@ function getAvailableVolunteers() {
       const role = volunteerData[i][4]?.toString().trim().toLowerCase() || '';
       
       if (!name || !station || !sessionId) continue;
-      // Exclude mentors, senior mentors, and receptionists
-      // Check both station and role fields
+      // Exclude non-filer roles (mentors, frontline, internal services)
       const stationLower = station.toLowerCase();
-      if (stationLower === 'mentor' || 
-          stationLower === 'senior mentor' || 
-          stationLower.includes('senior') ||
-          stationLower === 'receptionist' ||
-          role === 'mentor' ||
-          role === 'senior mentor' ||
-          role.includes('senior')) continue;
+      const nonFilerStations = CONFIG.SIGN_IN_OUT.NON_FILER_STATIONS;
+      if (nonFilerStations.some(r => stationLower === r || role === r)) continue;
       if (signInDate !== today) continue;
       
       // Check if signed out
@@ -351,9 +352,6 @@ function removeClientFromQueue(clientId, reason) {
       CACHE_CONFIG.KEYS.QUEUE,
       CACHE_CONFIG.KEYS.VOLUNTEER_LIST
     ]);
-
-    // Log audit
-    logAudit('Queue Removal', `Client: ${clientId}, Reason: ${reason}`);
 
     return {success: true, message: 'Client removed from queue'};
   }, 'removeClientFromQueue');

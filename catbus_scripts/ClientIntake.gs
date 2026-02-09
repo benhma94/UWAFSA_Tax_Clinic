@@ -100,7 +100,6 @@ function storeMainFormData(formData) {
         JSON.stringify(formData.documents || [])
       ]);
       
-      logAudit('Client Intake Created', `Client ID: ${clientID}`, Session.getActiveUser().getEmail());
       return clientID;
     } finally {
       // Always release the lock
@@ -109,34 +108,3 @@ function storeMainFormData(formData) {
   }, 'storeMainFormData');
 }
 
-/**
- * Submits initial client intake eligibility data
- * @param {Object} data - Eligibility form data
- * @returns {boolean} True if successful
- */
-function submitClientIntake(data) {
-  return safeExecute(() => {
-    const sheet = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
-    
-    const row = [
-      new Date(),
-      data.tuition || '',
-      data.incomeLimit || '',
-      data.documentsReady || '',
-      data.selfEmployment || '',
-      data.bankruptcyOrDeceased || '',
-      data.rentalOrGains || '',
-      data.foreignProperty || '',
-      data.householdCount || '',
-      data.yearsNeeded || '',
-      data.specialSituations || '',
-      data.ticketNumber || '',
-      data.allPresent || '',
-      data.needsReview || false
-    ];
-    
-    sheet.appendRow(row);
-    logAudit('Client Intake Eligibility Submitted', `Ticket: ${data.ticketNumber || 'N/A'}`);
-    return true;
-  }, 'submitClientIntake');
-}

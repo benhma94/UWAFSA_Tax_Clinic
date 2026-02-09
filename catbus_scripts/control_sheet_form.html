@@ -1771,9 +1771,11 @@
     }
 
     function highlightVolunteerMatch(text, term) {
-      if (!term) return text;
-      const regex = new RegExp('(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
-      return text.replace(regex, '<strong>$1</strong>');
+      if (!term) return escapeHtml(text);
+      const escapedText = escapeHtml(text);
+      const escapedTerm = escapeHtml(term);
+      const regex = new RegExp('(' + escapedTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      return escapedText.replace(regex, '<strong>$1</strong>');
     }
 
     function selectVolunteerFromDropdown(name) {
@@ -1869,13 +1871,13 @@
             <div id="reviewInput${rowId}" style="display: none;">
               <input list="reviewerList${rowId}" name="reviewer" placeholder="Start typing reviewer" oninput="checkReviewerAndEnableFilingStatus('${rowId}', '${rowCount}')">
               <datalist id="reviewerList${rowId}">
-                ${reviewerOptions.map(r => `<option value="${r}">`).join('')}
+                ${reviewerOptions.map(r => `<option value="${escapeHtml(r)}">`).join('')}
               </datalist>
               ${needsSeniorReview ? `
                 <br>
                 <input list="reviewerList${rowId}_secondary" name="secondaryReviewer" placeholder="Start typing Senior reviewer">
                 <datalist id="reviewerList${rowId}_secondary">
-                  ${seniorOptions.map(r => `<option value="${r}">`).join('')}
+                  ${seniorOptions.map(r => `<option value="${escapeHtml(r)}">`).join('')}
                 </datalist>
               ` : ''}
             </div>
@@ -2508,13 +2510,13 @@
               <div id="reviewInput${rowId}" style="display: none;">
                 <input list="reviewerList${rowId}" name="reviewer" placeholder="Start typing reviewer" oninput="checkReviewerAndEnableFilingStatus('${rowId}', '${rowCount}')">
                 <datalist id="reviewerList${rowId}">
-                  ${reviewerOptions.map(r => `<option value="${r}">`).join('')}
+                  ${reviewerOptions.map(r => `<option value="${escapeHtml(r)}">`).join('')}
                 </datalist>
                 ${needsSeniorReview ? `
                   <br>
                   <input list="reviewerList${rowId}_secondary" name="secondaryReviewer" placeholder="Start typing Senior reviewer">
                   <datalist id="reviewerList${rowId}_secondary">
-                    ${seniorOptions.map(r => `<option value="${r}">`).join('')}
+                    ${seniorOptions.map(r => `<option value="${escapeHtml(r)}">`).join('')}
                   </datalist>
                 ` : ''}
               </div>
@@ -2678,7 +2680,7 @@
         const fileSize = formatFileSizeEmail(file.size);
         
         fileItem.innerHTML = `
-          <span class="file-name">${file.name}</span>
+          <span class="file-name">${escapeHtml(file.name)}</span>
           <span class="file-size">${fileSize}</span>
           <button type="button" class="remove-file" onclick="removeFileEmail(${index})">Remove</button>
         `;

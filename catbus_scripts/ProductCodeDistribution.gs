@@ -92,10 +92,6 @@ function distributeProductCodes(year) {
 
     const codesRemaining = codesData.length - codesToDistribute;
 
-    logAudit('Product Code Distribution',
-      `Distributed ${codesToDistribute} codes for ${year} to ${codesToDistribute * 2} volunteers. ` +
-      `${codesRemaining} codes remaining.`);
-
     Logger.log(`Distribution complete: ${codesToDistribute} codes sent, ${codesRemaining} remaining`);
 
     return {

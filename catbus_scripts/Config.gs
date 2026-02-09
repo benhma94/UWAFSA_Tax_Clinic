@@ -90,7 +90,8 @@ const CONFIG = {
   
   SIGN_IN_OUT: {
     STATION_COUNT: 150,
-    EXCEPTION_STATIONS: ['Mentor', 'Senior Mentor', 'Frontline', 'Internal Services']
+    EXCEPTION_STATIONS: ['Mentor', 'Senior Mentor', 'Frontline', 'Internal Services'],
+    NON_FILER_STATIONS: ['mentor', 'senior mentor', 'frontline', 'internal services']
   },
   
   // Help Request Status Values
@@ -184,7 +185,7 @@ const ELIGIBILITY_CONFIG = {
   // Income thresholds for non-tuition filers
   INCOME_LIMITS: {
     INDIVIDUAL: 40000,
-    COUPLE: 50000,
+    COUPLE: 55000,
     PER_DEPENDANT: 5000
   },
 
@@ -362,6 +363,20 @@ const MESSAGING_CONFIG = {
   // Auto-archive messages older than this many days
   MESSAGE_RETENTION_DAYS: 7
 };
+
+/**
+ * Returns schedule config data for frontend consumption
+ * Eliminates need for hardcoded time slots and day labels in HTML files
+ * @returns {Object} Schedule configuration for frontend
+ */
+function getScheduleConfig() {
+  return {
+    timeSlots: SCHEDULE_CONFIG.TIME_SLOTS,
+    dayLabels: SCHEDULE_CONFIG.DEFAULT_DAY_LABELS,
+    daysCount: SCHEDULE_CONFIG.DAYS_COUNT,
+    slotsPerDay: SCHEDULE_CONFIG.SLOTS_PER_DAY
+  };
+}
 
 /**
  * Custom Volunteer Tags

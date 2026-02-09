@@ -375,34 +375,19 @@
 
 <?!= include('shared_scripts') ?>
 <script>
-  // Schedule configuration - Frontend display settings
+  // Schedule configuration - loaded from backend Config.gs
   const SHIFT_CONFIG = {
-    TIME_SLOTS: {
-      'A': { display: '9:45 AM - 1:15 PM', label: 'Morning' },
-      'B': { display: '1:00 PM - 4:30 PM', label: 'Afternoon' },
-      'C': { display: '4:15 PM - 8:00 PM', label: 'Evening' }
-    },
-    DAYS: ['Day 1', 'Day 2', 'Day 3', 'Day 4'],
-    DAY_LABELS: [
-      'Saturday March 21, 2026',
-      'Sunday March 22, 2026',
-      'Saturday March 28, 2026',
-      'Sunday March 29, 2026'
-    ],
-
-    // Get shift ID from day index and slot key
+    TIME_SLOTS: {},
+    DAYS: [],
+    DAY_LABELS: [],
     getShiftId: function(dayIndex, slotKey) {
       return `D${dayIndex + 1}${slotKey}`;
     }
   };
 
-  // Legacy constants for backward compatibility with existing code
-  const DAYS = SHIFT_CONFIG.DAYS;
-  const DAY_LABELS = SHIFT_CONFIG.DAY_LABELS;
-  const TIME_SLOTS = Object.keys(SHIFT_CONFIG.TIME_SLOTS).map(key => ({
-    id: key, // Now 'A', 'B', 'C' instead of time strings
-    label: SHIFT_CONFIG.TIME_SLOTS[key].display
-  }));
+  let DAYS = [];
+  let DAY_LABELS = [];
+  let TIME_SLOTS = [];
 
   let isUpdatingExisting = false;
   let checkTimeout = null;
@@ -758,10 +743,29 @@
       .submitAvailabilityForm(formData);
   }
 
-  // Initialize availability grid on page load
+  // Initialize: load config from backend, then build the UI
   window.addEventListener('load', () => {
-    buildAvailabilityGrid();
-    checkAvailabilityCount();
+    google.script.run
+      .withSuccessHandler(config => {
+        SHIFT_CONFIG.TIME_SLOTS = config.timeSlots;
+        SHIFT_CONFIG.DAY_LABELS = config.dayLabels;
+        SHIFT_CONFIG.DAYS = config.dayLabels.map((_, i) => `Day ${i + 1}`);
+
+        DAYS = SHIFT_CONFIG.DAYS;
+        DAY_LABELS = SHIFT_CONFIG.DAY_LABELS;
+        TIME_SLOTS = Object.keys(SHIFT_CONFIG.TIME_SLOTS).map(key => ({
+          id: key,
+          label: SHIFT_CONFIG.TIME_SLOTS[key].display
+        }));
+
+        buildAvailabilityGrid();
+        checkAvailabilityCount();
+      })
+      .withFailureHandler(err => {
+        console.error('Failed to load schedule config:', err);
+        showMessage('Failed to load schedule configuration. Please refresh the page.', 'error');
+      })
+      .getScheduleConfig();
   });
 </script>
 <div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>

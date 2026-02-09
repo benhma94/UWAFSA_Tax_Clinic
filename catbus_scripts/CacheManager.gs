@@ -134,31 +134,3 @@ function batchReadSheets(requests) {
   return results;
 }
 
-/**
- * Pre-warms critical caches - call this periodically (e.g., every minute via trigger)
- * to ensure cache is always fresh
- */
-function prewarmCache() {
-  Logger.log('Cache prewarm started');
-
-  try {
-    // Prewarm volunteer list
-    getCachedOrFetch(CACHE_CONFIG.KEYS.VOLUNTEER_LIST, () => {
-      return getSignedInVolunteers(); // From existing function
-    });
-
-    // Prewarm help requests
-    getCachedOrFetch(CACHE_CONFIG.KEYS.HELP_REQUESTS, () => {
-      return getLiveHelpRequests(); // From existing function
-    });
-
-    // Prewarm review requests
-    getCachedOrFetch(CACHE_CONFIG.KEYS.REVIEW_REQUESTS, () => {
-      return getLiveReviewRequests(); // From existing function
-    });
-
-    Logger.log('Cache prewarm completed');
-  } catch (e) {
-    Logger.log('Cache prewarm error: ' + e.message);
-  }
-}

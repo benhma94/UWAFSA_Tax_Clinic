@@ -228,8 +228,168 @@ function getVolunteerScheduleByName(searchTerm) {
       return a.shiftId.charCodeAt(2) - b.shiftId.charCodeAt(2);
     });
 
-    return { volunteerName, shifts };
+    // Get volunteer role to determine if mentor
+    let volunteerRole = '';
+    try {
+      const ss = getSpreadsheet();
+      const availSheet = ss.getSheetByName(CONFIG.SHEETS.SCHEDULE_AVAILABILITY);
+      if (availSheet && availSheet.getLastRow() > 1) {
+        const availData = availSheet.getRange(2, 1, availSheet.getLastRow() - 1, 5).getValues();
+        for (const row of availData) {
+          const firstName = row[1]?.toString().trim() || '';
+          const lastName = row[2]?.toString().trim() || '';
+          const role = row[4]?.toString().trim() || '';
+          if (`${firstName} ${lastName}`.toLowerCase() === volunteerName.toLowerCase()) {
+            volunteerRole = role;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      Logger.log('Warning: Could not read volunteer role: ' + e.message);
+    }
+
+    // If volunteer is a mentor, get their senior mentor assignments by day
+    let seniorsByDay = null;
+    const isMentor = volunteerRole.toLowerCase().includes('mentor');
+    if (isMentor && volunteerName) {
+      seniorsByDay = getMentorTeamInfo(volunteerName);
+    }
+
+    // Check if volunteer is a senior mentor and get their team members
+    let teamMembersByDay = null;
+    const isSeniorMentor = checkIfSeniorMentor(volunteerName);
+    if (isSeniorMentor) {
+      teamMembersByDay = getSeniorTeamMembers(volunteerName);
+    }
+
+    // Get volunteer's display tag
+    let volunteerTag = null;
+    if (volunteerName) {
+      const tagData = getVolunteerTagsFromSheet();
+      volunteerTag = tagData.displayTags[volunteerName] || tagData.displayTags[volunteerName.toLowerCase()] || null;
+    }
+
+    return { volunteerName, shifts, volunteerRole, seniorsByDay, teamMembersByDay, isSeniorMentor, volunteerTag };
   }, 'getVolunteerScheduleByName');
+}
+
+/**
+ * Gets the senior mentor assignments for a given mentor by day
+ * @param {string} mentorName - Name of the mentor
+ * @returns {Object|null} Map of day label -> senior mentor name, or null if not found
+ */
+function getMentorTeamInfo(mentorName) {
+  try {
+    const ss = getSpreadsheet();
+    const sheet = ss.getSheetByName('Mentor Teams');
+
+    if (!sheet || sheet.getLastRow() < 3) {
+      Logger.log('No Mentor Teams sheet found or empty');
+      return null;
+    }
+
+    // Data starts at row 3 (row 1 = header + seniors, row 2 = first-time mentors)
+    const data = sheet.getRange(3, 1, sheet.getLastRow() - 2, 3).getValues();
+    const seniorsByDay = {};
+
+    for (const row of data) {
+      let day = row[0];
+      // Format date cleanly if it's a Date object
+      if (day instanceof Date) {
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                            'July', 'August', 'September', 'October', 'November', 'December'];
+        day = `${dayNames[day.getDay()]} ${monthNames[day.getMonth()]} ${day.getDate()} ${day.getFullYear()}`;
+      } else {
+        // Strip time/timezone info if present in string
+        day = day?.toString().replace(/\s+\d{1,2}:\d{2}:\d{2}.*$/, '').trim() || '';
+      }
+      const mentor = row[1]?.toString().trim();
+      const senior = row[2]?.toString().trim();
+
+      if (mentor.toLowerCase() === mentorName.toLowerCase() && day) {
+        seniorsByDay[day] = senior || null;
+      }
+    }
+
+    // Return null if no assignments found
+    if (Object.keys(seniorsByDay).length === 0) {
+      return null;
+    }
+
+    return seniorsByDay;
+  } catch (e) {
+    Logger.log('Error reading mentor team info: ' + e.message);
+    return null;
+  }
+}
+
+/**
+ * Checks if a volunteer is designated as a senior mentor
+ * @param {string} name - Volunteer name to check
+ * @returns {boolean} True if volunteer is a senior mentor
+ */
+function checkIfSeniorMentor(name) {
+  try {
+    const ss = getSpreadsheet();
+    const sheet = ss.getSheetByName('Mentor Teams');
+    if (!sheet) return false;
+
+    const lastCol = sheet.getLastColumn();
+    if (lastCol < 7) return false;
+
+    // Senior names are stored in header row starting at column G (index 7)
+    const headerRow = sheet.getRange(1, 7, 1, lastCol - 6).getValues()[0];
+    return headerRow.some(n => n?.toString().trim().toLowerCase() === name.toLowerCase());
+  } catch (e) {
+    Logger.log('Error checking senior mentor status: ' + e.message);
+    return false;
+  }
+}
+
+/**
+ * Gets all mentors who report to a given senior mentor, grouped by day
+ * @param {string} seniorName - Name of the senior mentor
+ * @returns {Object|null} Map of day label -> array of mentor names, or null if not found
+ */
+function getSeniorTeamMembers(seniorName) {
+  try {
+    const ss = getSpreadsheet();
+    const sheet = ss.getSheetByName('Mentor Teams');
+    if (!sheet || sheet.getLastRow() < 3) return null;
+
+    // Data starts at row 3 (row 1 = header + seniors, row 2 = first-time mentors)
+    const data = sheet.getRange(3, 1, sheet.getLastRow() - 2, 3).getValues();
+    const teamByDay = {};
+
+    for (const row of data) {
+      let day = row[0];
+      // Format date cleanly if it's a Date object
+      if (day instanceof Date) {
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                            'July', 'August', 'September', 'October', 'November', 'December'];
+        day = `${dayNames[day.getDay()]} ${monthNames[day.getMonth()]} ${day.getDate()} ${day.getFullYear()}`;
+      } else {
+        day = day?.toString().replace(/\s+\d{1,2}:\d{2}:\d{2}.*$/, '').trim() || '';
+      }
+
+      const mentor = row[1]?.toString().trim();
+      const senior = row[2]?.toString().trim();
+
+      // If this mentor reports to the given senior, add to team
+      if (senior?.toLowerCase() === seniorName.toLowerCase() && day && mentor) {
+        if (!teamByDay[day]) teamByDay[day] = [];
+        teamByDay[day].push(mentor);
+      }
+    }
+
+    return Object.keys(teamByDay).length > 0 ? teamByDay : null;
+  } catch (e) {
+    Logger.log('Error reading senior team members: ' + e.message);
+    return null;
+  }
 }
 
 /**

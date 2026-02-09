@@ -545,9 +545,10 @@
           const volunteer = filteredVolunteers[i];
           const escapedName = volunteer.name.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
           const highlightedName = highlightMatch(volunteer.name, searchTerm);
-          const roleText = volunteer.role ? ` <span style="opacity: 0.7; font-size: 0.9em;">(${volunteer.role})</span>` : '';
+          const roleText = volunteer.role ? ` <span style="opacity: 0.7; font-size: 0.9em;">(${escapeHtml(volunteer.role)})</span>` : '';
+          const escapedRole = volunteer.role ? escapeHtml(volunteer.role) : '';
 
-          html += `<div class="autocomplete-item" data-index="${i}" data-name="${escapedName}" data-role="${volunteer.role || ''}" onclick="selectVolunteer(this.dataset.name, this.dataset.role)">${highlightedName}${roleText}</div>`;
+          html += `<div class="autocomplete-item" data-index="${i}" data-name="${escapedName}" data-role="${escapedRole}" onclick="selectVolunteer(this.dataset.name, this.dataset.role)">${highlightedName}${roleText}</div>`;
         }
 
         if (filteredVolunteers.length > 10) {
@@ -612,9 +613,11 @@
    * Highlights matching text in autocomplete suggestions
    */
   function highlightMatch(text, searchTerm) {
-    if (!searchTerm) return text;
-    const regex = new RegExp(`(${searchTerm})`, 'gi');
-    return text.replace(regex, '<strong>$1</strong>');
+    if (!searchTerm) return escapeHtml(text);
+    const escapedText = escapeHtml(text);
+    const escapedTerm = escapeHtml(searchTerm);
+    const regex = new RegExp(`(${escapedTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return escapedText.replace(regex, '<strong>$1</strong>');
   }
 
   /**

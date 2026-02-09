@@ -597,13 +597,9 @@
 
 <?!= include('shared_scripts') ?>
 <script>
-  // Schedule configuration - Frontend display settings
+  // Schedule configuration - loaded from backend Config.gs
   const SHIFT_CONFIG = {
-    TIME_SLOTS: {
-      'A': { display: '9:45 AM - 1:15 PM', label: 'Morning' },
-      'B': { display: '1:00 PM - 4:30 PM', label: 'Afternoon' },
-      'C': { display: '4:15 PM - 8:00 PM', label: 'Evening' }
-    }
+    TIME_SLOTS: {}
   };
 
   let allVolunteerNames = [];
@@ -612,14 +608,18 @@
 
   window.addEventListener('load', () => {
     loadVolunteerNames();
-    loadDayLabels();
+    loadScheduleConfig();
     setupAutocomplete();
   });
 
-  function loadDayLabels() {
+  function loadScheduleConfig() {
     google.script.run
-      .withSuccessHandler(dayLabels => {
+      .withSuccessHandler(config => {
+        // Populate SHIFT_CONFIG from backend
+        SHIFT_CONFIG.TIME_SLOTS = config.timeSlots;
+
         // Update dropdown options with actual day labels
+        const dayLabels = config.dayLabels;
         for (let i = 0; i < 4 && i < dayLabels.length; i++) {
           const option = document.getElementById(`dayOption${i + 1}`);
           if (option) {
@@ -629,10 +629,9 @@
         }
       })
       .withFailureHandler(error => {
-        console.error('Error loading day labels:', error);
-        // Keep default "Day 1", "Day 2", etc. if loading fails
+        console.error('Error loading schedule config:', error);
       })
-      .getDayLabels();
+      .getScheduleConfig();
   }
 
   function loadVolunteerNames() {
@@ -797,8 +796,11 @@
       return;
     }
 
-    // Display volunteer name prominently
-    nameResultsHeader.textContent = `Assigned Shifts for: ${result.volunteerName || searchTerm}`;
+    // Display volunteer name with tag if available
+    const tagHtml = result.volunteerTag
+      ? `<span class="volunteer-tag">${escapeHtml(result.volunteerTag)}</span>`
+      : '';
+    nameResultsHeader.innerHTML = `Assigned Shifts for: ${escapeHtml(result.volunteerName || searchTerm)} ${tagHtml}`;
 
     let html = `
       <table class="schedule-table">
@@ -825,6 +827,67 @@
       </table>
       <div class="total-shifts">📊 Total Shifts: ${result.shifts.length}</div>
     `;
+
+    // Show "My Senior Mentor" section if volunteer is a mentor with senior assignments
+    if (result.seniorsByDay && Object.keys(result.seniorsByDay).length > 0) {
+      html += `
+        <div class="senior-mentor-section" style="margin-top: 20px; padding: 15px; background: rgba(52, 152, 219, 0.1); border-radius: 8px; border: 1px solid rgba(52, 152, 219, 0.3);">
+          <h3 style="margin: 0 0 12px 0; color: var(--mentor-color); font-size: 16px;">👤 My Senior Mentor</h3>
+          <div style="display: grid; gap: 8px;">
+      `;
+
+      // Sort days chronologically by parsing dates
+      const sortedDays = Object.entries(result.seniorsByDay).sort((a, b) => {
+        const dateA = new Date(a[0].replace(/^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+/, ''));
+        const dateB = new Date(b[0].replace(/^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+/, ''));
+        return dateA - dateB;
+      });
+
+      for (const [day, senior] of sortedDays) {
+        const seniorDisplay = senior || '<span style="color: #999;">Unassigned</span>';
+        html += `
+          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.5); border-radius: 4px;">
+            <span style="font-weight: 500;">${day}</span>
+            <span>${seniorDisplay}</span>
+          </div>
+        `;
+      }
+
+      html += `
+          </div>
+        </div>
+      `;
+    }
+
+    // Show "My Team" section if volunteer is a senior mentor with team members
+    if (result.teamMembersByDay && Object.keys(result.teamMembersByDay).length > 0) {
+      html += `
+        <div class="team-section" style="margin-top: 20px; padding: 15px; background: rgba(155, 89, 182, 0.1); border-radius: 8px; border: 1px solid rgba(155, 89, 182, 0.3);">
+          <h3 style="margin: 0 0 12px 0; color: #9b59b6; font-size: 16px;">👥 My Team</h3>
+          <div style="display: grid; gap: 8px;">
+      `;
+
+      // Sort days chronologically
+      const sortedTeamDays = Object.entries(result.teamMembersByDay).sort((a, b) => {
+        const dateA = new Date(a[0].replace(/^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+/, ''));
+        const dateB = new Date(b[0].replace(/^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+/, ''));
+        return dateA - dateB;
+      });
+
+      for (const [day, members] of sortedTeamDays) {
+        html += `
+          <div style="padding: 8px 12px; background: rgba(255,255,255,0.5); border-radius: 4px;">
+            <div style="font-weight: 500; margin-bottom: 4px;">${day}</div>
+            <div style="color: #666;">${members.join(', ')}</div>
+          </div>
+        `;
+      }
+
+      html += `
+          </div>
+        </div>
+      `;
+    }
 
     nameResultsContent.innerHTML = html;
   }
@@ -928,9 +991,9 @@
           const role = volunteerRoles[volunteer] || 'N/A';
           const roleClass = role.toLowerCase().replace(/\s+/g, '');
           const customTag = volunteerTags[volunteer] || '';
-          const tagHtml = customTag ? `<span class="volunteer-tag">${customTag}</span>` : '';
+          const tagHtml = customTag ? `<span class="volunteer-tag">${escapeHtml(customTag)}</span>` : '';
           html += `<li class="volunteer-item">
-            <strong>${volunteer}</strong>${tagHtml} <span class="role-badge ${roleClass}">${role}</span>
+            <strong>${escapeHtml(volunteer)}</strong>${tagHtml} <span class="role-badge ${escapeHtml(role)}">${escapeHtml(role)}</span>
           </li>`;
         });
         html += '</ul>';

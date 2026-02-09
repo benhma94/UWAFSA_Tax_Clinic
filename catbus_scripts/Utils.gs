@@ -179,18 +179,6 @@ function parseWaitTimeToMinutes(waitStr) {
 }
 
 /**
- * Logs an operation to the audit log (if you create one)
- * @param {string} action - Action performed
- * @param {string} details - Additional details
- * @param {string} user - User who performed the action (optional)
- */
-function logAudit(action, details, user = null) {
-  // Optional: Create an Audit Log sheet and log here
-  const timestamp = new Date();
-  Logger.log(`[AUDIT] ${timestamp.toISOString()} - ${action} - ${details}${user ? ` - User: ${user}` : ''}`);
-}
-
-/**
  * Sanitizes string input by trimming and limiting length
  * @param {string} input - Input string to sanitize
  * @param {number} maxLength - Maximum length (default: 1000)

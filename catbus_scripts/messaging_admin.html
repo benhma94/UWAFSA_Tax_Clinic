@@ -426,12 +426,6 @@
       .getUnreadCountsByVolunteer();
   }
 
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
   function selectVolunteer(name) {
     currentRecipient = name;
     document.getElementById('chatHeader').textContent = 'Chat with ' + name;

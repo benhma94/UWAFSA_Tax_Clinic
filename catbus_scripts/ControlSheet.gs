@@ -191,31 +191,52 @@ function getMentorList() {
     
     // Optimization: Only read necessary columns (Timestamp, Name, Role)
     const data = volunteerSheet.getRange(2, 1, lastRow - 1, 3).getValues();
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
+    // Get designated senior mentors from Mentor Teams sheet (new source of truth)
+    const designatedSeniors = new Set();
+    try {
+      const ss = getSpreadsheet();
+      const teamsSheet = ss.getSheetByName('Mentor Teams');
+      if (teamsSheet && teamsSheet.getLastColumn() >= 7) {
+        // Senior designations stored in row 1, columns G+ (after "Senior Mentors:" label in F)
+        const headerRow = teamsSheet.getRange(1, 7, 1, teamsSheet.getLastColumn() - 6).getValues()[0];
+        headerRow.forEach(name => {
+          const trimmed = name?.toString().trim();
+          if (trimmed) designatedSeniors.add(trimmed);
+        });
+      }
+    } catch (e) {
+      Logger.log('Warning: Could not read senior designations from Mentor Teams: ' + e.message);
+    }
+
     const mentorsToday = new Set();
     const seniorMentorsToday = new Set();
-    
+
     for (let i = 0; i < data.length; i++) {
       const timestamp = data[i][0]; // Column A: Timestamp
       const name = data[i][1]?.toString().trim();
       const role = data[i][2]?.toString().trim().toLowerCase();
-      
+
       if (name && timestamp instanceof Date) {
         const signedInDate = new Date(timestamp);
         signedInDate.setHours(0, 0, 0, 0);
-        
+
         const isToday = signedInDate.getTime() === today.getTime();
-        
-        if (isToday) {
-          if (role === 'mentor') mentorsToday.add(name);
-          if (role === 'senior mentor') seniorMentorsToday.add(name);
+
+        if (isToday && (role === 'mentor' || role === 'senior mentor')) {
+          // Check if this mentor is designated as senior in the schedule dashboard
+          if (designatedSeniors.has(name)) {
+            seniorMentorsToday.add(name);
+          } else {
+            mentorsToday.add(name);
+          }
         }
       }
     }
-    
+
     const allReviewers = new Set([...mentorsToday, ...seniorMentorsToday]);
     
     const result = {
@@ -406,7 +427,6 @@ function finalizeReturnsAndStore(volunteer, client, rows) {
       throw new Error('No tax year data to append');
     }
     
-    logAudit('Returns Finalized', `Volunteer: ${volunteer}, Client: ${clientID}, Years: ${rows.map(r => r.taxYear).join(', ')}`);
     return true;
   }, 'finalizeReturnsAndStore');
 }
@@ -519,7 +539,6 @@ function cancelClientAndStore(volunteer, client, rows) {
       throw new Error('No tax year data to append');
     }
     
-    logAudit('Client Cancelled', `Volunteer: ${volunteer}, Client: ${clientID}, Years: ${rows.map(r => r.taxYear).join(', ')}, Reason: ${cancellationReason}`);
     return true;
   }, 'cancelClientAndStore');
 }
