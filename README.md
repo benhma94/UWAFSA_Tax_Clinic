@@ -1,4 +1,4 @@
-# CATBUS - Client Appointment Tracking and Booking Unified System
+# CATBUS - Client And Tax Booking Utility System
 
 A Google Apps Script-based volunteer coordination and client management platform for the UW AFSA Tax Clinic. CATBUS manages the full workflow from volunteer scheduling through client intake, queue management, and tax return completion.
 
@@ -144,7 +144,6 @@ All system configuration lives in [Config.gs](catbus_scripts/Config.gs):
 - **Charts:** Chart.js
 - **Deployment:** Google Apps Script Web Apps
 - **Version Control:** Git + clasp
-- **Cost:** $0 (Google Workspace)
 
 ---
 
