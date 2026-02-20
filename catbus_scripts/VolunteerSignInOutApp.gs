@@ -11,5 +11,6 @@ function doGetVolunteerSignInOut() {
   return HtmlService.createTemplateFromFile('volunteer_signinout')
     .evaluate()
     .setTitle('Volunteer Sign-In / Sign-Out')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

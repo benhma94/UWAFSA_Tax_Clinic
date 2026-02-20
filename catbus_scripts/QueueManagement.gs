@@ -113,12 +113,12 @@ function assignClientToVolunteer(clientId, volunteerName) {
         const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, assignmentLastRow - 1);
         const startRow = Math.max(2, assignmentLastRow - checkRows + 1);
         // Read Volunteer, Client ID, and Completed columns
-        const assignmentData = assignmentSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER,
+        const assignmentData = assignmentSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1,
                                                          checkRows, 3).getValues();
 
         for (let i = 0; i < assignmentData.length; i++) {
-          const assignedVolunteer = assignmentData[i][0]?.toString().trim();
-          const assignedClient = assignmentData[i][1]?.toString().trim();
+          const assignedClient = assignmentData[i][0]?.toString().trim();
+          const assignedVolunteer = assignmentData[i][1]?.toString().trim();
           const completed = assignmentData[i][2]?.toString().trim().toLowerCase();
 
           // Check if client is already assigned to someone else
@@ -135,14 +135,14 @@ function assignClientToVolunteer(clientId, volunteerName) {
         // If not found in recent rows, check older rows for volunteer's active assignment
         if (assignmentLastRow > CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK) {
           const olderRows = assignmentLastRow - CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK;
-          const olderData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER,
+          const olderData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1,
                                                       olderRows, 3).getValues();
           for (let i = 0; i < olderData.length; i++) {
-            const assignedVolunteer = olderData[i][0]?.toString().trim();
+            const assignedVolunteer = olderData[i][1]?.toString().trim();
             const completed = olderData[i][2]?.toString().trim().toLowerCase();
 
             if (assignedVolunteer === volunteerName && completed !== 'complete') {
-              const assignedClient = olderData[i][1]?.toString().trim();
+              const assignedClient = olderData[i][0]?.toString().trim();
               throw new Error(`${volunteerName} is already assigned to client ${assignedClient}. Please complete that assignment first.`);
             }
           }

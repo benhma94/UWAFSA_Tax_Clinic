@@ -193,6 +193,33 @@ function sanitizeInput(input, maxLength = 1000) {
 }
 
 /**
+ * Formats a Date object to a schedule-style label string
+ * @param {Date} date - Date to format
+ * @returns {string} Formatted string like "Saturday March 21 2026"
+ */
+function formatDateToScheduleLabel(date) {
+  if (!(date instanceof Date)) return date;
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  return `${dayNames[date.getDay()]} ${monthNames[date.getMonth()]} ${date.getDate()} ${date.getFullYear()}`;
+}
+
+/**
+ * Escapes HTML special characters for safe embedding in HTML emails
+ * @param {string} text - Text to escape
+ * @returns {string} HTML-escaped text
+ */
+function escapeHtmlServer(text) {
+  if (text === null || text === undefined) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
  * Validates volunteer name format
  * @param {string} volunteerName - Volunteer name to validate
  * @returns {boolean} True if valid format

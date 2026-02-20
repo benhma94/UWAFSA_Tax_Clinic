@@ -11,5 +11,6 @@ function doGetClientIntake() {
   return HtmlService.createTemplateFromFile('catbus_intake_form')
     .evaluate()
     .setTitle('AFSA Tax Clinic Intake Form')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

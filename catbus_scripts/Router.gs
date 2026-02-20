@@ -37,7 +37,11 @@ function doGet(e) {
     case 'signinout':
       return doGetVolunteerSignInOut();
     case 'messaging':
-      return doGet_Messaging(e);
+      return doGetMessaging();
+    case 'productcodes':
+      return doGetProductCodeDistribution();
+    case 'reviewer':
+      return doGetReviewerPage();
     default:
       return doGetClientIntake(); // Default fallback to intake
   }

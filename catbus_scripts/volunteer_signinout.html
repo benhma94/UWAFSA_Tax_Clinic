@@ -1,58 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <base target="_top">
+  <?!= include('shared_styles') ?>
   <style>
+    /* Override: different color scheme */
     :root {
-      --accent-color: rgb(142, 0, 0);
       --bg-color-light: #ffffff;
-      --text-color-light: #1a1a1a;
       --input-bg-light: #f2f2f2;
       --border-light: #ccc;
-      --bg-color-dark: #1e1e1e;
-      --text-color-dark: #f0f0f0;
-      --input-bg-dark: #2a2a2a;
-      --border-dark: #444;
-      --success-color: #27ae60;
       --error-color: #e74c3c;
     }
 
-    body.light {
-      background-color: var(--bg-color-light);
-      color: var(--text-color-light);
-    }
-
-    body.dark {
-      background-color: var(--bg-color-dark);
-      color: var(--text-color-dark);
-    }
-
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Verdana, sans-serif;
-      padding: 20px;
-      transition: background 0.3s, color 0.3s;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-    }
-
-    h1 {
-      margin: 0;
-      color: var(--accent-color);
-    }
-
-    .toggle-theme {
-      cursor: pointer;
-      font-size: 1.4em;
-      margin-left: 10px;
-    }
+    /* Override: different layout sizing */
+    body { padding: 20px; line-height: normal; }
+    header { margin-bottom: 30px; }
 
     .container {
       display: grid;
@@ -91,16 +53,6 @@
       color: var(--accent-color);
     }
 
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-
     input[type="text"],
     select {
       width: 100%;
@@ -126,12 +78,7 @@
       color: var(--text-color-dark);
     }
 
-    input[type="text"]:focus,
-    select:focus {
-      outline: none;
-      border-color: var(--accent-color);
-    }
-
+    /* Override: full-width buttons with different sizing */
     button {
       width: 100%;
       padding: 14px;
@@ -269,11 +216,6 @@
       margin-left: 10px;
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
     .refresh-btn {
       background-color: #4285f4;
       color: white;
@@ -365,38 +307,36 @@
       color: #aaa;
     }
 
-    .footer-copyright {
+    .sign-in-toast {
       position: fixed;
-      bottom: 10px;
-      right: 20px;
-      font-size: 11px;
-      opacity: 0.6;
-      transition: opacity 0.3s, color 0.3s;
-      z-index: 1000;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-80px);
+      background-color: #28a745;
+      color: white;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
       pointer-events: none;
-      max-width: 400px;
-      text-align: right;
-      line-height: 1.3;
+      z-index: 9999;
     }
 
-    body.light .footer-copyright {
-      color: var(--text-color-light);
+    .sign-in-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
     }
 
-    body.dark .footer-copyright {
-      color: var(--text-color-dark);
-    }
-
-    .footer-copyright:hover {
-      opacity: 0.8;
-    }
   </style>
 </head>
 <body class="light">
   <header>
     <h1>👤 Volunteer Sign-In / Sign-Out</h1>
     <div>
-      <span class="toggle-theme" onclick="toggleTheme()">☀️</span>
+      <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
   </header>
 
@@ -408,8 +348,8 @@
         <div class="form-group">
           <label for="volunteerName">Your Name:</label>
           <div class="autocomplete-container">
-            <input type="text" id="volunteerName" required placeholder="Start typing your name..." autocomplete="off">
-            <div id="volunteerAutocomplete" class="autocomplete-dropdown"></div>
+            <input type="text" id="volunteerName" required placeholder="Start typing your name..." autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="volunteerAutocomplete">
+            <div id="volunteerAutocomplete" class="autocomplete-dropdown" role="listbox"></div>
           </div>
           <div class="help-text">Select from suggestions or type a custom name</div>
         </div>
@@ -470,6 +410,7 @@
     </div>
   </div>
 
+  <div id="signInToast" class="sign-in-toast"></div>
   <div id="messageBox"></div>
 
 <?!= include('shared_scripts') ?>
@@ -477,8 +418,6 @@
   let refreshInterval = null;
   let allSessions = []; // Store all sessions for filtering
   let allVolunteers = []; // Store volunteer data: [{name: string, role: string}]
-  let filteredVolunteers = []; // Filtered volunteers for autocomplete
-  let highlightedIndex = -1; // Currently highlighted autocomplete item
 
 
   /**
@@ -502,135 +441,30 @@
   }
 
   /**
-   * Sets up autocomplete functionality for volunteer name input
+   * Sets up autocomplete using the shared createAutocomplete factory
    */
   function setupVolunteerAutocomplete() {
-    const input = document.getElementById('volunteerName');
-    const dropdown = document.getElementById('volunteerAutocomplete');
-
-    console.log('setupVolunteerAutocomplete called');
-    console.log('Input element:', input);
-    console.log('Dropdown element:', dropdown);
-
-    if (!input || !dropdown) {
-      console.error('Missing autocomplete elements!');
-      return;
-    }
-
-    input.addEventListener('input', function() {
-      const searchTerm = this.value.trim().toLowerCase();
-      console.log('Input event - search term:', searchTerm, '| allVolunteers count:', allVolunteers.length);
-
-      if (searchTerm.length === 0) {
-        dropdown.style.display = 'none';
-        filteredVolunteers = [];
-        highlightedIndex = -1;
-        return;
-      }
-
-      filteredVolunteers = allVolunteers.filter(v =>
-        v.name.toLowerCase().includes(searchTerm)
-      );
-
-      highlightedIndex = -1;
-
-      if (filteredVolunteers.length === 0) {
-        dropdown.innerHTML = '<div class="autocomplete-no-matches">No matching volunteers found</div>';
-        dropdown.style.display = 'block';
-      } else {
-        const displayCount = Math.min(filteredVolunteers.length, 10);
-        let html = '';
-
-        for (let i = 0; i < displayCount; i++) {
-          const volunteer = filteredVolunteers[i];
-          const escapedName = volunteer.name.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-          const highlightedName = highlightMatch(volunteer.name, searchTerm);
-          const roleText = volunteer.role ? ` <span style="opacity: 0.7; font-size: 0.9em;">(${escapeHtml(volunteer.role)})</span>` : '';
-          const escapedRole = volunteer.role ? escapeHtml(volunteer.role) : '';
-
-          html += `<div class="autocomplete-item" data-index="${i}" data-name="${escapedName}" data-role="${escapedRole}" onclick="selectVolunteer(this.dataset.name, this.dataset.role)">${highlightedName}${roleText}</div>`;
-        }
-
-        if (filteredVolunteers.length > 10) {
-          html += `<div class="autocomplete-no-matches">... and ${filteredVolunteers.length - 10} more</div>`;
-        }
-
-        dropdown.innerHTML = html;
-        dropdown.style.display = 'block';
-      }
+    createAutocomplete({
+      inputId: 'volunteerName',
+      dropdownId: 'volunteerAutocomplete',
+      idPrefix: 'ac-option-',
+      getItems: () => allVolunteers,
+      filterItem: (v, term) => v.name.toLowerCase().includes(term),
+      renderItem: (v, i, term) => {
+        const roleText = v.role
+          ? ` <span style="opacity:0.7;font-size:0.9em;">(${escapeHtml(v.role)})</span>`
+          : '';
+        return autocompleteHighlightMatch(v.name, term) + roleText;
+      },
+      onSelect: (v) => selectVolunteer(v.name, v.role)
     });
-
-    input.addEventListener('keydown', function(e) {
-      if (dropdown.style.display === 'none' || filteredVolunteers.length === 0) {
-        return;
-      }
-
-      const items = dropdown.querySelectorAll('.autocomplete-item');
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        highlightedIndex = (highlightedIndex + 1) % items.length;
-        updateAutocompleteHighlight(items);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        highlightedIndex = highlightedIndex <= 0 ? items.length - 1 : highlightedIndex - 1;
-        updateAutocompleteHighlight(items);
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (highlightedIndex >= 0 && highlightedIndex < filteredVolunteers.length) {
-          const selectedItem = items[highlightedIndex];
-          selectVolunteer(selectedItem.dataset.name, selectedItem.dataset.role);
-        }
-      } else if (e.key === 'Escape') {
-        dropdown.style.display = 'none';
-        highlightedIndex = -1;
-      }
-    });
-
-    document.addEventListener('click', function(e) {
-      if (!input.contains(e.target) && !dropdown.contains(e.target)) {
-        dropdown.style.display = 'none';
-        highlightedIndex = -1;
-      }
-    });
-  }
-
-  /**
-   * Updates visual highlighting of autocomplete items
-   */
-  function updateAutocompleteHighlight(items) {
-    items.forEach((item, index) => {
-      if (index === highlightedIndex) {
-        item.classList.add('highlighted');
-        item.scrollIntoView({ block: 'nearest' });
-      } else {
-        item.classList.remove('highlighted');
-      }
-    });
-  }
-
-  /**
-   * Highlights matching text in autocomplete suggestions
-   */
-  function highlightMatch(text, searchTerm) {
-    if (!searchTerm) return escapeHtml(text);
-    const escapedText = escapeHtml(text);
-    const escapedTerm = escapeHtml(searchTerm);
-    const regex = new RegExp(`(${escapedTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return escapedText.replace(regex, '<strong>$1</strong>');
   }
 
   /**
    * Selects a volunteer from autocomplete and preloads station based on role
    */
   function selectVolunteer(name, role) {
-    const input = document.getElementById('volunteerName');
-    const dropdown = document.getElementById('volunteerAutocomplete');
     const stationSelect = document.getElementById('stationSelect');
-
-    input.value = name;
-    dropdown.style.display = 'none';
-    highlightedIndex = -1;
 
     // Map role to station name (case-insensitive)
     const roleLower = (role || '').trim().toLowerCase();
@@ -658,6 +492,15 @@
       // Filer or unknown role - reset to placeholder
       stationSelect.value = '';
     }
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById('signInToast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2500);
   }
 
   function showMessage(message, type = 'info') {
@@ -833,6 +676,7 @@
         btn.disabled = false;
         btn.textContent = originalText;
 
+        showToast('Volunteer signed in!');
         showMessage(`Successfully signed in! Welcome, ${result.volunteerName} at Station ${result.station}`, 'success');
 
         // Clear form

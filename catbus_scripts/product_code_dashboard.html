@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --accent-color: rgb(142, 0, 0);
+      --bg-color: #ffffff;
+      --text-color: #1a1a1a;
+      --card-bg: #f2f2f2;
+      --border-color: #ccc;
+      --success-color: #27ae60;
+      --error-color: #e74c3c;
+      --warning-color: #f39c12;
+    }
+
+    body {
+      margin: 0 auto;
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+    }
+
+    h1 {
+      margin: 0 0 20px;
+      color: var(--accent-color);
+    }
+
+    .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 20px;
+    }
+
+    .card h2 {
+      margin: 0 0 15px;
+      font-size: 1.1rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    label { font-weight: 600; }
+
+    input[type="number"] {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 1rem;
+      width: 80px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button:hover:not(:disabled) { opacity: 0.85; }
+
+    .btn-preview {
+      background: #3498db;
+      color: #fff;
+    }
+
+    .btn-distribute {
+      background: var(--accent-color);
+      color: #fff;
+    }
+
+    .btn-test {
+      background: #f39c12;
+      color: #fff;
+    }
+
+    .btn-send {
+      background: var(--success-color);
+      color: #fff;
+    }
+
+    .btn-confirming {
+      background: var(--error-color);
+      color: #fff;
+      animation: pulse 1s ease-in-out infinite alternate;
+    }
+
+    .btn-cancel {
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 0.85rem;
+      padding: 6px 10px;
+      text-decoration: underline;
+      cursor: pointer;
+      font-weight: 400;
+    }
+
+    .btn-cancel:hover { color: #333; }
+
+    @keyframes pulse {
+      from { opacity: 1; }
+      to { opacity: 0.8; }
+    }
+
+    .btn-refresh {
+      background: #7f8c8d;
+      color: #fff;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+    }
+
+    select {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 0.95rem;
+      min-width: 250px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .stat-box {
+      background: #fff;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      text-align: center;
+    }
+
+    .stat-box .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--accent-color);
+    }
+
+    .stat-box .label {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .status-msg {
+      padding: 12px;
+      border-radius: 4px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .status-msg.success {
+      background: #d5f5e3;
+      color: #1e8449;
+      display: block;
+    }
+
+    .status-msg.error {
+      background: #fadbd8;
+      color: #922b21;
+      display: block;
+    }
+
+    .status-msg.loading {
+      background: #d6eaf8;
+      color: #21618c;
+      display: block;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background: #e8e8e8;
+      font-weight: 600;
+    }
+
+    .status-sent { color: var(--success-color); font-weight: 600; }
+    .status-failed { color: var(--error-color); font-weight: 600; }
+
+    .results-table { margin-top: 12px; }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+
+    .hidden { display: none; }
+
+    @media (max-width: 600px) {
+      .controls { flex-direction: column; align-items: stretch; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      body { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Product Code Distribution</h1>
+
+  <div class="card">
+    <h2>Controls</h2>
+    <div class="controls">
+      <label for="year">Year:</label>
+      <input type="number" id="year" value="2025" min="2020" max="2030">
+      <button class="btn-preview" id="btnPreview" onclick="runPreview()">Preview</button>
+      <button class="btn-distribute" id="btnDistribute" onclick="runDistribute()">Distribute Codes</button>
+      <button class="btn-cancel hidden" id="btnDistributeCancel" onclick="cancelConfirm('btnDistribute', null, null, 'btnDistributeCancel')">Cancel</button>
+      <button class="btn-test" id="btnTest" onclick="runTestEmail()">Send Test Email</button>
+    </div>
+    <div id="statusMsg" class="status-msg"></div>
+  </div>
+
+  <div class="card">
+    <h2>Send to Individual</h2>
+    <div class="controls">
+      <label for="individualYear">Year:</label>
+      <input type="number" id="individualYear" value="2025" min="2020" max="2030" onchange="loadVolunteers()">
+      <label for="volunteerSelect">Volunteer:</label>
+      <select id="volunteerSelect">
+        <option value="">-- Select a volunteer --</option>
+      </select>
+      <button class="btn-send" id="btnSendIndividual" onclick="sendToIndividual()">Send Code</button>
+      <button class="btn-cancel hidden" id="btnSendCancel" onclick="cancelConfirm('btnSendIndividual', null, null, 'btnSendCancel')">Cancel</button>
+    </div>
+    <div id="individualStatusMsg" class="status-msg"></div>
+  </div>
+
+  <div id="previewCard" class="card hidden">
+    <h2>Preview</h2>
+    <div id="statsGrid" class="stats-grid"></div>
+  </div>
+
+  <div id="resultsCard" class="card hidden">
+    <h2>Distribution Results</h2>
+    <div id="resultsSummary"></div>
+    <div class="table-wrap">
+      <table id="resultsTable" class="results-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Volunteer 1</th>
+            <th>Status</th>
+            <th>Volunteer 2</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h2 style="margin: 0;">Distribution Log</h2>
+      <button class="btn-refresh" onclick="loadLog()">Refresh</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Code</th>
+            <th>Volunteer 1</th>
+            <th>Status</th>
+            <th>Volunteer 2</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="logBody">
+          <tr><td colspan="6" style="text-align:center; color:#999;">Click Refresh to load</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  function getYear() {
+    return parseInt(document.getElementById('year').value, 10);
+  }
+
+  function getIndividualYear() {
+    return parseInt(document.getElementById('individualYear').value, 10);
+  }
+
+  function setStatus(msg, type) {
+    var el = document.getElementById('statusMsg');
+    el.textContent = msg;
+    el.className = 'status-msg ' + type;
+  }
+
+  function clearStatus() {
+    document.getElementById('statusMsg').className = 'status-msg';
+  }
+
+  function setButtonsDisabled(disabled) {
+    document.getElementById('btnPreview').disabled = disabled;
+    document.getElementById('btnDistribute').disabled = disabled;
+  }
+
+  // Inline confirmation helper - tracks which button is awaiting confirm
+  var pendingConfirm = {};
+
+  function requestConfirm(btnId, confirmText, cancelBtnId, onConfirm) {
+    var btn = document.getElementById(btnId);
+    if (pendingConfirm[btnId]) {
+      // Already confirming — execute the action
+      clearConfirmState(btnId);
+      onConfirm();
+      return;
+    }
+    // Enter confirming state
+    pendingConfirm[btnId] = {
+      originalText: btn.textContent,
+      originalClass: btn.className,
+      onConfirm: onConfirm
+    };
+    btn.textContent = confirmText;
+    btn.className = 'btn-confirming';
+    document.getElementById(cancelBtnId).classList.remove('hidden');
+
+    // Auto-revert after 5 seconds
+    pendingConfirm[btnId].timer = setTimeout(function() {
+      cancelConfirm(btnId, pendingConfirm[btnId].originalText, pendingConfirm[btnId].originalClass, cancelBtnId);
+    }, 5000);
+  }
+
+  function cancelConfirm(btnId, originalText, originalClass, cancelBtnId) {
+    var btn = document.getElementById(btnId);
+    if (pendingConfirm[btnId]) {
+      clearTimeout(pendingConfirm[btnId].timer);
+      btn.textContent = originalText || pendingConfirm[btnId].originalText;
+      btn.className = originalClass || pendingConfirm[btnId].originalClass;
+      delete pendingConfirm[btnId];
+    }
+    if (cancelBtnId) document.getElementById(cancelBtnId).classList.add('hidden');
+  }
+
+  function clearConfirmState(btnId) {
+    if (pendingConfirm[btnId]) {
+      var state = pendingConfirm[btnId];
+      clearTimeout(state.timer);
+      var btn = document.getElementById(btnId);
+      btn.textContent = state.originalText;
+      btn.className = state.originalClass;
+      delete pendingConfirm[btnId];
+    }
+  }
+
+  function runPreview() {
+    setButtonsDisabled(true);
+    setStatus('Loading preview...', 'loading');
+    document.getElementById('previewCard').classList.add('hidden');
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        showPreview(data);
+        clearStatus();
+        setButtonsDisabled(false);
+      })
+      .withFailureHandler(function(err) {
+        setStatus('Preview failed: ' + err.message, 'error');
+        setButtonsDisabled(false);
+      })
+      .previewDistribution(getYear());
+  }
+
+  function showPreview(data) {
+    var grid = document.getElementById('statsGrid');
+    grid.innerHTML =
+      statBox(data.totalAvailableCodes, 'Available Codes') +
+      statBox(data.totalVolunteers, 'Total Volunteers') +
+      statBox(data.alreadyDistributed, 'Already Have Codes') +
+      statBox(data.remainingVolunteers, 'Need Codes') +
+      statBox(data.filerCount, 'Filers Remaining') +
+      statBox(data.mentorCount, 'Mentors Remaining') +
+      statBox(data.willDistribute, 'Pairs to Distribute') +
+      statBox(data.codesRemaining, 'Codes Left After');
+
+    document.getElementById('previewCard').classList.remove('hidden');
+  }
+
+  function statBox(value, label) {
+    return '<div class="stat-box"><div class="value">' + value + '</div><div class="label">' + label + '</div></div>';
+  }
+
+  function setIndividualStatus(msg, type) {
+    var el = document.getElementById('individualStatusMsg');
+    el.textContent = msg;
+    el.className = 'status-msg ' + type;
+  }
+
+  function loadVolunteers() {
+    var select = document.getElementById('volunteerSelect');
+    select.innerHTML = '<option value="">Loading...</option>';
+
+    google.script.run
+      .withSuccessHandler(function(list) {
+        select.innerHTML = '<option value="">-- Select a volunteer --</option>';
+        for (var i = 0; i < list.length; i++) {
+          var v = list[i];
+          var label = v.name + ' (' + v.email + ')';
+          if (v.hasCode) label += ' - already has code';
+          var opt = document.createElement('option');
+          opt.value = v.email;
+          opt.textContent = label;
+          select.appendChild(opt);
+        }
+      })
+      .withFailureHandler(function(err) {
+        select.innerHTML = '<option value="">Failed to load</option>';
+        setIndividualStatus('Failed to load volunteers: ' + err.message, 'error');
+      })
+      .getVolunteerListForDropdown(getIndividualYear());
+  }
+
+  function sendToIndividual() {
+    var email = document.getElementById('volunteerSelect').value;
+    if (!email) {
+      setIndividualStatus('Please select a volunteer first.', 'error');
+      return;
+    }
+
+    requestConfirm('btnSendIndividual', 'Click again to confirm', 'btnSendCancel', function() {
+      document.getElementById('btnSendIndividual').disabled = true;
+      document.getElementById('btnSendCancel').classList.add('hidden');
+      setIndividualStatus('Sending code...', 'loading');
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          setIndividualStatus(data.message, data.success ? 'success' : 'error');
+          document.getElementById('btnSendIndividual').disabled = false;
+          if (data.success) loadVolunteers();
+        })
+        .withFailureHandler(function(err) {
+          setIndividualStatus('Failed: ' + err.message, 'error');
+          document.getElementById('btnSendIndividual').disabled = false;
+        })
+        .sendCodeToIndividual(email, getIndividualYear());
+    });
+  }
+
+  function runTestEmail() {
+    document.getElementById('btnTest').disabled = true;
+    setStatus('Sending test email...', 'loading');
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        setStatus(data.message, data.success ? 'success' : 'error');
+        document.getElementById('btnTest').disabled = false;
+      })
+      .withFailureHandler(function(err) {
+        setStatus('Test email failed: ' + err.message, 'error');
+        document.getElementById('btnTest').disabled = false;
+      })
+      .sendTestCodeEmail();
+  }
+
+  function runDistribute() {
+    requestConfirm('btnDistribute', 'Click again to confirm', 'btnDistributeCancel', function() {
+      document.getElementById('btnDistributeCancel').classList.add('hidden');
+      setButtonsDisabled(true);
+      setStatus('Distributing codes... This may take a moment.', 'loading');
+      document.getElementById('resultsCard').classList.add('hidden');
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          showResults(data);
+          setButtonsDisabled(false);
+          loadLog();
+        })
+        .withFailureHandler(function(err) {
+          setStatus('Distribution failed: ' + err.message, 'error');
+          setButtonsDisabled(false);
+        })
+        .distributeProductCodes(getYear());
+    });
+  }
+
+  function showResults(data) {
+    if (!data.success) {
+      setStatus(data.message, 'error');
+      return;
+    }
+
+    setStatus('Distributed ' + data.distributed + ' codes successfully. ' +
+      data.remaining + ' codes remaining. ' +
+      data.alreadyHadCodes + ' volunteers already had codes.', 'success');
+
+    var tbody = document.getElementById('resultsBody');
+    tbody.innerHTML = '';
+
+    var html = '';
+    for (var i = 0; i < data.results.length; i++) {
+      var r = data.results[i];
+      html += '<tr>' +
+        '<td><code>' + r.code + '</code></td>' +
+        '<td>' + r.volunteer1 + '</td>' +
+        '<td class="' + (r.sent1 ? 'status-sent' : 'status-failed') + '">' + (r.sent1 ? 'Sent' : 'Failed') + '</td>' +
+        '<td>' + r.volunteer2 + '</td>' +
+        '<td class="' + (r.sent2 ? 'status-sent' : 'status-failed') + '">' + (r.sent2 ? 'Sent' : 'Failed') + '</td>' +
+        '</tr>';
+    }
+    tbody.innerHTML = html;
+
+    document.getElementById('resultsCard').classList.remove('hidden');
+  }
+
+  function loadLog() {
+    var tbody = document.getElementById('logBody');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">Loading...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function(entries) {
+        tbody.innerHTML = '';
+        if (entries.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">No distributions yet</td></tr>';
+          return;
+        }
+        var logHtml = '';
+        for (var i = 0; i < entries.length; i++) {
+          var e = entries[i];
+          var ts = e.timestamp ? new Date(e.timestamp).toLocaleDateString() : '';
+          logHtml += '<tr>' +
+            '<td>' + ts + '</td>' +
+            '<td><code>' + e.code + '</code></td>' +
+            '<td>' + e.v1Name + '</td>' +
+            '<td class="' + (e.v1Status === 'Sent' ? 'status-sent' : 'status-failed') + '">' + e.v1Status + '</td>' +
+            '<td>' + e.v2Name + '</td>' +
+            '<td class="' + (e.v2Status === 'Sent' ? 'status-sent' : 'status-failed') + '">' + e.v2Status + '</td>' +
+            '</tr>';
+        }
+        tbody.innerHTML = logHtml;
+      })
+      .withFailureHandler(function(err) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#c0392b;">Failed to load: ' + err.message + '</td></tr>';
+      })
+      .getDistributionLog(getYear());
+  }
+
+  // Auto-load volunteer dropdown on page init
+  loadVolunteers();
+</script>
+</body>
+</html>

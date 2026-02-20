@@ -184,26 +184,6 @@ function updateConfirmationStatus(responseRange, status) {
 }
 
 /**
- * Gets or creates the appointment booking sheet
- * @returns {Sheet} The appointment sheet
- */
-function getOrCreateAppointmentSheet() {
-  const ss = getSpreadsheet();
-  let sheet = ss.getSheetByName(APPOINTMENT_CONFIG.SHEET_NAME);
-
-  if (!sheet) {
-    // Create the sheet with headers
-    sheet = ss.insertSheet(APPOINTMENT_CONFIG.SHEET_NAME);
-    const headers = ['Timestamp', 'Full Name', 'Email', 'Phone', 'Preferred Date', 'Preferred Time', 'Client ID', 'Confirmation Sent'];
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.setFrozenRows(1);
-    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
-  }
-
-  return sheet;
-}
-
-/**
  * Sends appointment confirmation email
  * @param {Object} data - Appointment data
  */
@@ -275,7 +255,7 @@ function buildConfirmationEmailBody(data) {
             <h3 style="margin-top: 0; color: #8e0000;">Appointment Details</h3>
             <p><strong>Date:</strong> ${data.preferredDate}</p>
             <p><strong>Time:</strong> ${data.preferredTime}</p>
-            <p><strong>Location:</strong> TBD</p>
+            <p><strong>Location:</strong> ${ELIGIBILITY_CONFIG.CLINIC_LOCATION}</p>
           </div>
 
           <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">
@@ -287,10 +267,10 @@ function buildConfirmationEmailBody(data) {
               <li>Previous year's Notice of Assessment (if not filing for the first time)</li>
               <li>Rent receipts (if applicable)</li>${situationDocs}
             </ul>
-            <p style="margin-bottom: 0;">For a complete checklist, visit <a href="http://taxclinic.uwaterloo.ca" style="color: #8e0000;">taxclinic.uwaterloo.ca</a></p>
+            <p style="margin-bottom: 0;">For a complete checklist, visit <a href="${CONFIG.CLINIC_WEBSITE_URL}" style="color: #8e0000;">taxclinic.uwaterloo.ca</a></p>
           </div>
 
-          <p>If you need to cancel or reschedule your appointment, please email us at <a href="mailto:taxclinic@uwafsa.com" style="color: #8e0000;">taxclinic@uwafsa.com</a>.</p>
+          <p>If you need to cancel or reschedule your appointment, please email us at <a href="mailto:${CONFIG.CLINIC_EMAIL}" style="color: #8e0000;">${CONFIG.CLINIC_EMAIL}</a>.</p>
 
           <p>We look forward to seeing you!</p>
 

@@ -1,57 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <base target="_top">
+  <?!= include('shared_styles') ?>
   <style>
     :root {
-      --accent-color: rgb(142, 0, 0);
-      --bg-color-light: #f5f5f5;
-      --text-color-light: #1a1a1a;
-      --input-bg-light: #ffffff;
-      --border-light: #e0e0e0;
-      --bg-color-dark: #1e1e1e;
-      --text-color-dark: #f0f0f0;
-      --input-bg-dark: #2a2a2a;
-      --border-dark: #444;
-      --success-color: #27ae60;
-      --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.1);
-      --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
       --panel-width-desktop: 320px;
       --panel-width-tablet: 280px;
       --panel-height-mobile: 60vh;
       --toggle-btn-size: 48px;
-    }
-
-    body.light {
-      background-color: var(--bg-color-light);
-      color: var(--text-color-light);
-    }
-
-    body.dark {
-      background-color: var(--bg-color-dark);
-      color: var(--text-color-dark);
-    }
-
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Verdana, sans-serif;
-      padding: 30px 20px;
-      transition: background 0.3s, color 0.3s;
-      max-width: 1200px;
-      margin: 0 auto;
-      line-height: 1.6;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 40px;
-    }
-
-    h1, h2, h3 {
-      font-weight: 600;
-      letter-spacing: -0.3px;
     }
 
     header h3 {
@@ -65,12 +22,6 @@
 
     header img {
       height: 60px;
-    }
-
-    .toggle-theme {
-      cursor: pointer;
-      font-size: 1.4em;
-      margin-left: 10px;
     }
 
     .form-row {
@@ -203,7 +154,7 @@
 
     input:focus,
     select:focus {
-      outline: none;
+      outline: 2px solid var(--accent-color); outline-offset: 2px;
       border-color: var(--accent-color);
       box-shadow: 0 0 0 3px rgba(142, 0, 0, 0.1);
     }
@@ -265,31 +216,9 @@
       background-color: #501919 !important;
     }
 
-    button {
-      padding: 12px 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-      background-color: var(--accent-color);
-      color: white;
-      transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
-    }
-
+    /* Override: different disabled button style */
     button:disabled {
       background-color: #888 !important;
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
-
-    button:hover:not(:disabled) {
-      background-color: #a00000;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(142, 0, 0, 0.3);
-    }
-
-    button:active:not(:disabled) {
-      transform: translateY(0);
     }
 
     #messageBox, #errorBox {
@@ -307,6 +236,31 @@
     #errorBox {
       background-color: #c0392b;
       color: white;
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    #errorBox #errorBoxText {
+      flex: 1;
+    }
+
+    #errorBox #errorBoxClose {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.2em;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+      min-height: unset;
+      opacity: 0.8;
+      flex-shrink: 0;
+    }
+
+    #errorBox #errorBoxClose:hover {
+      opacity: 1;
+      background: none;
     }
 
     #confirmModal, #cancelClientModal {
@@ -391,6 +345,39 @@
 
     hr {
       border: 1px solid #333;
+    }
+
+    #draftBanner {
+      display: none;
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-left: 4px solid #ffc107;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    #draftBanner.show {
+      display: flex;
+    }
+
+    body.dark #draftBanner {
+      background: #3d3419;
+      border-color: #ffc107;
+      color: #e0d3a8;
+    }
+
+    #draftBanner span {
+      flex: 1;
+      font-size: 0.95em;
+    }
+
+    #draftBanner button {
+      padding: 6px 14px;
+      font-size: 0.9em;
     }
     #helpBtn {
       background-color: #cccccc;  /* Neutral gray by default */
@@ -668,7 +655,7 @@
     }
 
     .email-form-field input:focus {
-      outline: none;
+      outline: 2px solid var(--accent-color); outline-offset: 2px;
       border-color: var(--accent-color);
     }
 
@@ -950,6 +937,7 @@
       padding: 15px;
       border-radius: 5px;
       margin-bottom: 15px;
+      text-align: left;
     }
 
     body.dark .reminder-message {
@@ -1280,31 +1268,39 @@
       }
     }
 
-    /* Footer Copyright */
-    .footer-copyright {
-      position: fixed;
-      bottom: 10px;
-      right: 20px;
-      font-size: 11px;
-      opacity: 0.6;
-      transition: opacity 0.3s, color 0.3s;
-      z-index: 1000;
-      pointer-events: none;
-      max-width: 400px;
-      text-align: right;
-      line-height: 1.3;
-    }
+    @media (max-width: 640px) {
+      header h3 {
+        font-size: 1.3rem;
+      }
 
-    body.light .footer-copyright {
-      color: var(--text-color-light);
-    }
+      .form-row {
+        flex-direction: column;
+        gap: 12px;
+      }
 
-    body.dark .footer-copyright {
-      color: var(--text-color-dark);
-    }
+      select,
+      input[type="text"],
+      input[type="number"],
+      .autocomplete-container {
+        width: 100%;
+      }
 
-    .footer-copyright:hover {
-      opacity: 0.8;
+      .autocomplete-container input[type="text"] {
+        width: 100%;
+      }
+
+      button {
+        min-height: 44px;
+      }
+
+      #taxYearWrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      #taxYearTable {
+        min-width: 560px;
+      }
     }
 
     /* Notification Toast for Internal Messaging */
@@ -1398,7 +1394,7 @@
     }
 
     .notification-toast .notif-reply-section input:focus {
-      outline: none;
+      outline: 2px solid var(--accent-color); outline-offset: 2px;
       border-color: var(--accent-color);
     }
 
@@ -1419,6 +1415,204 @@
     .notification-toast .notif-dismiss-btn:hover {
       background: #666;
     }
+
+    /* Message History Toggle Button */
+    .msg-history-toggle-btn {
+      position: fixed;
+      top: 20px;
+      right: 390px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      box-shadow: 0 4px 12px rgba(142, 0, 0, 0.3);
+      cursor: pointer;
+      z-index: 2400;
+      font-size: 1.3em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .msg-history-toggle-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(142, 0, 0, 0.4);
+    }
+
+    .msg-unread-dot {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 12px;
+      height: 12px;
+      background: #e74c3c;
+      border-radius: 50%;
+      border: 2px solid white;
+      display: none;
+    }
+
+    .msg-unread-dot.show {
+      display: block;
+    }
+
+    body.dark .msg-unread-dot {
+      border-color: var(--input-bg-dark);
+    }
+
+    /* Message History Panel */
+    .msg-history-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 350px;
+      max-height: 60vh;
+      background: var(--input-bg-light);
+      border-left: 4px solid var(--accent-color);
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      z-index: 2600;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .msg-history-panel.show {
+      display: flex;
+    }
+
+    body.dark .msg-history-panel {
+      background: var(--input-bg-dark);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .msg-history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-light);
+      font-weight: bold;
+      color: var(--accent-color);
+    }
+
+    body.dark .msg-history-header {
+      border-bottom-color: var(--border-dark);
+    }
+
+    .msg-history-header .msg-close-btn {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: #666;
+      padding: 0;
+      line-height: 1;
+    }
+
+    body.dark .msg-history-header .msg-close-btn {
+      color: #aaa;
+    }
+
+    .msg-history-header .msg-close-btn:hover {
+      color: var(--accent-color);
+    }
+
+    .msg-history-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .msg-bubble {
+      padding: 10px 14px;
+      border-radius: 18px;
+      max-width: 80%;
+      word-wrap: break-word;
+      font-size: 0.9em;
+      line-height: 1.4;
+    }
+
+    .msg-bubble.sent {
+      background: var(--accent-color);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg-bubble.received {
+      background: #e9ecef;
+      color: #333;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+
+    body.dark .msg-bubble.received {
+      background: #3a3a3a;
+      color: #f0f0f0;
+    }
+
+    .msg-history-empty {
+      text-align: center;
+      color: #999;
+      padding: 30px 16px;
+      font-size: 0.9em;
+    }
+
+    body.dark .msg-history-empty {
+      color: #777;
+    }
+
+    .msg-history-input {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    body.dark .msg-history-input {
+      border-top-color: var(--border-dark);
+    }
+
+    .msg-history-input input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border-light);
+      border-radius: 20px;
+      font-size: 0.85em;
+      outline: 2px solid var(--accent-color); outline-offset: 2px;
+      background: var(--input-bg-light);
+      color: inherit;
+    }
+
+    body.dark .msg-history-input input {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+      color: var(--text-color-dark);
+    }
+
+    .msg-history-input input:focus {
+      border-color: var(--accent-color);
+    }
+
+    .msg-history-input button {
+      padding: 8px 14px;
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.85em;
+    }
+
+    .msg-history-input button:hover {
+      opacity: 0.9;
+    }
   </style>
 </head>
 <body class="light" onload="loadDropdowns()">
@@ -1434,6 +1628,27 @@
     <button class="notif-dismiss-btn" onclick="dismissNotification()">Dismiss</button>
   </div>
 
+  <!-- Message History Toggle Button -->
+  <button class="msg-history-toggle-btn" onclick="toggleMessageHistory()" aria-label="Toggle message history">
+    💬
+    <span class="msg-unread-dot" id="msgUnreadDot"></span>
+  </button>
+
+  <!-- Message History Panel -->
+  <div class="msg-history-panel" id="msgHistoryPanel">
+    <div class="msg-history-header">
+      <span>Messages</span>
+      <button class="msg-close-btn" onclick="closeMessageHistory()">&times;</button>
+    </div>
+    <div class="msg-history-messages" id="msgHistoryMessages">
+      <div class="msg-history-empty">No messages yet.</div>
+    </div>
+    <div class="msg-history-input">
+      <input type="text" id="msgHistoryInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendMessageFromHistory()">
+      <button onclick="sendMessageFromHistory()">Send</button>
+    </div>
+  </div>
+
   <button class="checklist-toggle-btn" onclick="toggleDocumentPanel()" aria-label="Toggle document checklist">
     📋
     <span class="checklist-badge">0/25</span>
@@ -1442,16 +1657,23 @@
   <header>
     <h3>AFSA Tax Clinic Control Sheet</h3>
     <div>
-      <span class="toggle-theme" onclick="toggleTheme()">☀️</span>
+      <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
   </header>
+
+  <!-- Draft restore banner -->
+  <div id="draftBanner" role="alert" aria-live="polite">
+    <span id="draftBannerText"></span>
+    <button onclick="restoreDraft(currentDraft)">Restore</button>
+    <button onclick="dismissDraft()" style="background-color:#888;">Dismiss</button>
+  </div>
 
   <div class="form-row">
     <div>
       <label for="volunteer">Volunteer:</label><br>
       <div class="autocomplete-container">
-        <input type="text" id="volunteer" placeholder="Start typing volunteer name" autocomplete="off">
-        <div id="volunteerDropdown" class="autocomplete-dropdown"></div>
+        <input type="text" id="volunteer" placeholder="Start typing volunteer name" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="volunteerDropdown">
+        <div id="volunteerDropdown" class="autocomplete-dropdown" role="listbox"></div>
       </div>
     </div>
     <div>
@@ -1473,6 +1695,7 @@
   </div>
 
   <h3>Tax Year Details</h3>
+  <div id="taxYearWrapper">
   <table id="taxYearTable">
     <tr>
       <th>Tax Year</th>
@@ -1482,13 +1705,14 @@
       <th>Remove</th>
     </tr>
   </table>
+  </div>
 
   <br>
   <button onclick="addTaxYearRow()">Add Additional Tax Year</button>
   <br><br>
 
   <div id="messageBox"></div>
-  <div id="errorBox"></div>
+  <div id="errorBox"><span id="errorBoxText"></span><button id="errorBoxClose" onclick="document.getElementById('errorBox').style.display='none'" aria-label="Dismiss">&times;</button></div>
   <div id="spinner"><div class="lds-ring"><div></div><div></div><div></div><div></div></div></div>
 
   <button id="finalizeBtn" onclick="finalizeReturns()" disabled>Finalize Returns</button>
@@ -1496,18 +1720,18 @@
   <button id="cancelClientBtn" onclick="openCancelClientModal()" disabled style="background-color: #c0392b;">Cancel Client</button>
 
   <!-- Finalize Modal -->
-  <div id="confirmModal">
+  <div id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmModalLabel">
     <div class="modal-content">
-      <p>Are you sure you'd like to finalize?<br>Have all returns been finalized/EFILEd at this point?</p>
+      <p id="confirmModalLabel">Are you sure you'd like to finalize?<br>Have all returns been finalized/EFILEd at this point?</p>
       <button onclick="proceedFinalize()">Yes, finalize</button>
       <button onclick="closeModal()">Cancel</button>
     </div>
   </div>
 
   <!-- Cancel Client Modal -->
-  <div id="cancelClientModal">
+  <div id="cancelClientModal" role="dialog" aria-modal="true" aria-labelledby="cancelClientModalTitle">
     <div class="modal-content" style="width: 400px; max-width: 90vw;">
-      <h3 style="margin-top: 0; color: #c0392b;">Cancel Client</h3>
+      <h3 id="cancelClientModalTitle" style="margin-top: 0; color: #c0392b;">Cancel Client</h3>
       <p>Do you really want to cancel this client? Please indicate the reason below:</p>
       <div style="text-align: left; margin: 20px 0;">
         <label style="display: block; margin: 10px 0; cursor: pointer;">
@@ -1535,12 +1759,12 @@
   </div>
 
   <!-- Email Receipt Modal -->
-  <div id="emailReceiptModal">
+  <div id="emailReceiptModal" role="dialog" aria-modal="true" aria-labelledby="emailReceiptModalTitle">
     <div class="modal-content">
-      <button class="email-close-btn" onclick="closeEmailReceiptDialog()">&times;</button>
-      
+      <button class="email-close-btn" onclick="closeEmailReceiptDialog()" aria-label="Close">&times;</button>
+
       <div class="email-modal-header">
-        <h3>Email Receipt to Client</h3>
+        <h3 id="emailReceiptModalTitle">Email Receipt to Client</h3>
       </div>
       
       <div class="email-modal-body">
@@ -1595,7 +1819,7 @@
           <label style="display: block; margin-bottom: 10px; font-weight: bold;">Attachments <span style="color: red;">*</span></label>
           <div class="file-upload-area" id="fileUploadAreaEmail" onclick="document.getElementById('fileInputEmail').click()">
             <p>📎 Drag and drop files here or <span class="browse-link">click to browse</span></p>
-            <p style="font-size: 0.85em; margin-top: 5px;">25 MB per file, 25 MB total per email</p>
+            <p style="font-size: 0.85em; margin-top: 5px;">Requires: 1 UFILE (.u) file + 1 PDF file. 25 MB limit.</p>
           </div>
           <input type="file" id="fileInputEmail" multiple onchange="handleFileSelectEmail(event)">
           
@@ -1614,11 +1838,11 @@
   </div>
 
   <!-- Reminder Modal -->
-  <div id="reminderModal">
+  <div id="reminderModal" role="dialog" aria-modal="true" aria-labelledby="reminderModalTitle">
     <div class="modal-content">
       <div class="reminder-modal-header">
-        <h3>📋 Filing Reminders</h3>
-        <button class="reminder-close-btn" onclick="closeReminderDialog()">&times;</button>
+        <h3 id="reminderModalTitle">📋 Filing Reminders</h3>
+        <button class="reminder-close-btn" onclick="closeReminderDialog()" aria-label="Close">&times;</button>
       </div>
       
       <div class="reminder-modal-body" id="reminderModalBody">
@@ -1656,13 +1880,200 @@
   <script defer>
     let volunteerMap = {};
     let allVolunteerNames = [];
-    let filteredVolNames = [];
-    let volHighlightIndex = -1;
     let rowCount = 1;
     let currentClientData = null; // Store current client intake data
     let selectedFilesEmail = []; // Store files for email attachment
     let currentEmailRowId = null; // Store current row ID for email receipt
     let currentEmailRowCount = null; // Store current row count for email receipt
+
+    // Draft persistence (sessionStorage — survives same-tab refresh in private browsing)
+    const DRAFT_KEY = 'catbus_draft_control';
+    let currentDraft = null;      // draft object shown in restore banner
+    let pendingDraftRows = null;  // rows waiting to be applied after preloadTaxYearRows
+    let saveDraftTimer = null;    // debounce handle
+    let isRestoring = false;      // suppress auto-save during restore
+
+    function collectDraftState() {
+      const volunteer = document.getElementById('volunteer').value.trim();
+      const client = document.getElementById('client').value;
+      if (!volunteer || !client) return null;
+
+      const rows = [];
+      const table = document.getElementById('taxYearTable');
+      for (let i = 1; i < table.rows.length; i++) {
+        const row = table.rows[i];
+        const rowId = row.getAttribute('data-row-id');
+        if (!rowId) continue;
+        const rowNum = rowId.split('_')[1];
+
+        const taxYearSelect = row.querySelector('select[name="taxYear"]');
+        const reviewerInput = row.querySelector('input[name="reviewer"]');
+        const secReviewerInput = row.querySelector('input[name="secondaryReviewer"]');
+        const marriedCheckbox = row.querySelector('input[name="married"]');
+        const filingRadio = row.querySelector(`input[name="filingStatus${rowNum}"]:checked`);
+
+        const reviewInput = document.getElementById(`reviewInput${rowId}`);
+        const reviewActions = document.getElementById(`reviewActions${rowId}`);
+        let reviewState = 'reviewInitial';
+        if (reviewActions && reviewActions.style.display === 'block') {
+          reviewState = 'reviewActions';
+        } else if (reviewInput && reviewInput.style.display === 'block') {
+          reviewState = 'reviewInput';
+        }
+
+        rows.push({
+          taxYear: taxYearSelect ? taxYearSelect.value : '',
+          reviewer: reviewerInput ? reviewerInput.value : '',
+          secondaryReviewer: secReviewerInput ? secReviewerInput.value : '',
+          married: marriedCheckbox ? marriedCheckbox.checked : false,
+          filingStatus: filingRadio ? filingRadio.value : '',
+          reviewState
+        });
+      }
+
+      return { volunteer, client, rows, savedAt: Date.now() };
+    }
+
+    function saveDraft() {
+      if (isRestoring) return;
+      const state = collectDraftState();
+      if (!state) return;
+      try {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify(state));
+      } catch (e) {
+        // sessionStorage unavailable (e.g. storage quota exceeded) — fail silently
+      }
+    }
+
+    function scheduleSaveDraft() {
+      clearTimeout(saveDraftTimer);
+      saveDraftTimer = setTimeout(saveDraft, 500);
+    }
+
+    function loadDraft() {
+      try {
+        const raw = sessionStorage.getItem(DRAFT_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function clearDraft() {
+      try {
+        sessionStorage.removeItem(DRAFT_KEY);
+      } catch (e) {}
+      currentDraft = null;
+      hideDraftBanner();
+    }
+
+    function hideDraftBanner() {
+      document.getElementById('draftBanner').classList.remove('show');
+    }
+
+    function checkAndShowDraftBanner() {
+      const draft = loadDraft();
+      if (!draft || !draft.volunteer || !draft.client) return;
+      currentDraft = draft;
+      const time = new Date(draft.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('draftBannerText').textContent =
+        `Unsaved work from ${time} (${draft.volunteer} / ${draft.client}). Restore?`;
+      document.getElementById('draftBanner').classList.add('show');
+    }
+
+    function dismissDraft() {
+      clearDraft();
+    }
+
+    function restoreDraft(draft) {
+      if (!draft) return;
+      hideDraftBanner();
+      isRestoring = true;
+      pendingDraftRows = draft.rows;
+
+      // Step 1: set volunteer and populate client dropdown
+      const volunteerInput = document.getElementById('volunteer');
+      volunteerInput.value = draft.volunteer;
+      updateClients();
+      checkFormReady();
+
+      // Step 2: validate the volunteer/client still exist
+      const clientSelect = document.getElementById('client');
+      const clientExists = Array.from(clientSelect.options).some(o => o.value === draft.client);
+      if (!clientExists) {
+        showError('Could not restore: the volunteer or client is no longer available.');
+        pendingDraftRows = null;
+        clearDraft();
+        isRestoring = false;
+        return;
+      }
+
+      // Step 3: select client and fire the change event to load intake info
+      clientSelect.value = draft.client;
+      checkFormReady();
+      isRestoring = false;
+      clientSelect.dispatchEvent(new Event('change'));
+    }
+
+    function applyDraftRowState(savedRows) {
+      isRestoring = true;
+      const table = document.getElementById('taxYearTable');
+      for (let i = 1; i < table.rows.length; i++) {
+        const row = table.rows[i];
+        const rowId = row.getAttribute('data-row-id');
+        if (!rowId) continue;
+        const rowNum = rowId.split('_')[1];
+
+        const taxYearSelect = row.querySelector('select[name="taxYear"]');
+        if (!taxYearSelect) continue;
+        const taxYear = taxYearSelect.value;
+
+        const savedRow = savedRows.find(r => r.taxYear === taxYear);
+        if (!savedRow) continue;
+
+        // Apply review panel state
+        const reviewInitial = document.getElementById(`reviewInitial${rowId}`);
+        const reviewInput = document.getElementById(`reviewInput${rowId}`);
+        const reviewActions = document.getElementById(`reviewActions${rowId}`);
+
+        if (reviewInitial) reviewInitial.style.display = 'none';
+        if (reviewInput) reviewInput.style.display = 'none';
+        if (reviewActions) reviewActions.style.display = 'none';
+
+        if (savedRow.reviewState === 'reviewActions') {
+          if (reviewActions) reviewActions.style.display = 'block';
+        } else if (savedRow.reviewState === 'reviewInput' || savedRow.reviewer) {
+          if (reviewInput) reviewInput.style.display = 'block';
+        } else {
+          if (reviewInitial) reviewInitial.style.display = 'block';
+        }
+
+        // Set reviewer
+        const reviewerInput = row.querySelector('input[name="reviewer"]');
+        if (reviewerInput && savedRow.reviewer) reviewerInput.value = savedRow.reviewer;
+
+        // Set secondary reviewer
+        const secReviewerInput = row.querySelector('input[name="secondaryReviewer"]');
+        if (secReviewerInput && savedRow.secondaryReviewer) secReviewerInput.value = savedRow.secondaryReviewer;
+
+        // Set married checkbox
+        const marriedCheckbox = row.querySelector('input[name="married"]');
+        if (marriedCheckbox) marriedCheckbox.checked = savedRow.married;
+
+        // Enable filing status radios based on reviewer presence
+        checkReviewerAndEnableFilingStatus(rowId, parseInt(rowNum));
+
+        // Set filing status radio
+        if (savedRow.filingStatus) {
+          const radio = row.querySelector(`input[name="filingStatus${rowNum}"][value="${savedRow.filingStatus}"]`);
+          if (radio && !radio.disabled) {
+            radio.checked = true;
+            handleFilingStatusChange(rowId, parseInt(rowNum));
+          }
+        }
+      }
+      isRestoring = false;
+    }
 
 
     function checkFormReady() {
@@ -1683,106 +2094,40 @@
         volunteerMap = data;
         allVolunteerNames = Object.keys(volunteerMap).sort();
         checkFormReady();
+        checkAndShowDraftBanner(); // show restore banner if a draft exists
       }).getVolunteersAndClients();
       setupVolunteerAutocomplete();
       setInterval(pollHelpStatus, 10000);
       setInterval(pollMessages, 10000);
+      setInterval(pollReviewApproval, 10000);
+      // Wire up auto-save on any meaningful form change
+      document.addEventListener('change', function(e) {
+        if (!isRestoring) scheduleSaveDraft();
+      });
+      document.addEventListener('input', function(e) {
+        const n = e.target.name;
+        if (!isRestoring && (e.target.id === 'volunteer' || n === 'reviewer' || n === 'secondaryReviewer')) {
+          scheduleSaveDraft();
+        }
+      });
       document.getElementById('volunteer').focus();
     }
 
     function setupVolunteerAutocomplete() {
-      const input = document.getElementById('volunteer');
-      const dropdown = document.getElementById('volunteerDropdown');
-
-      input.addEventListener('input', function() {
-        const term = this.value.trim().toLowerCase();
-
-        if (term.length === 0) {
-          dropdown.style.display = 'none';
-          filteredVolNames = [];
-          updateClients();
-          checkFormReady();
-          return;
-        }
-
-        filteredVolNames = allVolunteerNames.filter(name =>
-          name.toLowerCase().includes(term)
-        );
-        volHighlightIndex = -1;
-
-        if (filteredVolNames.length === 0) {
-          dropdown.innerHTML = '<div class="no-matches">No volunteers found</div>';
-          dropdown.style.display = 'block';
-        } else {
-          const displayCount = Math.min(filteredVolNames.length, 10);
-          let html = '';
-          for (let i = 0; i < displayCount; i++) {
-            const name = filteredVolNames[i];
-            const escaped = name.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-            html += '<div class="autocomplete-item" data-index="' + i + '" data-name="' + escaped + '" onclick="selectVolunteerFromDropdown(this.dataset.name)">' + highlightVolunteerMatch(name, term) + '</div>';
-          }
-          if (filteredVolNames.length > 10) {
-            html += '<div class="no-matches">... and ' + (filteredVolNames.length - 10) + ' more</div>';
-          }
-          dropdown.innerHTML = html;
-          dropdown.style.display = 'block';
-        }
-
-        updateClients();
-        checkFormReady();
+      createAutocomplete({
+        inputId: 'volunteer',
+        dropdownId: 'volunteerDropdown',
+        idPrefix: 'cs-option-',
+        wrapAround: false,
+        getItems: () => allVolunteerNames,
+        filterItem: (name, term) => name.toLowerCase().includes(term),
+        renderItem: (name, i, term) => autocompleteHighlightMatch(name, term),
+        onSelect: (name) => selectVolunteerFromDropdown(name),
+        onInput: () => { updateClients(); checkFormReady(); }
       });
-
-      input.addEventListener('keydown', function(e) {
-        if (dropdown.style.display === 'none' || filteredVolNames.length === 0) return;
-
-        const items = dropdown.querySelectorAll('.autocomplete-item');
-
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          volHighlightIndex = Math.min(volHighlightIndex + 1, items.length - 1);
-          updateVolHighlight(items);
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          volHighlightIndex = Math.max(volHighlightIndex - 1, 0);
-          updateVolHighlight(items);
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          if (volHighlightIndex >= 0 && volHighlightIndex < items.length) {
-            selectVolunteerFromDropdown(items[volHighlightIndex].dataset.name);
-          }
-        } else if (e.key === 'Escape') {
-          dropdown.style.display = 'none';
-          volHighlightIndex = -1;
-        }
-      });
-
-      document.addEventListener('click', function(e) {
-        if (!input.contains(e.target) && !dropdown.contains(e.target)) {
-          dropdown.style.display = 'none';
-          volHighlightIndex = -1;
-        }
-      });
-    }
-
-    function updateVolHighlight(items) {
-      items.forEach((item, idx) => {
-        item.classList.toggle('highlighted', idx === volHighlightIndex);
-      });
-    }
-
-    function highlightVolunteerMatch(text, term) {
-      if (!term) return escapeHtml(text);
-      const escapedText = escapeHtml(text);
-      const escapedTerm = escapeHtml(term);
-      const regex = new RegExp('(' + escapedTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
-      return escapedText.replace(regex, '<strong>$1</strong>');
     }
 
     function selectVolunteerFromDropdown(name) {
-      document.getElementById('volunteer').value = name;
-      document.getElementById('volunteerDropdown').style.display = 'none';
-      volHighlightIndex = -1;
-      filteredVolNames = [];
       updateClients();
       checkFormReady();
     }
@@ -1946,6 +2291,69 @@
 
     // Poll every 10 seconds
 
+    function pollReviewApproval() {
+      const volunteer = document.getElementById('volunteer').value.trim();
+      if (!volunteer) return;
+      const volunteerNameOnly = volunteer.includes('–')
+        ? volunteer.split('–')[1].trim()
+        : volunteer.trim();
+
+      google.script.run.withSuccessHandler(result => {
+        if (!result || !result.resolved) return;
+
+        // Find the row matching the tax year from the resolved review
+        const table = document.getElementById('taxYearTable');
+        let targetRow = null;
+        let targetRowId = null;
+        let targetRowNum = null;
+        for (let i = 1; i < table.rows.length; i++) {
+          const r = table.rows[i];
+          const rid = r.getAttribute('data-row-id');
+          if (!rid) continue;
+          const yearSel = r.querySelector('select[name="taxYear"]');
+          if (yearSel && (!result.taxYear || yearSel.value === result.taxYear)) {
+            const reviewActions = document.getElementById(`reviewActions${rid}`);
+            if (reviewActions && reviewActions.style.display === 'block') {
+              targetRow = r;
+              targetRowId = rid;
+              targetRowNum = rid.split('_')[1];
+              break;
+            }
+          }
+        }
+
+        if (result.approved) {
+          if (targetRow && targetRowId) {
+            // Transition: reviewActions → reviewInput, auto-fill reviewer name
+            const reviewActions = document.getElementById(`reviewActions${targetRowId}`);
+            const reviewInput = document.getElementById(`reviewInput${targetRowId}`);
+            if (reviewActions) reviewActions.style.display = 'none';
+            if (reviewInput) reviewInput.style.display = 'block';
+            const reviewerInput = targetRow.querySelector('input[name="reviewer"]');
+            if (reviewerInput) {
+              reviewerInput.value = result.reviewerName;
+              reviewerInput.style.border = '2px solid #27ae60';
+            }
+            checkReviewerAndEnableFilingStatus(targetRowId, parseInt(targetRowNum));
+          }
+          showMessage(`Review approved by ${result.reviewerName}. Enter filing status to continue.`);
+          // Consume the result so we stop seeing it
+          google.script.run.completeReviewApproval(volunteerNameOnly);
+        } else {
+          if (targetRow && targetRowId) {
+            // Revert: hide reviewActions, show reviewInitial
+            const reviewActions = document.getElementById(`reviewActions${targetRowId}`);
+            const reviewInitial = document.getElementById(`reviewInitial${targetRowId}`);
+            if (reviewActions) reviewActions.style.display = 'none';
+            if (reviewInitial) reviewInitial.style.display = 'block';
+          }
+          const reasonText = result.reason ? `: ${result.reason}` : '';
+          showError(`Return flagged for corrections${reasonText}`, true);
+          google.script.run.completeReviewApproval(volunteerNameOnly);
+        }
+      }).getReviewApprovalResult(volunteerNameOnly);
+    }
+
     // Review functions
     function callForReview(rowId) {
       const volunteer = document.getElementById('volunteer').value.trim();
@@ -1960,21 +2368,26 @@
         ? volunteer.split('–')[1].trim() 
         : volunteer.trim();
       
+      // Collect context for the review request
+      const clientId = document.getElementById('client').value;
+      const rowEl = document.querySelector(`[data-row-id="${rowId}"]`);
+      const taxYear = rowEl ? (rowEl.querySelector('select[name="taxYear"]')?.value || '') : '';
+
       // Send review request to admin dashboard
       google.script.run
         .withSuccessHandler(() => {
           // Hide the initial button, show the review actions
           const reviewInitial = document.getElementById(`reviewInitial${rowId}`);
           const reviewActions = document.getElementById(`reviewActions${rowId}`);
-          
+
           if (reviewInitial) reviewInitial.style.display = 'none';
           if (reviewActions) reviewActions.style.display = 'block';
-          showMessage('Review request sent to admin dashboard.');
+          showMessage('Review request sent. A reviewer will respond shortly.');
         })
         .withFailureHandler(error => {
           showError('Error sending review request: ' + (error.message || error));
         })
-        .sendReviewRequest(volunteerNameOnly);
+        .sendReviewRequest(volunteerNameOnly, clientId, taxYear);
     }
     
     function returnForCorrections(rowId) {
@@ -2092,11 +2505,18 @@
           showError('Please select both a volunteer and a client.');
           return;
         }
-        
+
+        const allItems = document.querySelectorAll('#documentChecklist .checklist-item input[type="checkbox"]');
+        const checkedItems = document.querySelectorAll('#documentChecklist .checklist-item input[type="checkbox"]:checked');
+        if (allItems.length > 0 && checkedItems.length === 0) {
+          showError('Are you sure client has all information? Checklist should not be blank.');
+          return;
+        }
+
         const modal = document.getElementById('confirmModal');
         if (modal) {
-          console.log('Showing modal');
           modal.style.display = 'flex';
+          modal.querySelector('button').focus();
         } else {
           showError('Modal not found. Please refresh the page.');
           console.error('confirmModal element not found');
@@ -2289,8 +2709,11 @@
       document.getElementById('cancelReasonOtherText').style.display = 'none';
       document.getElementById('cancelReasonOtherText').disabled = true;
       
-      // Show modal
-      document.getElementById('cancelClientModal').style.display = 'flex';
+      // Show modal and focus first radio
+      const cancelModal = document.getElementById('cancelClientModal');
+      cancelModal.style.display = 'flex';
+      const firstRadio = cancelModal.querySelector('input[name="cancelReason"]');
+      if (firstRadio) firstRadio.focus();
       
       // Add event listeners for radio buttons
       document.querySelectorAll('input[name="cancelReason"]').forEach(radio => {
@@ -2400,11 +2823,13 @@
         .cancelClientAndStore(volunteer, client, rows);
     }
 
-    function showError(message) {
+    function showError(message, persistent = false) {
       const box = document.getElementById('errorBox');
-      box.textContent = message;
-      box.style.display = 'block';
-      setTimeout(() => box.style.display = 'none', 5000);
+      document.getElementById('errorBoxText').textContent = message;
+      box.style.display = 'flex';
+      if (!persistent) {
+        setTimeout(() => box.style.display = 'none', 5000);
+      }
     }
 
     function showMessage(message, success = false) {
@@ -2422,6 +2847,7 @@
       while (table.rows.length > 1) table.deleteRow(1);
       rowCount = 1;
       currentClientData = null; // Clear stored client data
+      clearDraft(); // Discard any saved draft after successful submission/cancel
     }
 
     function removeRow(button) {
@@ -2545,6 +2971,12 @@
           `;
           rowCount++;
         });
+
+        // If restoring a draft, apply saved row state now that all rows are built
+        if (pendingDraftRows) {
+          applyDraftRowState(pendingDraftRows);
+          pendingDraftRows = null;
+        }
       }).getMentorList();
     }
 
@@ -2821,6 +3253,21 @@
         return;
       }
 
+      // Validate UFILE password requirements
+      const ufilePassword = document.getElementById('ufilePasswordReceipt').value.trim();
+      const passwordErrors = [];
+      if (ufilePassword.length < 6 || ufilePassword.length > 15) {
+        passwordErrors.push('be between 6 and 15 characters');
+      }
+      if (!/[A-Z]/.test(ufilePassword)) passwordErrors.push('contain an uppercase letter');
+      if (!/[a-z]/.test(ufilePassword)) passwordErrors.push('contain a lowercase letter');
+      if (!/[0-9]/.test(ufilePassword)) passwordErrors.push('contain a number');
+      if (!/[^A-Za-z0-9]/.test(ufilePassword)) passwordErrors.push('contain a symbol');
+      if (passwordErrors.length > 0) {
+        showEmailStatus('UFILE password must ' + passwordErrors.join(', ') + '.', 'error');
+        return;
+      }
+
       const modal = document.getElementById('emailReceiptModal');
       const filingStatus = modal.getAttribute('data-filing-status') || 'efile';
       const taxYear = modal.getAttribute('data-tax-year') || '';
@@ -2881,9 +3328,18 @@
         efileConfirmation: filingStatus === 'efile' ? document.getElementById('efileConfirmationReceipt').value.trim() : ''
       };
 
-      // Validate that at least one file is attached
-      if (selectedFilesEmail.length === 0) {
-        showEmailStatus('At least one attachment is required.', 'error');
+      // Validate file attachments: require at least a .u file and a .pdf
+      if (selectedFilesEmail.length < 2) {
+        showEmailStatus('At least 2 attachments are required: one .u file and one .pdf file.', 'error');
+        return;
+      }
+      const hasUFile = selectedFilesEmail.some(f => /\.u\d*$/i.test(f.name));
+      const hasPdf = selectedFilesEmail.some(f => /\.pdf$/i.test(f.name));
+      if (!hasUFile || !hasPdf) {
+        const missing = [];
+        if (!hasUFile) missing.push('a .u file');
+        if (!hasPdf) missing.push('a .pdf file');
+        showEmailStatus('Missing required attachment(s): ' + missing.join(' and ') + '.', 'error');
         return;
       }
 
@@ -3108,6 +3564,16 @@
       const modal = document.getElementById('reminderModal');
       modal.classList.remove('show');
     }
+
+    // Close modals on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        if (document.getElementById('confirmModal').style.display === 'flex') closeModal();
+        if (document.getElementById('cancelClientModal').style.display === 'flex') closeCancelModal();
+        if (document.getElementById('emailReceiptModal').style.display === 'flex') closeEmailReceiptDialog();
+        if (document.getElementById('reminderModal').classList.contains('show')) closeReminderDialog();
+      }
+    });
 
     // ===== Document Checklist Side Panel =====
 
@@ -3383,6 +3849,89 @@
     let currentNotification = null;
 
     /**
+     * Toggles the message history panel visibility
+     */
+    function toggleMessageHistory() {
+      const panel = document.getElementById('msgHistoryPanel');
+      if (panel.classList.contains('show')) {
+        closeMessageHistory();
+      } else {
+        panel.classList.add('show');
+        loadMessageHistory();
+      }
+    }
+
+    /**
+     * Closes the message history panel
+     */
+    function closeMessageHistory() {
+      document.getElementById('msgHistoryPanel').classList.remove('show');
+    }
+
+    /**
+     * Sends a new message from the volunteer to the manager
+     */
+    function sendMessageFromHistory() {
+      var input = document.getElementById('msgHistoryInput');
+      var text = input.value.trim();
+      var volunteer = document.getElementById('volunteer').value;
+
+      if (!text || !volunteer) return;
+
+      input.disabled = true;
+
+      google.script.run
+        .withSuccessHandler(function() {
+          input.value = '';
+          input.disabled = false;
+          loadMessageHistory();
+        })
+        .withFailureHandler(function() {
+          input.disabled = false;
+          alert('Failed to send message.');
+        })
+        .replyToMessage(volunteer, text, null);
+    }
+
+    /**
+     * Loads message history from the backend and renders chat bubbles
+     */
+    function loadMessageHistory() {
+      const volunteer = document.getElementById('volunteer').value;
+      if (!volunteer) {
+        document.getElementById('msgHistoryMessages').innerHTML =
+          '<div class="msg-history-empty">Select a volunteer to view messages.</div>';
+        return;
+      }
+
+      document.getElementById('msgHistoryMessages').innerHTML =
+        '<div class="msg-history-empty">Loading...</div>';
+
+      google.script.run
+        .withSuccessHandler(function(messages) {
+          const container = document.getElementById('msgHistoryMessages');
+          if (!messages || messages.length === 0) {
+            container.innerHTML = '<div class="msg-history-empty">No messages yet.</div>';
+            return;
+          }
+
+          let html = '';
+          messages.forEach(function(msg) {
+            const bubbleClass = msg.fromRole === 'Volunteer' ? 'sent' : 'received';
+            html += '<div class="msg-bubble ' + bubbleClass + '">' + escapeHtml(msg.message) + '</div>';
+          });
+
+          container.innerHTML = html;
+          container.scrollTop = container.scrollHeight;
+        })
+        .withFailureHandler(function() {
+          document.getElementById('msgHistoryMessages').innerHTML =
+            '<div class="msg-history-empty">Failed to load messages.</div>';
+        })
+        .getConversationWithVolunteer(volunteer);
+    }
+
+    /**
      * Polls for new messages - only when volunteer has a client selected
      */
     function pollMessages() {
@@ -3399,7 +3948,13 @@
     }
 
     function handleNewMessages(messages) {
-      if (!messages || messages.length === 0) return;
+      if (!messages || messages.length === 0) {
+        document.getElementById('msgUnreadDot').classList.remove('show');
+        return;
+      }
+
+      // Show unread indicator on toggle button
+      document.getElementById('msgUnreadDot').classList.add('show');
 
       // Show the most recent unread message
       var latestMessage = messages[messages.length - 1];

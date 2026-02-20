@@ -1,51 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <base target="_top">
+  <?!= include('shared_styles') ?>
   <style>
-    :root {
-      --accent-color: rgb(142, 0, 0);
-      --bg-color-light: #f5f5f5;
-      --text-color-light: #1a1a1a;
-      --input-bg-light: #ffffff;
-      --border-light: #e0e0e0;
-      --bg-color-dark: #1e1e1e;
-      --text-color-dark: #f0f0f0;
-      --input-bg-dark: #2a2a2a;
-      --border-dark: #444;
-    }
-
-    body {
-      font-family: 'Segoe UI', Verdana, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: var(--bg-color-light);
-      color: var(--text-color-light);
-      transition: background 0.3s, color 0.3s;
-    }
-
-    body.dark {
-      background: var(--bg-color-dark);
-      color: var(--text-color-dark);
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    h1 {
-      color: var(--accent-color);
-      margin: 0;
-      font-size: 1.8em;
-    }
-
-    .toggle-theme {
-      cursor: pointer;
-      font-size: 1.4em;
-    }
+    /* Override: messaging-specific layout */
+    body { padding: 20px; max-width: none; line-height: normal; }
+    header { margin-bottom: 20px; }
+    h1 { font-size: 1.8em; }
 
     .layout {
       display: grid;
@@ -242,7 +204,7 @@
     }
 
     .chat-input input:focus {
-      outline: none;
+      outline: 2px solid var(--accent-color); outline-offset: 2px;
       border-color: var(--accent-color);
     }
 
@@ -292,19 +254,12 @@
       100% { transform: rotate(360deg); }
     }
 
-    .footer-copyright {
-      position: fixed;
-      bottom: 10px;
-      right: 20px;
-      font-size: 11px;
-      opacity: 0.6;
-    }
   </style>
 </head>
 <body class="light">
   <header>
     <h1>CATBUS Messaging</h1>
-    <span class="toggle-theme" onclick="toggleTheme()">☀️</span>
+    <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
   </header>
 
   <div class="layout">

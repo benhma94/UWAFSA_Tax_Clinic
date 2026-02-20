@@ -50,23 +50,19 @@ function getReturnSummary() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Optimization: Only read necessary columns (Timestamp, EFILE, PAPER)
-    // Read all rows (or limit by PERFORMANCE.RETURN_SUMMARY_DAYS if configured)
+    // Read all columns so we can use config-based indices
     const numRows = lastRow - 1;
-    const timestampCol = CONFIG.COLUMNS.TAX_RETURN_TRACKER.TIMESTAMP + 1;
-    const efileCol = CONFIG.COLUMNS.TAX_RETURN_TRACKER.EFILE + 1;
-    const paperCol = CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1;
-
-    const data = sheet.getRange(2, timestampCol, numRows, 3).getValues();
+    const numCols = CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1; // Read up to PAPER column
+    const data = sheet.getRange(2, 1, numRows, numCols).getValues();
 
     let totalCompleted = 0;
     let completedToday = 0;
     const hourlyCounts = {};
 
     for (let i = 0; i < data.length; i++) {
-      const timestamp = data[i][0];
-      const efile = data[i][1]?.toString().toLowerCase() === 'yes';
-      const paper = data[i][2]?.toString().toLowerCase() === 'yes';
+      const timestamp = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.TIMESTAMP];
+      const efile = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.EFILE]?.toString().toLowerCase() === 'yes';
+      const paper = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER]?.toString().toLowerCase() === 'yes';
 
       if (efile || paper) {
         totalCompleted++;

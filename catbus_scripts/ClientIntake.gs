@@ -24,7 +24,7 @@ function storeMainFormData(formData) {
 
     // Check if client has a pre-booked appointment ID
     const appointmentId = formData.appointmentId ? sanitizeInput(formData.appointmentId, 10).toUpperCase() : null;
-    const hasValidAppointmentId = appointmentId && /^P\d{1,3}$/.test(appointmentId);
+    const hasValidAppointmentId = appointmentId && /^P\d{3}$/.test(appointmentId);
 
     // Use LockService to serialize ID generation and prevent race conditions
     const lock = LockService.getScriptLock();
@@ -37,9 +37,11 @@ function storeMainFormData(formData) {
 
       const sheet = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
 
+      let clientID;
+
       // If appointment ID provided, use it directly (no generation needed)
       if (hasValidAppointmentId) {
-        var clientID = appointmentId;
+        clientID = appointmentId;
         Logger.log(`Using pre-booked appointment ID: ${clientID}`);
       } else {
         // Get last row to optimize - only read what we need
@@ -71,7 +73,7 @@ function storeMainFormData(formData) {
             while (usedNums.has(num)) num++;
 
             if (num <= 999) {
-              var clientID = `${letter}${String(num).padStart(3, '0')}`;
+              clientID = `${letter}${String(num).padStart(3, '0')}`;
               break;
             }
 
@@ -83,7 +85,7 @@ function storeMainFormData(formData) {
           }
         } else {
           // First client - start with A001
-          var clientID = 'A001';
+          clientID = 'A001';
         }
       }
       

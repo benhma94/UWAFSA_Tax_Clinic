@@ -1,86 +1,29 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <base target="_top">
+  <?!= include('shared_styles') ?>
   <style>
+    /* Override: different color scheme for schedule dashboard */
     :root {
-      --accent-color: rgb(142, 0, 0);
       --bg-color-light: #ffffff;
-      --text-color-light: #1a1a1a;
       --input-bg-light: #f2f2f2;
       --border-light: #ccc;
-      --bg-color-dark: #1e1e1e;
-      --text-color-dark: #f0f0f0;
-      --input-bg-dark: #2a2a2a;
-      --border-dark: #444;
-      --success-color: #27ae60;
       --error-color: #e74c3c;
     }
 
-    body.light {
-      background-color: var(--bg-color-light);
-      color: var(--text-color-light);
-    }
+    /* Override: different layout sizing */
+    body { padding: 20px; line-height: normal; }
+    header { margin-bottom: 30px; }
 
-    body.dark {
-      background-color: var(--bg-color-dark);
-      color: var(--text-color-dark);
-    }
-
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Verdana, sans-serif;
-      padding: 20px;
-      transition: background 0.3s, color 0.3s;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-    }
-
-    .toggle-theme {
-      cursor: pointer;
-      font-size: 1.4em;
-      margin-left: 10px;
-    }
-
-    h1 {
-      margin: 0;
-      color: var(--accent-color);
-    }
-
+    /* Override: simpler form-section */
     .form-section {
-      background: var(--input-bg-light);
       padding: 20px;
       border-radius: 8px;
       margin-bottom: 20px;
-      transition: background 0.3s, border 0.3s;
+      box-shadow: none;
     }
-
-    body.light .form-section {
-      background-color: var(--input-bg-light);
-      border: 1px solid var(--border-light);
-    }
-
-    body.dark .form-section {
-      background-color: var(--input-bg-dark);
-      border: 1px solid var(--border-dark);
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
+    .form-section:hover { box-shadow: none; }
 
     input[type="text"],
     input[type="number"],
@@ -108,13 +51,6 @@
       background-color: #333;
       border-color: var(--border-dark);
       color: var(--text-color-dark);
-    }
-
-    input[type="text"]:focus,
-    input[type="number"]:focus,
-    select:focus {
-      outline: none;
-      border-color: var(--accent-color);
     }
 
     .button-group {
@@ -268,11 +204,6 @@
       margin-left: 10px;
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
     .help-text {
       font-size: 12px;
       color: #666;
@@ -283,30 +214,97 @@
       color: #aaa;
     }
 
-    .footer-copyright {
-      position: fixed;
-      bottom: 10px;
-      right: 20px;
-      font-size: 11px;
-      opacity: 0.6;
-      transition: opacity 0.3s, color 0.3s;
+    /* Schedule Editor */
+    .editor-autocomplete-container {
+      position: relative;
+    }
+
+    .editor-autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 2px solid var(--border-light);
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      background-color: #ffffff;
       z-index: 1000;
-      pointer-events: none;
-      max-width: 400px;
-      text-align: right;
-      line-height: 1.3;
+      display: none;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
-    body.light .footer-copyright {
-      color: var(--text-color-light);
+    body.dark .editor-autocomplete-dropdown {
+      background-color: #333;
+      border-color: var(--border-dark);
     }
 
-    body.dark .footer-copyright {
-      color: var(--text-color-dark);
+    .editor-autocomplete-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border-light);
+      transition: background 0.2s;
     }
 
-    .footer-copyright:hover {
-      opacity: 0.8;
+    body.dark .editor-autocomplete-item {
+      border-bottom-color: var(--border-dark);
+    }
+
+    .editor-autocomplete-item:hover,
+    .editor-autocomplete-item.highlighted {
+      background-color: rgba(142, 0, 0, 0.1);
+    }
+
+    body.dark .editor-autocomplete-item:hover,
+    body.dark .editor-autocomplete-item.highlighted {
+      background-color: rgba(142, 0, 0, 0.2);
+    }
+
+    .editor-autocomplete-item:last-child {
+      border-bottom: none;
+    }
+
+    .edit-grid-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-top: 10px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .edit-grid-table th,
+    .edit-grid-table td {
+      padding: 12px;
+      text-align: center;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark .edit-grid-table th,
+    body.dark .edit-grid-table td {
+      border-bottom-color: var(--border-dark);
+    }
+
+    .edit-grid-table th {
+      background-color: var(--accent-color);
+      color: white;
+      font-weight: 600;
+      font-size: 0.85em;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .edit-grid-table td:first-child {
+      text-align: left;
+      font-weight: 500;
+    }
+
+    .edit-grid-table input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--accent-color);
     }
   </style>
 </head>
@@ -314,7 +312,7 @@
   <header>
     <h1>📅 Tax Clinic Schedule Generator</h1>
     <div>
-      <span class="toggle-theme" onclick="toggleTheme()">☀️</span>
+      <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
   </header>
 
@@ -360,6 +358,19 @@
   <div id="statsBox" class="stats-box" style="display: none;">
     <h2>Schedule Generation Results</h2>
     <div id="statsContent"></div>
+  </div>
+
+  <div class="form-section">
+    <h2>✏️ Schedule Editor</h2>
+    <p style="color: #666; font-size: 13px; margin-top: 0;">Search for a volunteer to manually adjust their shift assignments.</p>
+    <div class="form-group">
+      <label for="editorSearchName">Volunteer Name:</label>
+      <div class="editor-autocomplete-container">
+        <input type="text" id="editorSearchName" placeholder="Start typing a volunteer name..." autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="editorAutocompleteDropdown">
+        <div id="editorAutocompleteDropdown" class="editor-autocomplete-dropdown" role="listbox"></div>
+      </div>
+    </div>
+    <div id="editorPanel" style="display: none;"></div>
   </div>
 
 <?!= include('shared_scripts') ?>
@@ -747,6 +758,115 @@
 
     teamResults.innerHTML = html;
     teamResults.style.display = 'block';
+  }
+
+  // === Schedule Editor ===
+  let editorVolunteerNames = [];
+  let editorVolunteerName = '';
+  let editorShiftMap = {};
+
+  // Load volunteer names for the editor autocomplete on page load
+  window.addEventListener('load', () => {
+    google.script.run
+      .withSuccessHandler(names => { editorVolunteerNames = names || []; })
+      .withFailureHandler(() => { editorVolunteerNames = []; })
+      .getAllVolunteerNames();
+
+    setupEditorAutocomplete();
+  });
+
+  function setupEditorAutocomplete() {
+    createAutocomplete({
+      inputId: 'editorSearchName',
+      dropdownId: 'editorAutocompleteDropdown',
+      idPrefix: 'sd-option-',
+      itemClass: 'editor-autocomplete-item',
+      getItems: () => editorVolunteerNames,
+      filterItem: (name, term) => name.toLowerCase().includes(term),
+      renderItem: (name) => escapeHtml(name),
+      onSelect: (name) => selectEditorVolunteer(name)
+    });
+  }
+
+  function selectEditorVolunteer(name) {
+    editorVolunteerName = name;
+
+    const panel = document.getElementById('editorPanel');
+    panel.style.display = 'block';
+    panel.innerHTML = '<div class="loading" style="display:inline-block;"></div> Loading shift data...';
+
+    google.script.run
+      .withSuccessHandler(shiftMap => {
+        editorShiftMap = shiftMap;
+        renderEditorGrid(shiftMap);
+      })
+      .withFailureHandler(error => {
+        panel.innerHTML = '<div style="color:var(--error-color);">Error: ' + (error.message || error) + '</div>';
+      })
+      .getVolunteerShiftMap(name);
+  }
+
+  function renderEditorGrid(shiftMap) {
+    const panel = document.getElementById('editorPanel');
+    const slotKeys = ['A', 'B', 'C'];
+    const slotLabels = { A: 'Morning', B: 'Afternoon', C: 'Evening' };
+
+    // Read day labels from the day input fields
+    const dayLabels = [];
+    for (let d = 1; d <= 4; d++) {
+      const el = document.getElementById('day' + d);
+      const raw = el ? el.value.trim() : 'Day ' + d;
+      // Simplify: take first 3 chars of day name + first 3 chars of month + day number
+      const parts = raw.split(/\s+/);
+      dayLabels.push(parts.length >= 3 ? parts[0].substring(0, 3) + ', ' + parts[1].substring(0, 3) + ' ' + parts[2] : raw);
+    }
+
+    let html = '<h3 style="margin-top:0;">Editing: ' + escapeHtml(editorVolunteerName) + '</h3>';
+    html += '<div style="overflow-x:auto;"><table class="edit-grid-table"><thead><tr><th>Shift</th>';
+    for (const dl of dayLabels) {
+      html += '<th>' + escapeHtml(dl) + '</th>';
+    }
+    html += '</tr></thead><tbody>';
+
+    for (const sk of slotKeys) {
+      html += '<tr><td>' + slotLabels[sk] + '</td>';
+      for (let d = 1; d <= 4; d++) {
+        const shiftId = 'D' + d + sk;
+        const checked = shiftMap[shiftId] ? 'checked' : '';
+        html += '<td><input type="checkbox" id="ed_' + shiftId + '" ' + checked + ' onchange="editorShiftMap[\'' + shiftId + '\']=this.checked"></td>';
+      }
+      html += '</tr>';
+    }
+
+    html += '</tbody></table></div>';
+    html += '<div class="button-group" style="margin-top:15px;">';
+    html += '<button class="btn-primary" onclick="saveEditorChanges()" id="editorSaveBtn">Save Changes</button>';
+    html += '<button class="btn-secondary" onclick="document.getElementById(\'editorPanel\').style.display=\'none\';document.getElementById(\'editorSearchName\').value=\'\';">Cancel</button>';
+    html += '</div>';
+    html += '<div id="editorStatus" style="margin-top:10px;"></div>';
+
+    panel.innerHTML = html;
+  }
+
+  function saveEditorChanges() {
+    const saveBtn = document.getElementById('editorSaveBtn');
+    const status = document.getElementById('editorStatus');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    status.innerHTML = '<div class="loading" style="display:inline-block;"></div> Saving changes...';
+
+    google.script.run
+      .withSuccessHandler(result => {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+        status.innerHTML = '<div style="color:var(--success-color);font-weight:600;">Saved! ' + result.changesApplied + ' shift(s) updated.</div>';
+      })
+      .withFailureHandler(error => {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+        status.innerHTML = '<div style="color:var(--error-color);">Error: ' + (error.message || error) + '</div>';
+      })
+      .saveVolunteerScheduleEdits(editorVolunteerName, editorShiftMap);
   }
 
   function runDiagnostic(retryCount = 0) {

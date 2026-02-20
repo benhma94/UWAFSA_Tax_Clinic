@@ -5,107 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Tax Clinic &mdash; Accounting &amp; Finance Student Association</title>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico"/>
-    <link rel="canonical" href="http://taxclinic.uwaterloo.ca"/>
+    <link rel="canonical" href="https://taxclinic.uwaterloo.ca"/>
     <meta property="og:site_name" content="Accounting &amp; Finance Student Association"/>
     <meta property="og:title" content="Tax Clinic &mdash; Accounting &amp; Finance Student Association"/>
-    <meta property="og:url" content="http://taxclinic.uwaterloo.ca"/>
+    <meta property="og:url" content="https://taxclinic.uwaterloo.ca"/>
     <meta property="og:type" content="website"/>
     <meta name="description" content="" />
+    <link rel="stylesheet" href="shared.css">
     <style>
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-        color: #333;
-        line-height: 1.6;
-      }
-      #content {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-      }
-      h2 {
-        margin-top: 0;
-      }
-      header {
-        text-align: center;
-        padding: 20px;
-      }
-      header img {
-        max-width: 200px;
-      }
-      nav ul {
-        list-style: none;
-        padding: 0;
-        display: flex;
-        justify-content: center;
-        gap: 20px;
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 15px;
-        margin-bottom: 20px;
-      }
-      nav a {
-        color: #333;
-        text-decoration: none;
-        font-weight: bold;
-      }
-      nav a:hover {
-        color: #c0392b;
-      }
-      footer {
-        text-align: center;
-        padding: 20px;
-        margin-top: 40px;
-        border-top: 1px solid #ddd;
-        color: #666;
-      }
-      footer a {
-        color: #666;
-      }
-      footer svg {
-        vertical-align: middle;
-      }
-      .sqs-html-content p { text-align: justify; }
-      .sqs-html-content .section-divider {
-        border: none;
-        border-top: 1px solid #ddd;
-        margin: 15px 0;
-      }
       .sqs-html-content p > strong:only-child {
         display: block;
         border-left: 3px solid #333;
         padding-left: 10px;
         margin-top: 20px;
       }
-      .sqs-html-content a {
-        color: #c0392b;
-        text-decoration: underline;
-        transition: color 0.2s ease;
-      }
-      .sqs-html-content a:hover {
-        color: #922b21;
-      }
-      .sqs-html-content li {
-        margin-bottom: 4px;
-      }
     </style>
   </head>
   <body>
 
-  <header>
-    <a href="http://uwafsa.com/">
-      <img src="images/logo.png" alt="Accounting &amp; Finance Student Association" />
-    </a>
-  </header>
-
-  <nav>
-    <ul>
-      <li><a href="/">Eligibility and Details</a></li>
-      <li><a href="/FAQ.html">FAQ</a></li>
-      <li><a href="/PostFiling.html">Post Tax Return Filing</a></li>
-      <li><a href="/volunteerapplications.html">Volunteer Applications</a></li>
-    </ul>
-  </nav>
+  <div id="site-header"></div>
+  <div id="site-nav"></div>
 
   <div id="content">
     <div class="sqs-html-content">
@@ -148,10 +67,8 @@
     </div>
   </div>
 
-  <footer>
-    <a href="#top">Back to Top</a> |
-    <a href="http://instagram.com/uwafsa" aria-label="Instagram"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
-  </footer>
+  <div id="site-footer"></div>
 
+  <script src="shared.js"></script>
   </body>
 </html>

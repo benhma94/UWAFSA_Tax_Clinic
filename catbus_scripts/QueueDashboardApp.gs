@@ -11,22 +11,7 @@ function doGetQueueDashboard() {
   return HtmlService.createTemplateFromFile('queue_dashboard')
     .evaluate()
     .setTitle('Tax Clinic Queue Master Dashboard')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-/**
- * Gets queue data with caching for improved performance
- * @returns {Object} Object containing queue and volunteers data
- */
-function getQueueDataCached() {
-  return getCachedOrFetch(
-    CACHE_CONFIG.KEYS.QUEUE,
-    () => {
-      return {
-        queue: getClientQueue(),
-        volunteers: getSignedInVolunteers()
-      };
-    },
-    CACHE_CONFIG.TTL.QUEUE
-  );
-}

@@ -31,9 +31,10 @@ const REQUEST_TYPES = {
  * Generic function that works for both help and review requests
  * @param {string} volunteer - Volunteer name
  * @param {string} requestType - 'HELP' or 'REVIEW'
+ * @param {Object} [extraData] - Optional extra data (REVIEW only): { clientId, taxYear }
  * @returns {boolean} True if successful
  */
-function sendRequest(volunteer, requestType) {
+function sendRequest(volunteer, requestType, extraData) {
   return safeExecute(() => {
     volunteer = sanitizeInput(volunteer, 100);
     if (!volunteer) {
@@ -62,12 +63,14 @@ function sendRequest(volunteer, requestType) {
       }
     }
 
-    // Add new request
-    sheet.appendRow([
-      new Date(),
-      volunteer,
-      config.primaryStatus
-    ]);
+    // Build row — append extra context columns for REVIEW requests
+    const row = [new Date(), volunteer, config.primaryStatus];
+    if (requestType === 'REVIEW' && extraData) {
+      row.push(extraData.clientId || '');
+      row.push(extraData.taxYear || '');
+      row.push(''); // REVIEWER_OR_REASON placeholder
+    }
+    sheet.appendRow(row);
 
     // Invalidate cache since request data changed
     const cacheKey = requestType === 'HELP' ? CACHE_CONFIG.KEYS.HELP_REQUESTS : CACHE_CONFIG.KEYS.REVIEW_REQUESTS;
@@ -194,9 +197,10 @@ function getLiveRequests(requestType) {
     const sheet = getSheet(config.sheet);
     const lastRow = sheet.getLastRow();
 
-    // Optimization: Only read rows with data and only necessary columns
+    // Read up to 6 columns for REVIEW (which has extra context columns); 3 for HELP
+    const numCols = requestType === 'REVIEW' ? 6 : 3;
     const data = lastRow > 1
-      ? sheet.getRange(2, 1, lastRow - 1, 3).getValues()
+      ? sheet.getRange(2, 1, lastRow - 1, numCols).getValues()
       : [];
 
     const now = new Date();
@@ -212,13 +216,21 @@ function getLiveRequests(requestType) {
 
       const minutesAgo = Math.floor((now - new Date(timestamp)) / 60000);
 
-      output.push({
+      const entry = {
         volunteer,
         timestamp: Utilities.formatDate(new Date(timestamp), Session.getScriptTimeZone(), 'M/d/yyyy HH:mm'),
         status: status.toLowerCase(),
         minutesAgo,
         rawTimestamp: new Date(timestamp).getTime()
-      });
+      };
+
+      // Include context columns for REVIEW requests
+      if (requestType === 'REVIEW' && config.columns.CLIENT_ID !== undefined) {
+        entry.clientId = data[i][config.columns.CLIENT_ID]?.toString().trim() || '';
+        entry.taxYear = data[i][config.columns.TAX_YEAR]?.toString().trim() || '';
+      }
+
+      output.push(entry);
     }
 
     // Sort by time waited (descending: oldest first)

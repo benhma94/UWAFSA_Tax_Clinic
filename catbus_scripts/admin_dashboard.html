@@ -1,48 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <base target="_top">
+  <?!= include('shared_styles') ?>
   <style>
-    :root {
-      --accent-color: rgb(142, 0, 0);
-      --bg-color-light: #f5f5f5;
-      --text-color-light: #1a1a1a;
-      --input-bg-light: #ffffff;
-      --border-light: #e0e0e0;
-      --bg-color-dark: #1e1e1e;
-      --text-color-dark: #f0f0f0;
-      --input-bg-dark: #2a2a2a;
-      --border-dark: #444;
-      --success-color: #27ae60;
-      --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.1);
-      --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    body.light {
-      background-color: var(--bg-color-light);
-      color: var(--text-color-light);
-    }
-
-    body.dark {
-      background-color: var(--bg-color-dark);
-      color: var(--text-color-dark);
-    }
-
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Verdana, sans-serif;
-      padding: 30px 20px;
-      transition: background 0.3s, color 0.3s;
-      max-width: 1200px;
-      margin: 0 auto;
-      line-height: 1.6;
-    }
-
-    h1, h2, h3 {
-      font-weight: 600;
-      letter-spacing: -0.3px;
-    }
-
     .request {
       padding: 16px 20px;
       border-radius: 12px;
@@ -56,11 +17,6 @@
     .request:hover {
       transform: translateX(4px);
       box-shadow: var(--shadow-hover);
-    }
-    .toggle-theme {
-      cursor: pointer;
-      font-size: 1.4em;
-      margin-left: 10px;
     }
     .request.active {
       background-color: #f4b400;
@@ -123,18 +79,6 @@
       width: 100%;
       max-width: 400px;  /* controls how wide the chart can go */
       height: auto;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 40px;
-    }
-
-    header h1 {
-      font-size: 2em;
-      color: var(--accent-color);
     }
 
     .return-item {
@@ -208,37 +152,12 @@
       color: var(--accent-color);
     }
 
-    .footer-copyright {
-      position: fixed;
-      bottom: 10px;
-      right: 20px;
-      font-size: 11px;
-      opacity: 0.6;
-      transition: opacity 0.3s, color 0.3s;
-      z-index: 1000;
-      pointer-events: none;
-      max-width: 400px;
-      text-align: right;
-      line-height: 1.3;
-    }
-
-    body.light .footer-copyright {
-      color: var(--text-color-light);
-    }
-
-    body.dark .footer-copyright {
-      color: var(--text-color-dark);
-    }
-
-    .footer-copyright:hover {
-      opacity: 0.8;
-    }
   </style>
 </head>
 <body class="light">
   <header>
     <div>
-      <span class="toggle-theme" onclick="toggleTheme()">☀️</span>
+      <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
   </header>
 

@@ -282,7 +282,7 @@ function getVolunteerScheduleByName(searchTerm) {
 function getMentorTeamInfo(mentorName) {
   try {
     const ss = getSpreadsheet();
-    const sheet = ss.getSheetByName('Mentor Teams');
+    const sheet = ss.getSheetByName(CONFIG.SHEETS.MENTOR_TEAMS);
 
     if (!sheet || sheet.getLastRow() < 3) {
       Logger.log('No Mentor Teams sheet found or empty');
@@ -297,10 +297,7 @@ function getMentorTeamInfo(mentorName) {
       let day = row[0];
       // Format date cleanly if it's a Date object
       if (day instanceof Date) {
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                            'July', 'August', 'September', 'October', 'November', 'December'];
-        day = `${dayNames[day.getDay()]} ${monthNames[day.getMonth()]} ${day.getDate()} ${day.getFullYear()}`;
+        day = formatDateToScheduleLabel(day);
       } else {
         // Strip time/timezone info if present in string
         day = day?.toString().replace(/\s+\d{1,2}:\d{2}:\d{2}.*$/, '').trim() || '';
@@ -333,7 +330,7 @@ function getMentorTeamInfo(mentorName) {
 function checkIfSeniorMentor(name) {
   try {
     const ss = getSpreadsheet();
-    const sheet = ss.getSheetByName('Mentor Teams');
+    const sheet = ss.getSheetByName(CONFIG.SHEETS.MENTOR_TEAMS);
     if (!sheet) return false;
 
     const lastCol = sheet.getLastColumn();
@@ -356,7 +353,7 @@ function checkIfSeniorMentor(name) {
 function getSeniorTeamMembers(seniorName) {
   try {
     const ss = getSpreadsheet();
-    const sheet = ss.getSheetByName('Mentor Teams');
+    const sheet = ss.getSheetByName(CONFIG.SHEETS.MENTOR_TEAMS);
     if (!sheet || sheet.getLastRow() < 3) return null;
 
     // Data starts at row 3 (row 1 = header + seniors, row 2 = first-time mentors)
@@ -367,10 +364,7 @@ function getSeniorTeamMembers(seniorName) {
       let day = row[0];
       // Format date cleanly if it's a Date object
       if (day instanceof Date) {
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                            'July', 'August', 'September', 'October', 'November', 'December'];
-        day = `${dayNames[day.getDay()]} ${monthNames[day.getMonth()]} ${day.getDate()} ${day.getFullYear()}`;
+        day = formatDateToScheduleLabel(day);
       } else {
         day = day?.toString().replace(/\s+\d{1,2}:\d{2}:\d{2}.*$/, '').trim() || '';
       }

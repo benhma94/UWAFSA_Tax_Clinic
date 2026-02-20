@@ -13,15 +13,6 @@ function normalizeEmail(email) {
 }
 
 /**
- * Wrapper function for web app - accepts email as explicit parameter
- * @param {string} emailToCheck - Email to search for
- * @returns {Object} Existing volunteer data or {exists: false}
- */
-function checkExistingVolunteerByEmail(emailToCheck) {
-  return checkExistingVolunteer(emailToCheck);
-}
-
-/**
  * Checks if a volunteer with the given email already exists
  * @param {string} email - Email to search for
  * @returns {Object} Existing volunteer data or {exists: false}
@@ -100,6 +91,12 @@ function submitAvailabilityForm(formData) {
       throw new Error('Missing required fields');
     }
 
+    // Validate role against allowed values
+    const allowedRoles = ['Filer', 'Mentor', 'Frontline', 'Internal Services'];
+    if (!allowedRoles.includes(formData.role)) {
+      throw new Error('Invalid role selected');
+    }
+
     // Validate role-specific requirements
     if (formData.role === 'Mentor' || formData.role === 'Internal Services') {
       // Mentors and Internal Services can request any number of shifts (1-12)
@@ -110,10 +107,6 @@ function submitAvailabilityForm(formData) {
       // Non-mentors must request 3-12 shifts
       if (!formData.numShifts || formData.numShifts < 3 || formData.numShifts > 12) {
         throw new Error('Number of shifts must be between 3 and 12');
-      }
-      
-      if (formData.role === 'Filer' && formData.numShifts < 3) {
-        throw new Error('Filers must choose at least 3 shifts');
       }
     }
     

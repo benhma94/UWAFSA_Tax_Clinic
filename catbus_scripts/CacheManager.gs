@@ -11,7 +11,8 @@ const CACHE_CONFIG = {
     HELP_REQUESTS: 'help_requests',
     REVIEW_REQUESTS: 'review_requests',
     AVAILABILITY_DATA: 'availability_data',
-    RETURN_SUMMARY: 'return_summary'
+    RETURN_SUMMARY: 'return_summary',
+    MENTOR_LIST: 'mentor_list'
   },
   // Cache TTLs in seconds
   TTL: {
@@ -20,7 +21,8 @@ const CACHE_CONFIG = {
     HELP_REQUESTS: 15,       // 15 seconds - real-time updates needed
     REVIEW_REQUESTS: 15,     // 15 seconds - real-time updates needed
     AVAILABILITY_DATA: 300,  // 5 minutes - rarely changes during operation
-    RETURN_SUMMARY: 60       // 1 minute - summary data changes less frequently
+    RETURN_SUMMARY: 60,      // 1 minute - summary data changes less frequently
+    MENTOR_LIST: 45          // 45 seconds - matches existing cache TTL
   }
 };
 

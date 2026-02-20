@@ -74,7 +74,21 @@ function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
     MailApp.sendEmail(emailOptions);
 
     Logger.log(`Receipt email sent successfully to ${clientEmail}${attachments.length > 0 ? ' with ' + attachments.length + ' attachment(s)' : ''}`);
-    
+
+    // Send UFILE password in a separate email
+    if (emailData.ufilePassword) {
+      const passwordSubject = taxYearDisplay
+        ? `Tax Year ${taxYearDisplay} — UFILE Password`
+        : `UFILE Password`;
+      const passwordBody = buildPasswordEmailBody(emailData.ufilePassword, taxYearDisplay);
+      MailApp.sendEmail({
+        to: clientEmail,
+        subject: passwordSubject,
+        htmlBody: passwordBody
+      });
+      Logger.log(`UFILE password email sent to ${clientEmail}`);
+    }
+
     return {
       success: true,
       message: 'Email sent successfully',
@@ -130,27 +144,23 @@ function buildReceiptEmailBody(emailData, filingStatus) {
             <h3 style="margin-top: 0; color: #8e0000;">Return Summary:</h3>
             
             ${emailData.refundBalance && emailData.refundLabel ? `
-              <p><strong>${emailData.refundLabel}:</strong> ${emailData.refundBalance}</p>
+              <p><strong>${escapeHtmlServer(emailData.refundLabel)}:</strong> ${escapeHtmlServer(emailData.refundBalance)}</p>
             ` : ''}
-            
+
             ${emailData.gstHst ? `
-              <p><strong>GST/HST Credit:</strong> ${emailData.gstHst}, paid over 4 quarterly payments</p>
+              <p><strong>GST/HST Credit:</strong> ${escapeHtmlServer(emailData.gstHst)}, paid over 4 quarterly payments</p>
             ` : ''}
-            
+
             ${emailData.onBen ? `
-              <p><strong>Ontario Trillium Benefit:</strong> ${emailData.onBen}, paid over 12 monthly payments</p>
+              <p><strong>Ontario Trillium Benefit:</strong> ${escapeHtmlServer(emailData.onBen)}, paid over 12 monthly payments</p>
             ` : ''}
-            
+
             ${emailData.other ? `
-              <p><strong>Other Amounts:</strong> ${emailData.other}</p>
+              <p><strong>Other Amounts:</strong> ${escapeHtmlServer(emailData.other)}</p>
             ` : ''}
-            
-            ${emailData.ufilePassword ? `
-              <p><strong>UFILE Password:</strong> ${emailData.ufilePassword}</p>
-            ` : ''}
-            
+
             ${emailData.efileConfirmation ? `
-              <p><strong>E-File Confirmation Number:</strong> ${emailData.efileConfirmation}</p>
+              <p><strong>E-File Confirmation Number:</strong> ${escapeHtmlServer(emailData.efileConfirmation)}</p>
             ` : ''}
           </div>
           
@@ -171,11 +181,13 @@ function buildReceiptEmailBody(emailData, filingStatus) {
           ${emailData.notes ? `
             <div style="margin: 20px 0; padding: 15px; background-color: #f9f9f9; border-radius: 5px; border-left: 4px solid #8e0000;">
               <h3 style="margin-top: 0; color: #8e0000;">Notes:</h3>
-              <p style="white-space: pre-wrap; margin: 0;">${emailData.notes}</p>
+              <p style="white-space: pre-wrap; margin: 0;">${escapeHtmlServer(emailData.notes)}</p>
             </div>
           ` : ''}
-          
-          <p>For Post-Filing questions, please go to <a href="https://taxclinic.uwaterloo.ca/PostFiling" style="color: #8e0000; text-decoration: underline;">taxclinic.uwaterloo.ca/PostFiling</a>. If you have any further questions, please contact the Tax Clinic.</p>
+
+          <p>Two files have been attached for your records. The UFILE file is the softcopy version of your tax return. You will not be able to open it without UFILE installed. It is provided to you in the event you need to update or modify your tax return. The UFILE password will be sent in a separate email. The PDF is a copy of your tax return for your reading purposes.</p>
+
+          <p>For Post-Filing questions, please go to <a href="${CONFIG.CLINIC_WEBSITE_URL}/PostFiling" style="color: #8e0000; text-decoration: underline;">taxclinic.uwaterloo.ca/PostFiling</a>. If you have any further questions, please contact us at <a href="mailto:${CONFIG.CLINIC_EMAIL}" style="color: #8e0000; text-decoration: underline;">${CONFIG.CLINIC_EMAIL}</a>.</p>
           
           <p>Thank you,<br>
           UW AFSA Tax Clinic</p>
@@ -190,6 +202,42 @@ function buildReceiptEmailBody(emailData, filingStatus) {
   `;
   
   return body;
+}
+
+/**
+ * Builds the HTML email body for the UFILE password (sent separately)
+ * @param {string} ufilePassword - The UFILE password
+ * @returns {string} HTML email body
+ */
+function buildPasswordEmailBody(ufilePassword, taxYear) {
+  const taxYearLabel = taxYear ? ` (${taxYear})` : '';
+  return `
+    <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #8e0000;">UFILE${taxYearLabel} Password</h2>
+
+          <p>Dear Client,</p>
+
+          <p>Here is your UFILE${taxYearLabel} password for your records:</p>
+
+          <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; font-size: 1.1em;"><strong>UFILE${taxYearLabel} Password:</strong> ${ufilePassword}</p>
+          </div>
+
+          <p>Please keep this password safe. You will need it to access your tax return file in UFILE.</p>
+
+          <p>Thank you,<br>
+          UW AFSA Tax Clinic</p>
+
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+          <p style="font-size: 12px; color: #666;">
+            This is an automated email from the UW AFSA Tax Clinic. Please note that these receipts are automatically deleted from our outbox and are not retained.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
 }
 
 /**

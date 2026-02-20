@@ -11,5 +11,6 @@ function doGetControlSheet() {
   return HtmlService.createTemplateFromFile('control_sheet_form')
     .evaluate()
     .setTitle('AFSA Tax Clinic Control Sheet')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <?!= include('shared_styles') ?>
+  <style>
+    header h3 {
+      font-family: Verdana, sans-serif;
+      color: var(--accent-color);
+      font-size: 1.8rem;
+      margin: 0;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+    }
+
+    header img {
+      height: 60px;
+    }
+
+    #identityBar {
+      background: rgba(142, 0, 0, 0.05);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    body.dark #identityBar {
+      background: rgba(142, 0, 0, 0.12);
+      border-color: var(--border-dark);
+    }
+
+    #identityBar label {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    #reviewerSelect {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 2px solid var(--border-light);
+      font-size: 14px;
+      min-width: 220px;
+    }
+
+    body.light #reviewerSelect {
+      background-color: var(--input-bg-light);
+      color: var(--text-color-light);
+      border-color: var(--border-light);
+    }
+
+    body.dark #reviewerSelect {
+      background-color: var(--input-bg-dark);
+      color: var(--text-color-dark);
+      border-color: var(--border-dark);
+    }
+
+    #reviewerSelect:focus {
+      outline: 2px solid var(--accent-color); outline-offset: 2px;
+      border-color: var(--accent-color);
+    }
+
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+
+    .status-badge.ready {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-badge.waiting {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    body.dark .status-badge.ready {
+      background: #1a3d26;
+      color: #7fcf9a;
+    }
+
+    body.dark .status-badge.waiting {
+      background: #3d3419;
+      color: #e0d3a8;
+    }
+
+    #requestsSection h2 {
+      color: var(--accent-color);
+      font-size: 1.3rem;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--border-light);
+    }
+
+    body.dark #requestsSection h2 {
+      border-bottom-color: var(--border-dark);
+    }
+
+    #requestCards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .request-card {
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border-left: 4px solid var(--accent-color);
+      transition: box-shadow 0.2s;
+    }
+
+    body.light .request-card {
+      background: var(--input-bg-light);
+      border: 1px solid var(--border-light);
+      border-left: 4px solid var(--accent-color);
+    }
+
+    body.dark .request-card {
+      background: var(--input-bg-dark);
+      border: 1px solid var(--border-dark);
+      border-left: 4px solid var(--accent-color);
+    }
+
+    .request-card:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    .card-volunteer {
+      font-size: 1.1em;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--accent-color);
+    }
+
+    .card-meta {
+      font-size: 0.9em;
+      margin-bottom: 4px;
+      opacity: 0.8;
+    }
+
+    .card-wait {
+      font-size: 0.85em;
+      margin-bottom: 16px;
+      color: #e67e22;
+      font-weight: 600;
+    }
+
+    body.dark .card-wait {
+      color: #f39c12;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .approve-btn {
+      background-color: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 0.9em;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .approve-btn:hover {
+      background-color: #229954;
+    }
+
+    .approve-btn:disabled {
+      background-color: #888 !important;
+      cursor: not-allowed;
+    }
+
+    .return-btn {
+      background-color: #f1c40f;
+      color: #333;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 0.9em;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .return-btn:hover {
+      background-color: #d4ac0d;
+    }
+
+    .return-btn:disabled {
+      background-color: #888 !important;
+      cursor: not-allowed;
+    }
+
+    .reason-area {
+      display: none;
+      margin-top: 12px;
+    }
+
+    .reason-area textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-light);
+      font-size: 0.9em;
+      box-sizing: border-box;
+      resize: vertical;
+      min-height: 70px;
+    }
+
+    body.light .reason-area textarea {
+      background: var(--input-bg-light);
+      color: var(--text-color-light);
+    }
+
+    body.dark .reason-area textarea {
+      background: var(--input-bg-dark);
+      color: var(--text-color-dark);
+      border-color: var(--border-dark);
+    }
+
+    .reason-submit-btn {
+      margin-top: 8px;
+      background-color: #f1c40f;
+      color: #333;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 14px;
+      cursor: pointer;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+
+    .reason-cancel-btn {
+      margin-top: 8px;
+      margin-left: 6px;
+      background-color: #888;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 14px;
+      cursor: pointer;
+      font-size: 0.85em;
+    }
+
+    /* ---- Client Info toggle button ---- */
+    .client-info-toggle {
+      margin-top: 10px;
+    }
+
+    .info-btn {
+      background: none;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 0.82em;
+      font-weight: 600;
+      cursor: pointer;
+      color: inherit;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    body.dark .info-btn {
+      border-color: var(--border-dark);
+    }
+
+    .info-btn:hover {
+      background: rgba(0, 0, 0, 0.06);
+      border-color: var(--accent-color);
+      transform: none;
+      box-shadow: none;
+    }
+
+    body.dark .info-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .info-btn.info-btn-active {
+      background: rgba(142, 0, 0, 0.1);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    /* ---- Client Info expandable panel ---- */
+    .client-info-section {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border-light);
+      font-size: 0.88em;
+    }
+
+    body.light .client-info-section {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    body.dark .client-info-section {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: var(--border-dark);
+    }
+
+    .ci-loading, .ci-empty, .ci-error {
+      font-style: italic;
+      opacity: 0.65;
+    }
+
+    .ci-error { color: #c0392b; opacity: 1; }
+    body.dark .ci-error { color: #f1948a; }
+
+    .ci-row { margin-bottom: 10px; }
+    .ci-row:last-child { margin-bottom: 0; }
+
+    .ci-label {
+      display: block;
+      font-weight: 700;
+      font-size: 0.78em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.55;
+      margin-bottom: 4px;
+    }
+
+    .ci-notes { white-space: pre-wrap; line-height: 1.5; }
+
+    .ci-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+
+    .ci-badge {
+      background: rgba(142, 0, 0, 0.1);
+      color: var(--accent-color);
+      border: 1px solid rgba(142, 0, 0, 0.25);
+      border-radius: 12px;
+      padding: 2px 9px;
+      font-size: 0.88em;
+      font-weight: 600;
+    }
+
+    body.dark .ci-badge {
+      background: rgba(200, 50, 50, 0.2);
+      border-color: rgba(200, 80, 80, 0.4);
+      color: #f1948a;
+    }
+
+    .ci-docs {
+      margin: 2px 0 0 0;
+      padding-left: 18px;
+      line-height: 1.7;
+    }
+
+    .card-done-overlay {
+      text-align: center;
+      padding: 20px;
+      font-style: italic;
+      opacity: 0.6;
+    }
+
+    #emptyState {
+      text-align: center;
+      padding: 40px 20px;
+      opacity: 0.6;
+      font-style: italic;
+    }
+
+    #statusMessage {
+      display: none;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+
+    #statusMessage.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    #statusMessage.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    body.dark #statusMessage.success {
+      background-color: #1a3d26;
+      color: #7fcf9a;
+      border-color: #27ae60;
+    }
+
+    body.dark #statusMessage.error {
+      background-color: #3d1a1a;
+      color: #f1948a;
+      border-color: #c0392b;
+    }
+
+    .refresh-info {
+      font-size: 0.8em;
+      opacity: 0.6;
+      margin-left: auto;
+    }
+
+    @media (max-width: 768px) {
+      #requestCards {
+        grid-template-columns: 1fr;
+      }
+
+      #identityBar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      #reviewerSelect {
+        width: 100%;
+        min-width: unset;
+      }
+
+      .refresh-info {
+        margin-left: 0;
+        font-size: 0.75em;
+      }
+
+      .approve-btn,
+      .return-btn {
+        padding: 12px 18px;
+        font-size: 1em;
+        flex: 1;
+      }
+
+      .reason-submit-btn,
+      .reason-cancel-btn {
+        padding: 10px 16px;
+        font-size: 0.9em;
+      }
+
+      .card-wait,
+      .status-badge,
+      .card-meta {
+        font-size: 0.9em;
+      }
+
+      #requestsSection h2 {
+        font-size: 1.1rem;
+      }
+    }
+  </style>
+</head>
+<body class="light" onload="init()">
+
+  <header>
+    <h3>Reviewer Dashboard</h3>
+    <div>
+      <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
+    </div>
+  </header>
+
+  <!-- Reviewer identity bar -->
+  <div id="identityBar">
+    <label for="reviewerSelect">You are:</label>
+    <select id="reviewerSelect" onchange="onReviewerChange()">
+      <option value="">— Select your name —</option>
+    </select>
+    <span id="readyBadge" class="status-badge waiting">Select your name to begin</span>
+    <span class="refresh-info" id="refreshInfo">Auto-refreshes every 15s</span>
+  </div>
+
+  <div id="statusMessage"></div>
+
+  <div id="requestsSection">
+    <h2>Pending Review Requests</h2>
+    <div id="requestCards">
+      <div id="emptyState">Loading…</div>
+    </div>
+  </div>
+
+  <?!= include('shared_scripts') ?>
+  <script defer>
+    let selectedReviewer = '';
+    let refreshTimer = null;
+    // cardState persists UI across renderCards() calls. Key: volunteerName.
+    // Value: { reasonOpen: bool, reasonText: string, infoOpen: bool }
+    let cardState = {};
+    // cardInfoCache stores fetched getClientIntakeInfo() results. Key: volunteerName.
+    let cardInfoCache = {};
+
+    // Document category lookup for resolving document IDs (e.g. "essential_0") to labels.
+    const DOCUMENT_CATEGORIES = [
+      { id: 'essential', items: ['Government-issued photo ID', 'Notice of Assessment (NOA) from previous year', 'Social Insurance Number (SIN)'] },
+      { id: 'employment', items: ['T4 - Employment Income', 'T4A - Pension, Retirement, Scholarships/RESP Withdrawals', 'T4E - Employment Insurance/Unemployment Benefits', 'T5007 - Statement of Benefits (EI, Social Assistance)'] },
+      { id: 'investment', items: ['T5 - Investment Income (interest, dividends)', 'T3 - Trust Income/ETFs/Mutual Funds'] },
+      { id: 'student', items: ['T2202 - Tuition and Enrolment Certificate', 'Rent receipts (if claiming)', 'UHIP receipts (international students)', 'Student loan interest statements'] },
+      { id: 'deductions', items: ['RRSP contribution receipts', 'FHSA contribution receipts', 'Medical expense receipts', 'Charitable donation receipts', 'Child care expense receipts', 'Moving expense receipts'] }
+    ];
+
+    function init() {
+      loadReviewerList();
+      loadRequests();
+      refreshTimer = setInterval(loadRequests, 15000);
+    }
+
+    function loadReviewerList() {
+      google.script.run
+        .withSuccessHandler(data => {
+          const sel = document.getElementById('reviewerSelect');
+          const mentors = data.reviewers || [];
+          mentors.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            sel.appendChild(opt);
+          });
+        })
+        .withFailureHandler(err => {
+          console.error('Failed to load mentor list:', err);
+        })
+        .getMentorList();
+    }
+
+    function onReviewerChange() {
+      selectedReviewer = document.getElementById('reviewerSelect').value;
+      const badge = document.getElementById('readyBadge');
+      if (selectedReviewer) {
+        badge.textContent = `Ready as ${selectedReviewer}`;
+        badge.className = 'status-badge ready';
+      } else {
+        badge.textContent = 'Select your name to begin';
+        badge.className = 'status-badge waiting';
+      }
+      // Re-render to update button enabled states
+      renderCards(currentRequests);
+    }
+
+    let currentRequests = [];
+
+    function loadRequests() {
+      google.script.run
+        .withSuccessHandler(requests => {
+          currentRequests = requests || [];
+          renderCards(currentRequests);
+        })
+        .withFailureHandler(err => {
+          console.error('Failed to load review requests:', err);
+        })
+        .getReviewDashboardData();
+    }
+
+    function renderCards(requests) {
+      const container = document.getElementById('requestCards');
+      if (!requests || requests.length === 0) {
+        container.innerHTML = '<div id="emptyState">No pending review requests right now.</div>';
+        return;
+      }
+
+      // Save live state from current DOM before wiping
+      container.querySelectorAll('.request-card').forEach(card => {
+        const vName = card.dataset.volunteer;
+        if (!vName) return;
+        const reasonArea = card.querySelector('.reason-area');
+        const textarea = reasonArea ? reasonArea.querySelector('textarea') : null;
+        const infoSection = card.querySelector('.client-info-section');
+        if (!cardState[vName]) cardState[vName] = {};
+        if (reasonArea) {
+          cardState[vName].reasonOpen = reasonArea.style.display === 'block';
+          cardState[vName].reasonText = textarea ? textarea.value : (cardState[vName].reasonText || '');
+        }
+        if (infoSection) {
+          cardState[vName].infoOpen = infoSection.style.display === 'block';
+        }
+      });
+
+      container.innerHTML = '';
+      requests.forEach(req => {
+        const card = document.createElement('div');
+        card.className = 'request-card';
+        card.id = `card_${CSS.escape(req.volunteer)}`;
+        card.dataset.volunteer = req.volunteer;
+
+        const clientLine = req.clientId ? `<div class="card-meta">Client: <strong>${escapeHtml(req.clientId)}</strong></div>` : '';
+        const taxYearLine = req.taxYear ? `<div class="card-meta">Tax Year: <strong>${escapeHtml(req.taxYear)}</strong></div>` : '';
+        const waitText = req.minutesAgo === 0 ? 'Just now' : `${req.minutesAgo} min ago`;
+        const disabled = selectedReviewer ? '' : 'disabled';
+        const clientInfoHtml = req.clientId ? `
+          <div class="client-info-toggle">
+            <button class="info-btn" onclick="toggleClientInfo('${escapeHtml(req.volunteer)}', '${escapeHtml(req.clientId)}', this)">&#x1F4CB; Client Info</button>
+          </div>
+          <div class="client-info-section" id="info_${escapeHtml(req.volunteer)}" style="display:none;"></div>` : '';
+
+        card.innerHTML = `
+          <div class="card-volunteer">${escapeHtml(req.volunteer)}</div>
+          ${clientLine}
+          ${taxYearLine}
+          <div class="card-wait">⏱ Waiting ${waitText}</div>
+          <div class="card-actions">
+            <button class="approve-btn" ${disabled} onclick="approveRequest('${escapeHtml(req.volunteer)}', this)">✓ Approve</button>
+            <button class="return-btn" ${disabled} onclick="showReturnReason('${escapeHtml(req.volunteer)}', this)">↩ Return for Corrections</button>
+          </div>
+          <div class="reason-area" id="reason_${escapeHtml(req.volunteer)}">
+            <textarea placeholder="Optional: describe what needs to be corrected…"></textarea><br>
+            <button class="reason-submit-btn" onclick="submitReturn('${escapeHtml(req.volunteer)}')">Return for Corrections</button>
+            <button class="reason-cancel-btn" onclick="cancelReturn('${escapeHtml(req.volunteer)}')">Cancel</button>
+          </div>
+          ${clientInfoHtml}
+        `;
+
+        container.appendChild(card);
+
+        // Restore saved state for this card
+        const st = cardState[req.volunteer];
+        if (st) {
+          const reasonArea = card.querySelector('.reason-area');
+          const textarea = reasonArea ? reasonArea.querySelector('textarea') : null;
+          if (st.reasonOpen && reasonArea) {
+            reasonArea.style.display = 'block';
+            const returnBtn = card.querySelector('.return-btn');
+            if (returnBtn) returnBtn.style.display = 'none';
+          }
+          if (textarea && st.reasonText) {
+            textarea.value = st.reasonText;
+          }
+          if (st.infoOpen && req.clientId) {
+            const infoSection = card.querySelector('.client-info-section');
+            const infoBtn = card.querySelector('.info-btn');
+            if (infoSection) {
+              infoSection.style.display = 'block';
+              if (infoBtn) infoBtn.classList.add('info-btn-active');
+              if (cardInfoCache[req.volunteer] !== undefined) {
+                renderClientInfo(infoSection, cardInfoCache[req.volunteer]);
+              } else {
+                infoSection.innerHTML = '<div class="ci-loading">Loading…</div>';
+                google.script.run
+                  .withSuccessHandler(data => { cardInfoCache[req.volunteer] = data; renderClientInfo(infoSection, data); })
+                  .withFailureHandler(() => { infoSection.innerHTML = '<div class="ci-error">Could not load client info.</div>'; })
+                  .getClientIntakeInfo(req.clientId);
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function approveRequest(volunteerName, btn) {
+      if (!selectedReviewer) return;
+      btn.disabled = true;
+      btn.textContent = 'Approving…';
+
+      google.script.run
+        .withSuccessHandler(() => {
+          showStatus(`Approved ${volunteerName}'s return. The volunteer has been notified.`, 'success');
+          markCardDone(volunteerName, '✓ Approved');
+        })
+        .withFailureHandler(err => {
+          showStatus('Error: ' + (err.message || err), 'error');
+          btn.disabled = false;
+          btn.textContent = '✓ Approve';
+        })
+        .approveReviewRemotely(volunteerName, selectedReviewer);
+    }
+
+    function showReturnReason(volunteerName, btn) {
+      const reasonArea = document.getElementById(`reason_${volunteerName}`);
+      if (reasonArea) {
+        reasonArea.style.display = 'block';
+        btn.style.display = 'none';
+      }
+    }
+
+    function cancelReturn(volunteerName) {
+      const reasonArea = document.getElementById(`reason_${volunteerName}`);
+      if (reasonArea) {
+        reasonArea.style.display = 'none';
+        // Re-show the return button
+        const card = document.getElementById(`card_${CSS.escape(volunteerName)}`);
+        if (card) {
+          const returnBtn = card.querySelector('.return-btn');
+          if (returnBtn) returnBtn.style.display = '';
+        }
+      }
+      if (cardState[volunteerName]) cardState[volunteerName].reasonOpen = false;
+    }
+
+    function submitReturn(volunteerName) {
+      if (!selectedReviewer) return;
+      const reasonArea = document.getElementById(`reason_${volunteerName}`);
+      const reason = reasonArea ? reasonArea.querySelector('textarea').value.trim() : '';
+
+      const submitBtn = reasonArea ? reasonArea.querySelector('.reason-submit-btn') : null;
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Sending…'; }
+
+      google.script.run
+        .withSuccessHandler(() => {
+          showStatus(`Return sent back to ${volunteerName} for corrections.`, 'success');
+          markCardDone(volunteerName, '↩ Returned for corrections');
+        })
+        .withFailureHandler(err => {
+          showStatus('Error: ' + (err.message || err), 'error');
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Send Return'; }
+        })
+        .returnReviewRemotely(volunteerName, reason);
+    }
+
+    function markCardDone(volunteerName, message) {
+      delete cardState[volunteerName];
+      delete cardInfoCache[volunteerName];
+      const card = document.getElementById(`card_${CSS.escape(volunteerName)}`);
+      if (card) {
+        card.innerHTML = `<div class="card-done-overlay">${escapeHtml(message)}</div>`;
+        setTimeout(() => card.remove(), 3000);
+      }
+    }
+
+    function toggleClientInfo(volunteerName, clientId, btn) {
+      const section = document.getElementById(`info_${volunteerName}`);
+      if (!section) return;
+      const isOpen = section.style.display === 'block';
+      if (isOpen) {
+        section.style.display = 'none';
+        btn.classList.remove('info-btn-active');
+        if (cardState[volunteerName]) cardState[volunteerName].infoOpen = false;
+        return;
+      }
+      // Expand
+      section.style.display = 'block';
+      btn.classList.add('info-btn-active');
+      if (!cardState[volunteerName]) cardState[volunteerName] = {};
+      cardState[volunteerName].infoOpen = true;
+      if (cardInfoCache[volunteerName] !== undefined) {
+        renderClientInfo(section, cardInfoCache[volunteerName]);
+        return;
+      }
+      section.innerHTML = '<div class="ci-loading">Loading client info…</div>';
+      google.script.run
+        .withSuccessHandler(data => {
+          cardInfoCache[volunteerName] = data;
+          renderClientInfo(section, data);
+        })
+        .withFailureHandler(err => {
+          section.innerHTML = '<div class="ci-error">Could not load client info.</div>';
+          console.error('getClientIntakeInfo error:', err);
+        })
+        .getClientIntakeInfo(clientId);
+    }
+
+    function renderClientInfo(section, data) {
+      if (!data) {
+        section.innerHTML = '<div class="ci-empty">No intake record found for this client.</div>';
+        return;
+      }
+      let html = '';
+      if (data.notes) {
+        html += `<div class="ci-row"><span class="ci-label">Front Desk Notes</span><div class="ci-notes">${escapeHtml(data.notes)}</div></div>`;
+      }
+      const situations = (data.situations || []).filter(s => s);
+      if (situations.length > 0) {
+        html += `<div class="ci-row"><span class="ci-label">Situations</span><div class="ci-badges">${
+          situations.map(s => `<span class="ci-badge">${escapeHtml(s)}</span>`).join('')
+        }</div></div>`;
+      }
+      if (data.documents && data.documents.length > 0) {
+        const labels = data.documents.map(docId => {
+          const parts = typeof docId === 'string' ? docId.split('_') : [];
+          if (parts.length < 2) return docId;
+          const catId = parts[0];
+          const idx = parseInt(parts.slice(1).join('_'));
+          const cat = DOCUMENT_CATEGORIES.find(c => c.id === catId);
+          return (cat && cat.items[idx]) ? cat.items[idx] : docId;
+        });
+        html += `<div class="ci-row"><span class="ci-label">Documents</span><ul class="ci-docs">${
+          labels.map(l => `<li>${escapeHtml(l)}</li>`).join('')
+        }</ul></div>`;
+      }
+      section.innerHTML = html || '<div class="ci-empty">No notes, situations, or documents on file.</div>';
+    }
+
+    function showStatus(message, type) {
+      const box = document.getElementById('statusMessage');
+      box.textContent = message;
+      box.className = type;
+      box.style.display = 'block';
+      setTimeout(() => { box.style.display = 'none'; }, 5000);
+    }
+  </script>
+</body>
+</html>

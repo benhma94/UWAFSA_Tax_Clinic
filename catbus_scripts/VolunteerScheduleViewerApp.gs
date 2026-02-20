@@ -11,5 +11,6 @@ function doGetVolunteerScheduleViewer() {
   return HtmlService.createTemplateFromFile('volunteer_schedule_dashboard')
     .evaluate()
     .setTitle('Volunteer Schedule Viewer')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

@@ -29,4 +29,169 @@
     div.textContent = text;
     return div.innerHTML;
   }
+
+  /**
+   * Highlights matching text in autocomplete suggestions.
+   * @param {string} text - The full text to display
+   * @param {string} term - The search term to highlight
+   * @returns {string} HTML string with matches wrapped in <strong>
+   */
+  function autocompleteHighlightMatch(text, term) {
+    if (!term) return escapeHtml(text);
+    const escapedText = escapeHtml(text);
+    const escapedTerm = escapeHtml(term);
+    const regex = new RegExp(`(${escapedTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return escapedText.replace(regex, '<strong>$1</strong>');
+  }
+
+  /**
+   * Creates a reusable autocomplete controller for a text input + dropdown pair.
+   *
+   * @param {Object} config
+   * @param {string}   config.inputId         - ID of the <input> element
+   * @param {string}   config.dropdownId      - ID of the dropdown container
+   * @param {string}   config.idPrefix        - Prefix for option IDs (e.g. 'ac-option-')
+   * @param {string}   [config.itemClass]     - CSS class for items (default: 'autocomplete-item')
+   * @param {function} config.getItems        - () => Array — returns the full data set
+   * @param {function} config.filterItem      - (item, term) => boolean — inclusion predicate
+   * @param {function} config.renderItem      - (item, index, term) => string — inner HTML for each item
+   * @param {function} config.onSelect        - (item) => void — called when an item is chosen
+   * @param {function} [config.onInput]       - () => void — called after every input event (incl. empty)
+   * @param {function} [config.onEnterFallback] - () => void — called on Enter with no active highlight
+   * @param {boolean}  [config.wrapAround]    - Whether arrow navigation wraps (default: true)
+   * @returns {{ clear: () => void, getFiltered: () => Array }}
+   */
+  function createAutocomplete(config) {
+    const {
+      inputId,
+      dropdownId,
+      idPrefix,
+      itemClass = 'autocomplete-item',
+      getItems,
+      filterItem,
+      renderItem,
+      onSelect,
+      onInput,
+      onEnterFallback,
+      wrapAround = true
+    } = config;
+
+    const input = document.getElementById(inputId);
+    const dropdown = document.getElementById(dropdownId);
+    let filtered = [];
+    let highlightIndex = -1;
+
+    function close() {
+      dropdown.style.display = 'none';
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      highlightIndex = -1;
+    }
+
+    function applyHighlight() {
+      const items = dropdown.querySelectorAll('.' + itemClass);
+      items.forEach((el, i) => {
+        el.classList.toggle('highlighted', i === highlightIndex);
+        if (i === highlightIndex) {
+          el.scrollIntoView({ block: 'nearest' });
+          input.setAttribute('aria-activedescendant', el.id);
+        }
+      });
+    }
+
+    // Event delegation: handle clicks on items via the dropdown container
+    dropdown.addEventListener('click', (e) => {
+      const item = e.target.closest('.' + itemClass);
+      if (!item) return;
+      const idx = parseInt(item.dataset.index, 10);
+      if (!isNaN(idx) && idx < filtered.length) {
+        input.value = item.dataset.name || input.value;
+        onSelect(filtered[idx]);
+        close();
+      }
+    });
+
+    input.addEventListener('input', function() {
+      const term = this.value.trim().toLowerCase();
+
+      if (!term) {
+        close();
+        filtered = [];
+        if (onInput) onInput();
+        return;
+      }
+
+      filtered = getItems().filter(item => filterItem(item, term));
+      highlightIndex = -1;
+
+      if (filtered.length === 0) {
+        dropdown.innerHTML = '<div class="autocomplete-no-matches">No matches found</div>';
+      } else {
+        const displayCount = Math.min(filtered.length, 10);
+        let html = '';
+        for (let i = 0; i < displayCount; i++) {
+          const item = filtered[i];
+          const nameForAttr = (typeof item === 'string' ? item : item.name || '');
+          const escaped = nameForAttr.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+          html += `<div class="${itemClass}" role="option" id="${idPrefix}${i}" data-index="${i}" data-name="${escaped}">${renderItem(item, i, term)}</div>`;
+        }
+        if (filtered.length > 10) {
+          html += `<div class="autocomplete-no-matches">... and ${filtered.length - 10} more</div>`;
+        }
+        dropdown.innerHTML = html;
+      }
+
+      dropdown.style.display = 'block';
+      input.setAttribute('aria-expanded', 'true');
+      if (onInput) onInput();
+    });
+
+    input.addEventListener('keydown', function(e) {
+      const items = dropdown.querySelectorAll('.' + itemClass);
+
+      if (dropdown.style.display === 'none' || items.length === 0) {
+        if (e.key === 'Enter' && onEnterFallback) {
+          e.preventDefault();
+          onEnterFallback();
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        highlightIndex = wrapAround
+          ? (highlightIndex + 1) % items.length
+          : Math.min(highlightIndex + 1, items.length - 1);
+        applyHighlight();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        highlightIndex = wrapAround
+          ? (highlightIndex <= 0 ? items.length - 1 : highlightIndex - 1)
+          : Math.max(highlightIndex - 1, 0);
+        applyHighlight();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (highlightIndex >= 0 && highlightIndex < filtered.length) {
+          input.value = items[highlightIndex].dataset.name || input.value;
+          onSelect(filtered[highlightIndex]);
+          close();
+        } else if (onEnterFallback) {
+          onEnterFallback();
+        }
+      } else if (e.key === 'Escape') {
+        close();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+        close();
+      }
+    });
+
+    return {
+      clear() { close(); filtered = []; },
+      getFiltered() { return filtered; }
+    };
+  }
 </script>

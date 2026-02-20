@@ -11,5 +11,6 @@ function doGetAdminDashboard() {
   return HtmlService.createTemplateFromFile('admin_dashboard')
     .evaluate()
     .setTitle('Live Help Request Dashboard')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }

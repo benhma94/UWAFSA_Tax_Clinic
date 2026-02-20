@@ -12,34 +12,57 @@ A Google Apps Script-based volunteer coordination and client management platform
 catbus_scripts/                    # Google Apps Script backend
 ├── Config.gs                      # Central configuration
 ├── Router.gs                      # Web app URL routing
-├── ScheduleAutomation.gs          # Volunteer schedule generation
+│
+├── # Volunteer Management
 ├── AvailabilityForm.gs            # Volunteer availability submission
+├── ScheduleAutomation.gs          # Automated schedule generation
+├── ScheduleEditor.gs              # Manual shift editing per volunteer
+├── ScheduleNotifications.gs       # Email alerts when schedules change
+├── MentorTeams.gs                 # Mentor-to-senior-mentor pairing
 ├── VolunteerScheduleViewer.gs     # Schedule viewing
 ├── VolunteerSignInOut.gs          # Sign in/out tracking
+│
+├── # Client Management
 ├── ClientIntake.gs                # Client intake and eligibility
 ├── QueueManagement.gs             # Client queue operations
 ├── AppointmentBooking.gs          # Appointment booking + confirmation emails
+├── ReviewRequests.gs              # Senior review requests (remote approve/return)
+├── EmailReceipt.gs                # Post-filing email receipts
+│
+├── # Communication
+├── Messaging.gs                   # Internal manager-to-volunteer messaging
+├── ProductCodeDistribution.gs     # UFILE product code distribution to volunteers
+│
+├── # Admin & Support
 ├── AdminDashboard.gs              # Analytics and monitoring
 ├── ControlSheet.gs                # Volunteer dashboard
 ├── HelpRequests.gs                # Help request handling
-├── ReviewRequests.gs              # Senior review requests
-├── EmailReceipt.gs                # Post-filing email receipts
 ├── Utils.gs                       # Shared utilities
 ├── CacheManager.gs                # Cache management
 ├── RequestHandler.gs              # Request processing
+│
+├── # Frontend UI
+├── shared_styles.html             # Shared CSS (theme vars, role colours, dark mode)
+├── messaging_admin.html           # Manager chat UI with unread badges
+├── reviewer_page.html             # Remote review approval/return dashboard
+├── product_code_dashboard.html    # Product code distribution dashboard
+├── *.html                         # Other frontend UI files
+│
 ├── *App.gs                        # Web app entry points (doGet)
-├── *.html                         # Frontend UI files
 ├── *.bat                          # Clasp upload/download/deploy scripts
 └── appsscript.json                # Apps Script manifest
 
 webpage/                           # Public-facing website pages
 ├── index.html                     # Main landing page
+├── about.html                     # About Us page
 ├── appointment_screening.html     # Eligibility + complexity screening
 ├── FAQ.html                       # FAQ
 ├── PostFiling.html                # Post-filing info
 ├── catbus.html                    # CATBUS info portal
 ├── admin.html                     # Admin links
-└── volunteerapplications.html     # Volunteer application info
+├── volunteerapplications.html     # Volunteer application info
+├── shared.css                     # Shared public site stylesheet (header, nav, footer)
+└── shared.js                      # Injects shared header/nav/footer into all pages
 ```
 
 ---
@@ -57,9 +80,9 @@ webpage/                           # Public-facing website pages
 
 | Shift | Time |
 |-------|------|
-| Morning | 9:45 AM - 1:15 PM |
-| Afternoon | 1:00 PM - 4:30 PM |
-| Evening | 4:15 PM - 8:00 PM |
+| Morning | 9:45 AM – 1:15 PM |
+| Afternoon | 1:00 PM – 4:45 PM |
+| Evening | 4:30 PM – 8:15 PM |
 
 Shift IDs use format `D{day}{shift}` (e.g., D1A = Day 1 Morning, D3C = Day 3 Evening).
 
@@ -80,6 +103,37 @@ Shift IDs use format `D{day}{shift}` (e.g., D1A = Day 1 Morning, D3C = Day 3 Eve
 4. System generates a priority Client ID (P001, P002...) and sends a confirmation email with situation-specific document requirements
 
 **Eligibility limits:** $40k individual / $55k couple (+$5k per dependent), waived with tuition credits (T2202).
+
+### Mentor Team Management
+
+1. Admin runs `MentorTeams.gs` after the schedule is generated
+2. First-time mentors are paired with senior mentors based on shared shift availability
+3. Round-robin load balancing distributes first-time mentors evenly across seniors
+
+### Schedule Editing & Notifications
+
+1. Admin manually adjusts individual shifts using `ScheduleEditor.gs` (add/remove shifts per volunteer)
+2. `ScheduleNotifications.gs` sends an HTML email to affected volunteers showing their before/after shift assignments
+
+### Product Code Distribution (UFILE)
+
+1. Admin opens the product code dashboard (`ProductCodeDistributionApp.gs`)
+2. Preview mode shows which volunteers will receive codes (filers prioritized over mentors; frontline excluded)
+3. Codes are distributed in pairs; a log sheet prevents duplicate distribution
+4. Individual codes can also be sent manually from the dashboard
+
+### Internal Messaging
+
+1. Manager opens `messaging_admin.html` and selects a volunteer from the list
+2. Messages are sent and received in a two-panel chat interface with unread badge counts
+3. Supports alert and chat message types; auto-refreshes every 5–15 seconds
+
+### Remote Review
+
+1. Reviewer opens `reviewer_page.html` and selects their identity
+2. Cards display pending review requests: volunteer name, client ID, tax year, and wait time
+3. Reviewer approves or returns the submission with optional correction notes
+4. Client intake details are expandable inline; dashboard auto-refreshes every 15 seconds
 
 ---
 
@@ -133,6 +187,9 @@ All system configuration lives in [Config.gs](catbus_scripts/Config.gs):
 - `INCOME_LIMITS` — eligibility thresholds
 - `SIGN_IN_OUT` — station count, exception stations
 - `PERFORMANCE` — row limits for optimization
+- `MESSAGING_CONFIG` — sheet name, column mappings, polling interval (10s), message retention (7 days)
+- `PRODUCT_CODE_CONFIG` — UFILE code sheet references and email template subject
+- `VOLUNTEER_TAGS` — custom display tags per volunteer
 
 ---
 

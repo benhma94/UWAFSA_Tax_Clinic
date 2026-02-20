@@ -14,29 +14,26 @@ function getAvailableStations() {
     
     const stationList = Array.from({ length: CONFIG.SIGN_IN_OUT.STATION_COUNT }, (_, i) => (i + 1).toString());
     const exceptionStations = CONFIG.SIGN_IN_OUT.EXCEPTION_STATIONS;
-    const today = new Date().toDateString();
-    
+
     const signInData = signInSheet.getDataRange().getValues();
     const signOutData = signOutSheet.getDataRange().getValues();
     const activeStations = new Set();
-    
-    // Get all signed-out session IDs for today
+
+    // Get ALL signed-out session IDs (no date filter — catches previous-day stragglers)
     const signedOutIds = new Set();
     for (let i = 1; i < signOutData.length; i++) {
-      const outDate = new Date(signOutData[i][CONFIG.COLUMNS.SIGNOUT.TIMESTAMP]).toDateString();
       const outId = signOutData[i][CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim();
-      if (outDate === today && outId) {
+      if (outId) {
         signedOutIds.add(outId);
       }
     }
-    
-    // Find stations that are active (signed in but not signed out)
+
+    // Find stations that are active (signed in but not signed out, any day)
     for (let i = 1; i < signInData.length; i++) {
-      const date = new Date(signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP]).toDateString();
       const station = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.STATION]?.toString().trim();
       const sessionId = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
-      
-      if (date === today && station && sessionId && !signedOutIds.has(sessionId) && !exceptionStations.includes(station)) {
+
+      if (station && sessionId && !signedOutIds.has(sessionId) && !exceptionStations.includes(station)) {
         activeStations.add(station);
       }
     }
@@ -58,31 +55,29 @@ function getActiveSessions() {
   return safeExecute(() => {
     const signInSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
     const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
-    const today = new Date().toDateString();
-    
+
     const signInData = signInSheet.getDataRange().getValues();
     const signOutData = signOutSheet.getDataRange().getValues();
-    
-    // Get all signed-out session IDs for today
+
+    // Get ALL signed-out session IDs (no date filter — catches previous-day stragglers)
     const signedOutIds = new Set();
     for (let i = 1; i < signOutData.length; i++) {
-      const outDate = new Date(signOutData[i][CONFIG.COLUMNS.SIGNOUT.TIMESTAMP]).toDateString();
       const outId = signOutData[i][CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim();
-      if (outDate === today && outId) {
+      if (outId) {
         signedOutIds.add(outId);
       }
     }
-    
+
     const activeSessions = [];
-    
+
+    // Include sign-ins from any day that haven't been signed out (catches previous-day stragglers)
     for (let i = 1; i < signInData.length; i++) {
-      const date = new Date(signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP]).toDateString();
       const name = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
       const station = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.STATION]?.toString().trim();
       const sessionId = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
       const timestamp = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP];
-      
-      if (date === today && name && sessionId && !signedOutIds.has(sessionId)) {
+
+      if (name && sessionId && !signedOutIds.has(sessionId)) {
         const time = Utilities.formatDate(new Date(timestamp), Session.getScriptTimeZone(), 'HH:mm');
         activeSessions.push({
           name: name,
@@ -118,35 +113,46 @@ function signInVolunteer(volunteerName, station) {
       throw new Error('Station is required');
     }
     
-    // Check if station is available
-    const availableStations = getAvailableStations();
-    if (!availableStations.includes(station)) {
-      throw new Error(`Station "${station}" is not available. Please select another station.`);
+    // Lock to prevent two volunteers claiming the same station concurrently
+    const lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+
+    try {
+      // Check if station is available (inside lock to prevent race condition)
+      const availableStations = getAvailableStations();
+      if (!availableStations.includes(station)) {
+        throw new Error(`Station "${station}" is not available. Please select another station.`);
+      }
+
+      const sheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
+
+      // Generate session ID
+      const sessionId = Utilities.getUuid();
+      const timestamp = new Date();
+
+      // Append sign-in record
+      sheet.appendRow([
+        timestamp,
+        volunteerName.trim(),
+        station.trim(),
+        sessionId
+      ]);
+
+      Logger.log(`Volunteer signed in: ${volunteerName} at station ${station} (${sessionId})`);
+
+      // Invalidate mentor list cache so control sheets pick up new mentors immediately
+      invalidateCache(CACHE_CONFIG.KEYS.MENTOR_LIST);
+
+      return {
+        success: true,
+        sessionId: sessionId,
+        timestamp: timestamp,
+        volunteerName: volunteerName.trim(),
+        station: station.trim()
+      };
+    } finally {
+      lock.releaseLock();
     }
-    
-    const sheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
-    
-    // Generate session ID
-    const sessionId = Utilities.getUuid();
-    const timestamp = new Date();
-    
-    // Append sign-in record
-    sheet.appendRow([
-      timestamp,
-      volunteerName.trim(),
-      station.trim(),
-      sessionId
-    ]);
-    
-    Logger.log(`Volunteer signed in: ${volunteerName} at station ${station} (${sessionId})`);
-    
-    return {
-      success: true,
-      sessionId: sessionId,
-      timestamp: timestamp,
-      volunteerName: volunteerName.trim(),
-      station: station.trim()
-    };
   }, 'signInVolunteer');
 }
 
@@ -186,12 +192,11 @@ function signOutVolunteer(sessionId) {
     // Check if already signed out today
     const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
     const signOutData = signOutSheet.getDataRange().getValues();
-    const today = new Date().toDateString();
-    
+
+    // Check if already signed out (no date filter — catches previous-day sessions)
     for (let i = 1; i < signOutData.length; i++) {
-      const outDate = new Date(signOutData[i][CONFIG.COLUMNS.SIGNOUT.TIMESTAMP]).toDateString();
       const outId = signOutData[i][CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim();
-      if (outDate === today && outId === sessionId.trim()) {
+      if (outId === sessionId.trim()) {
         throw new Error('This session is already signed out.');
       }
     }
@@ -205,7 +210,10 @@ function signOutVolunteer(sessionId) {
     ]);
     
     Logger.log(`Volunteer signed out: ${volunteerName} (${sessionId})`);
-    
+
+    // Invalidate mentor list cache so control sheets remove signed-out mentors
+    invalidateCache(CACHE_CONFIG.KEYS.MENTOR_LIST);
+
     return {
       success: true,
       sessionId: sessionId.trim(),
@@ -276,7 +284,7 @@ function getConsolidatedVolunteerData() {
       // Get designated senior mentors from Mentor Teams sheet (new source of truth)
       const designatedSeniors = new Set();
       try {
-        const teamsSheet = ss.getSheetByName('Mentor Teams');
+        const teamsSheet = getSpreadsheet().getSheetByName(CONFIG.SHEETS.MENTOR_TEAMS);
         if (teamsSheet && teamsSheet.getLastColumn() >= 7) {
           // Senior designations stored in row 1, columns G+ (after "Senior Mentors:" label in F)
           const headerRow = teamsSheet.getRange(1, 7, 1, teamsSheet.getLastColumn() - 6).getValues()[0];

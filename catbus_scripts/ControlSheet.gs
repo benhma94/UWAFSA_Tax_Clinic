@@ -141,122 +141,76 @@ function getClientIntakeInfo(clientID) {
  */
 function getMentorList() {
   return safeExecute(() => {
-    const cacheKey = 'mentorList';
-    const cacheExpiryKey = 'mentorListExpiry';
-    const cacheTTL = CONFIG.PERFORMANCE.MENTOR_LIST_CACHE_TTL;
-    
-    // Try to use cache, but fall back to direct read if cache fails
-    let useCache = true;
-    let cached = null;
-    let expiry = null;
-    
-    try {
-      const properties = PropertiesService.getScriptProperties();
-      cached = properties.getProperty(cacheKey);
-      expiry = properties.getProperty(cacheExpiryKey);
-      
-      // Check if cache is valid
-      if (cached && expiry) {
-        const now = new Date().getTime();
-        const expiryTime = parseInt(expiry);
-        if (now < expiryTime) {
-          // Cache is valid, return cached data
-          return JSON.parse(cached);
+    return getCachedOrFetch(
+      CACHE_CONFIG.KEYS.MENTOR_LIST,
+      () => {
+        const volunteerSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
+        const lastRow = volunteerSheet.getLastRow();
+
+        if (lastRow <= 1) {
+          return { reviewers: [], seniors: [] };
         }
-      }
-    } catch (cacheError) {
-      // Cache service failed, fall back to direct read
-      Logger.log(`Cache error in getMentorList: ${cacheError.message}`);
-      useCache = false;
-    }
-    
-    // Cache expired or doesn't exist, fetch fresh data
-    const volunteerSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
-    const lastRow = volunteerSheet.getLastRow();
-    
-    if (lastRow <= 1) {
-      const emptyResult = { reviewers: [], seniors: [] };
-      // Try to cache empty result, but don't fail if cache fails
-      if (useCache) {
+
+        const data = volunteerSheet.getRange(2, 1, lastRow - 1, 4).getValues();
+
+        // Build set of signed-out session IDs (all time, not just today)
+        const signedOutIds = new Set();
         try {
-          const properties = PropertiesService.getScriptProperties();
-          properties.setProperty(cacheKey, JSON.stringify(emptyResult));
-          properties.setProperty(cacheExpiryKey, (new Date().getTime() + cacheTTL * 1000).toString());
-        } catch (cacheError) {
-          Logger.log(`Cache write error (non-fatal): ${cacheError.message}`);
+          const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
+          const signOutData = signOutSheet.getDataRange().getValues();
+          for (let i = 1; i < signOutData.length; i++) {
+            const outId = signOutData[i][CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim();
+            if (outId) signedOutIds.add(outId);
+          }
+        } catch (e) {
+          Logger.log('Warning: Could not read sign-out data: ' + e.message);
         }
-      }
-      return emptyResult;
-    }
-    
-    // Optimization: Only read necessary columns (Timestamp, Name, Role)
-    const data = volunteerSheet.getRange(2, 1, lastRow - 1, 3).getValues();
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+        // Get designated senior mentors from Mentor Teams sheet
+        const designatedSeniors = new Set();
+        try {
+          const ss = getSpreadsheet();
+          const teamsSheet = ss.getSheetByName(CONFIG.SHEETS.MENTOR_TEAMS);
+          if (teamsSheet && teamsSheet.getLastColumn() >= 7) {
+            const headerRow = teamsSheet.getRange(1, 7, 1, teamsSheet.getLastColumn() - 6).getValues()[0];
+            headerRow.forEach(name => {
+              const trimmed = name?.toString().trim();
+              if (trimmed) designatedSeniors.add(trimmed);
+            });
+          }
+        } catch (e) {
+          Logger.log('Warning: Could not read senior designations: ' + e.message);
+        }
 
-    // Get designated senior mentors from Mentor Teams sheet (new source of truth)
-    const designatedSeniors = new Set();
-    try {
-      const ss = getSpreadsheet();
-      const teamsSheet = ss.getSheetByName('Mentor Teams');
-      if (teamsSheet && teamsSheet.getLastColumn() >= 7) {
-        // Senior designations stored in row 1, columns G+ (after "Senior Mentors:" label in F)
-        const headerRow = teamsSheet.getRange(1, 7, 1, teamsSheet.getLastColumn() - 6).getValues()[0];
-        headerRow.forEach(name => {
-          const trimmed = name?.toString().trim();
-          if (trimmed) designatedSeniors.add(trimmed);
-        });
-      }
-    } catch (e) {
-      Logger.log('Warning: Could not read senior designations from Mentor Teams: ' + e.message);
-    }
+        const mentorsToday = new Set();
+        const seniorMentorsToday = new Set();
 
-    const mentorsToday = new Set();
-    const seniorMentorsToday = new Set();
+        for (let i = 0; i < data.length; i++) {
+          const timestamp = data[i][0];
+          const name = data[i][1]?.toString().trim();
+          const role = data[i][2]?.toString().trim().toLowerCase();
+          const sessionId = data[i][3]?.toString().trim();
 
-    for (let i = 0; i < data.length; i++) {
-      const timestamp = data[i][0]; // Column A: Timestamp
-      const name = data[i][1]?.toString().trim();
-      const role = data[i][2]?.toString().trim().toLowerCase();
-
-      if (name && timestamp instanceof Date) {
-        const signedInDate = new Date(timestamp);
-        signedInDate.setHours(0, 0, 0, 0);
-
-        const isToday = signedInDate.getTime() === today.getTime();
-
-        if (isToday && (role === 'mentor' || role === 'senior mentor')) {
-          // Check if this mentor is designated as senior in the schedule dashboard
-          if (designatedSeniors.has(name)) {
-            seniorMentorsToday.add(name);
-          } else {
-            mentorsToday.add(name);
+          if (name && timestamp instanceof Date) {
+            // Include any mentor currently signed in (not yet signed out), regardless of sign-in date
+            if ((role === 'mentor' || role === 'senior mentor') && !signedOutIds.has(sessionId)) {
+              if (designatedSeniors.has(name)) {
+                seniorMentorsToday.add(name);
+              } else {
+                mentorsToday.add(name);
+              }
+            }
           }
         }
-      }
-    }
 
-    const allReviewers = new Set([...mentorsToday, ...seniorMentorsToday]);
-    
-    const result = {
-      reviewers: [...allReviewers].sort(),
-      seniors: [...seniorMentorsToday].sort()
-    };
-    
-    // Try to cache the result, but don't fail if cache fails
-    if (useCache) {
-      try {
-        const properties = PropertiesService.getScriptProperties();
-        properties.setProperty(cacheKey, JSON.stringify(result));
-        properties.setProperty(cacheExpiryKey, (new Date().getTime() + cacheTTL * 1000).toString());
-      } catch (cacheError) {
-        Logger.log(`Cache write error (non-fatal): ${cacheError.message}`);
-        // Continue without caching - function still works
-      }
-    }
-    
-    return result;
+        const allReviewers = new Set([...mentorsToday, ...seniorMentorsToday]);
+        return {
+          reviewers: [...allReviewers].sort(),
+          seniors: [...seniorMentorsToday].sort()
+        };
+      },
+      CACHE_CONFIG.TTL.MENTOR_LIST
+    );
   }, 'getMentorList');
 }
 

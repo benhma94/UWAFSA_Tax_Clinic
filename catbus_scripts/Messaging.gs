@@ -56,17 +56,23 @@ function getUnreadMessages(volunteerName) {
   const sheet = getMessagesSheet();
   if (!sheet) return [];
 
-  const data = sheet.getDataRange().getValues();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  // Read only columns up to STATUS (0-8), skipping READ_AT
+  const numRows = lastRow - 1;
+  const numCols = MESSAGING_CONFIG.COLUMNS.STATUS + 1;
+  const data = sheet.getRange(2, 1, numRows, numCols).getValues();
   const messages = [];
 
-  for (let i = 1; i < data.length; i++) {
+  for (let i = 0; i < data.length; i++) {
     const row = data[i];
     const toName = row[MESSAGING_CONFIG.COLUMNS.TO_NAME]?.toString().trim();
     const status = row[MESSAGING_CONFIG.COLUMNS.STATUS]?.toString().trim();
 
     if (toName && toName.toLowerCase() === volunteerName.toLowerCase() && status === 'unread') {
       messages.push({
-        rowIndex: i + 1,
+        rowIndex: i + 2,
         timestamp: serializeTimestamp(row[MESSAGING_CONFIG.COLUMNS.TIMESTAMP]),
         fromName: row[MESSAGING_CONFIG.COLUMNS.FROM_NAME],
         fromRole: row[MESSAGING_CONFIG.COLUMNS.FROM_ROLE],
@@ -105,6 +111,11 @@ function markMessageAsRead(rowIndex) {
 function replyToMessage(volunteerName, message, conversationId) {
   const sheet = getOrCreateMessagesSheet();
 
+  // Generate conversation ID if not provided (new conversation)
+  if (!conversationId) {
+    conversationId = Utilities.getUuid();
+  }
+
   sheet.appendRow([
     new Date(),           // Timestamp
     volunteerName,        // FromName
@@ -132,10 +143,15 @@ function getConversationWithVolunteer(volunteerName) {
   const sheet = getMessagesSheet();
   if (!sheet) return [];
 
-  const data = sheet.getDataRange().getValues();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const numRows = lastRow - 1;
+  const numCols = MESSAGING_CONFIG.COLUMNS.STATUS + 1;
+  const data = sheet.getRange(2, 1, numRows, numCols).getValues();
   const messages = [];
 
-  for (let i = 1; i < data.length; i++) {
+  for (let i = 0; i < data.length; i++) {
     const row = data[i];
     const fromName = row[MESSAGING_CONFIG.COLUMNS.FROM_NAME]?.toString().trim();
     const toName = row[MESSAGING_CONFIG.COLUMNS.TO_NAME]?.toString().trim();
@@ -174,10 +190,15 @@ function getConversation(conversationId) {
   const sheet = getMessagesSheet();
   if (!sheet) return [];
 
-  const data = sheet.getDataRange().getValues();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const numRows = lastRow - 1;
+  const numCols = MESSAGING_CONFIG.COLUMNS.STATUS + 1;
+  const data = sheet.getRange(2, 1, numRows, numCols).getValues();
   const messages = [];
 
-  for (let i = 1; i < data.length; i++) {
+  for (let i = 0; i < data.length; i++) {
     const convId = data[i][MESSAGING_CONFIG.COLUMNS.CONVERSATION_ID];
     if (convId === conversationId) {
       messages.push({
@@ -201,10 +222,15 @@ function getActiveConversations() {
   const sheet = getMessagesSheet();
   if (!sheet) return [];
 
-  const data = sheet.getDataRange().getValues();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const numRows = lastRow - 1;
+  const numCols = MESSAGING_CONFIG.COLUMNS.STATUS + 1;
+  const data = sheet.getRange(2, 1, numRows, numCols).getValues();
   const conversations = {};
 
-  for (let i = 1; i < data.length; i++) {
+  for (let i = 0; i < data.length; i++) {
     const row = data[i];
     const convId = row[MESSAGING_CONFIG.COLUMNS.CONVERSATION_ID];
     const fromRole = row[MESSAGING_CONFIG.COLUMNS.FROM_ROLE];
@@ -254,10 +280,15 @@ function getUnreadCountsByVolunteer() {
   const sheet = getMessagesSheet();
   if (!sheet) return {};
 
-  const data = sheet.getDataRange().getValues();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return {};
+
+  const numRows = lastRow - 1;
+  const numCols = MESSAGING_CONFIG.COLUMNS.STATUS + 1;
+  const data = sheet.getRange(2, 1, numRows, numCols).getValues();
   const counts = {};
 
-  for (let i = 1; i < data.length; i++) {
+  for (let i = 0; i < data.length; i++) {
     const row = data[i];
     const toName = row[MESSAGING_CONFIG.COLUMNS.TO_NAME]?.toString().trim();
     const fromName = row[MESSAGING_CONFIG.COLUMNS.FROM_NAME]?.toString().trim();
@@ -280,28 +311,27 @@ function getUnreadCountsByVolunteer() {
 function getVolunteersWithActiveClients() {
   const ss = getSpreadsheet();
   const sheetName = CONFIG.SHEETS.CLIENT_ASSIGNMENT;
-  Logger.log('Looking for sheet: "' + sheetName + '"');
-
   const assignmentSheet = ss.getSheetByName(sheetName);
 
   if (!assignmentSheet) {
-    Logger.log('ERROR: Sheet "' + sheetName + '" not found. Available sheets: ' +
-      ss.getSheets().map(s => s.getName()).join(', '));
+    Logger.log('Sheet "' + sheetName + '" not found');
     return [];
   }
 
-  const data = assignmentSheet.getDataRange().getValues();
-  Logger.log('Sheet has ' + data.length + ' rows (including header)');
+  const lastRow = assignmentSheet.getLastRow();
+  if (lastRow < 2) return [];
 
+  // Read only columns up to COMPLETED (0-3) instead of the full sheet
+  const numRows = lastRow - 1;
+  const numCols = CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1;
+  const data = assignmentSheet.getRange(2, 1, numRows, numCols).getValues();
   const activeVolunteers = [];
   const seenVolunteers = new Set();
 
-  for (let i = 1; i < data.length; i++) {
+  for (let i = 0; i < data.length; i++) {
     const clientId = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
     const volunteer = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
     const completed = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim();
-
-    Logger.log('Row ' + (i+1) + ': clientId="' + clientId + '", volunteer="' + volunteer + '", completed="' + completed + '"');
 
     // Only include non-completed assignments, avoid duplicates
     if (volunteer && clientId && completed !== 'Complete' && !seenVolunteers.has(volunteer)) {
@@ -314,7 +344,6 @@ function getVolunteersWithActiveClients() {
     }
   }
 
-  Logger.log('Returning ' + activeVolunteers.length + ' active volunteers');
   return activeVolunteers;
 }
 

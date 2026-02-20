@@ -28,11 +28,16 @@ const CONFIG = {
     SIGNOUT: 'SignOut',
     SCHEDULE_AVAILABILITY: 'Schedule Availability', // Form responses for volunteer availability
     SCHEDULE_OUTPUT: 'Schedule Output', // Generated schedule
-    PRODUCT_CODES: 'Product Codes', // Product codes for distribution
+    PRODUCT_CODES: 'UFILE Keys', // Product codes for distribution
     PRODUCT_CODE_DISTRIBUTION_LOG: 'Product Code Distribution Log', // Distribution tracking
     VOLUNTEER_TAGS: 'Volunteer Tags', // Custom display tags for volunteers
-    MESSAGES: 'Messages' // Internal messaging between managers and volunteers
+    MESSAGES: 'Messages', // Internal messaging between managers and volunteers
+    MENTOR_TEAMS: 'Mentor Teams' // Mentor team assignments
   },
+
+  // Clinic contact info (used in emails and public pages)
+  CLINIC_EMAIL: 'taxclinic@uwafsa.com',
+  CLINIC_WEBSITE_URL: 'https://taxclinic.uwaterloo.ca',
   
   // Column Mappings (0-indexed)
   COLUMNS: {
@@ -61,7 +66,10 @@ const CONFIG = {
     REVIEW_REQUESTS: {
       TIMESTAMP: 0,
       VOLUNTEER: 1,
-      STATUS: 2
+      STATUS: 2,
+      CLIENT_ID: 3,
+      TAX_YEAR: 4,
+      REVIEWER_OR_REASON: 5
     },
     TAX_RETURN_TRACKER: {
       TIMESTAMP: 0,
@@ -104,8 +112,10 @@ const CONFIG = {
   // Review Request Status Values
   REVIEW_STATUS: {
     REQUESTED: 'Requested',
-    COMPLETED: 'Completed',
-    CANCELLED: 'Cancelled'
+    APPROVED: 'Approved',    // reviewer approved remotely
+    RETURNED: 'Returned',    // reviewer returned for corrections remotely
+    COMPLETED: 'Completed',  // control sheet consumed the approval/return result
+    CANCELLED: 'Cancelled'   // local cancel from control sheet
   },
   
   // Timezone
@@ -222,6 +232,11 @@ const SCHEDULE_CONFIG = {
   DAYS_COUNT: 4,
   SLOTS_PER_DAY: 3,
 
+  // Algorithm constraints
+  FILER_HARD_CAP: 50,       // Max filers per shift
+  FILER_MIN_SHIFTS: 3,      // Minimum shifts each filer gets
+  ROLE_MIN_PER_SHIFT: 1,    // Minimum volunteers of each role per shift
+
   // Time slot definitions (for display only - backend only uses A/B/C)
   TIME_SLOTS: {
     'A': { start: '9:45', end: '1:15', display: '9:45 AM - 1:15 PM', label: 'Morning' },
@@ -316,7 +331,7 @@ const SCHEDULE_CONFIG = {
  */
 const PRODUCT_CODE_CONFIG = {
   // Product codes sheet (in main CATBUS spreadsheet)
-  SHEET_NAME: 'Product Codes',
+  SHEET_NAME: 'UFILE Keys',
 
   // Column mappings (0-indexed)
   COLUMNS: {
