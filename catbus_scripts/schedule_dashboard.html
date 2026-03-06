@@ -379,6 +379,7 @@
     const messageBox = document.getElementById('messageBox');
     messageBox.textContent = message;
     messageBox.className = type;
+    messageBox.style.display = ''; // clear any inline override from hideMessage()
     messageBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
@@ -463,11 +464,16 @@
 
     // Add notifications sent count if available
     if (result.notificationsSent !== undefined) {
+      const recipients = result.notificationRecipients || [];
+      const recipientList = recipients.length > 0
+        ? recipients.map(r => `<div style="padding: 1px 0;">• ${r.name}</div>`).join('')
+        : '';
       html += `
         <div class="stat-item" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-light);">
           <span class="stat-label">📧 Change Notifications Sent:</span>
           <span class="stat-value">${result.notificationsSent}</span>
         </div>
+        ${recipientList ? `<div style="margin-top: 4px; margin-left: 4px; font-size: 13px; color: var(--text-secondary);">${recipientList}</div>` : ''}
       `;
     }
 

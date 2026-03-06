@@ -171,83 +171,98 @@ function assignClientToVolunteer(clientId, volunteerName) {
 
 /**
  * Gets available volunteers (signed in today, not signed out, not mentors/receptionists)
- * Optimized to read only necessary data
- * @returns {Array<string>} Array of volunteer names in format "Station X – Name"
+ * Sorted by idle time (longest idle first) so queue managers prioritize waiting volunteers.
+ * @returns {Array<Object>} Array of {name, station, displayText, idleMinutes}
  */
 function getAvailableVolunteers() {
   return safeExecute(() => {
     const volunteerSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
     const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
     const assignmentSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
-    
+
     // Optimization: Only read rows that have data
     const volunteerLastRow = volunteerSheet.getLastRow();
     const signOutLastRow = signOutSheet.getLastRow();
     const assignmentLastRow = assignmentSheet.getLastRow();
-    
+
     // Read columns: Timestamp (0), Name (1), Station (2), SessionId (3), Role (4) if exists
     const volunteerData = volunteerLastRow > 1
       ? volunteerSheet.getRange(2, 1, volunteerLastRow - 1, 5).getValues()
       : [];
-    
+
     const signOutData = signOutLastRow > 1
       ? signOutSheet.getRange(2, 1, signOutLastRow - 1, 3).getValues()
       : [];
-    
-    // Build set of currently busy volunteers - only check recent assignments
+
+    // Build busy-volunteer set AND last-completed-assignment map from recent rows.
+    // Read all 4 columns (Timestamp, ClientID, Volunteer, Completed) starting from col A.
     const busyVolunteers = new Set();
+    const lastCompletedMap = {}; // volunteerName -> most recent completed assignment Date
     if (assignmentLastRow > 1) {
-      // Only check last N assignments (most are recent)
       const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, assignmentLastRow - 1);
       const startRow = Math.max(2, assignmentLastRow - checkRows + 1);
-      const assignmentData = assignmentSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER + 1, 
-                                                       checkRows, 2).getValues();
-      
+      // Read from col 1 (Timestamp) through col 4 (Completed)
+      const assignmentData = assignmentSheet.getRange(startRow, 1, checkRows, 4).getValues();
+
       assignmentData.forEach(row => {
-        const completed = row[1]?.toString().trim().toLowerCase();
+        const ts        = row[CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP];
+        const label     = row[CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString() || '';
+        const completed = row[CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
+        const name = label.includes('–') ? label.split('–')[1].trim() : label.trim();
+        if (!name) return;
         if (completed !== 'complete') {
-          const label = row[0]?.toString() || '';
-          const name = label.includes('–') 
-            ? label.split('–')[1].trim() 
-            : label.trim();
-          if (name) busyVolunteers.add(name);
+          busyVolunteers.add(name);
+        } else if (ts) {
+          const d = new Date(ts);
+          if (!lastCompletedMap[name] || d > lastCompletedMap[name]) {
+            lastCompletedMap[name] = d;
+          }
         }
       });
     }
-    
+
     const today = new Date().toDateString();
+    const now = new Date();
     const activeVolunteers = [];
-    
+
     for (let i = 0; i < volunteerData.length; i++) {
-      const signInDate = new Date(volunteerData[i][0]).toDateString();
+      const signInTimestamp = volunteerData[i][0];
+      const signInDate = new Date(signInTimestamp).toDateString();
       const name = volunteerData[i][1]?.toString().trim();
       const station = volunteerData[i][2]?.toString().trim();
       const sessionId = volunteerData[i][3]?.toString().trim();
       const role = volunteerData[i][4]?.toString().trim().toLowerCase() || '';
-      
+
       if (!name || !station || !sessionId) continue;
       // Exclude non-filer roles (mentors, frontline, internal services)
       const stationLower = station.toLowerCase();
       const nonFilerStations = CONFIG.SIGN_IN_OUT.NON_FILER_STATIONS;
       if (nonFilerStations.some(r => stationLower === r || role === r)) continue;
       if (signInDate !== today) continue;
-      
+
       // Check if signed out
       const signedOut = signOutData.some(row => {
         const outId = row[2]?.toString().trim();
         return outId === sessionId;
       });
-      
+
       if (signedOut) continue;
       if (busyVolunteers.has(name)) continue;
-      
-      activeVolunteers.push(`Station ${station} – ${name}`);
+
+      // Idle since last completed assignment, or since sign-in if no prior clients
+      const idleSince = lastCompletedMap[name] || new Date(signInTimestamp);
+      const idleMinutes = Math.floor((now - idleSince) / 60000);
+
+      activeVolunteers.push({
+        name,
+        station,
+        displayText: `Station ${station} – ${name}`,
+        idleMinutes
+      });
     }
-    
-    return activeVolunteers.sort((a, b) => {
-      const getNum = s => parseInt(s.split('–')[0].replace('Station', '').trim());
-      return getNum(a) - getNum(b);
-    });
+
+    // Sort by idle time descending (longest idle first)
+    return activeVolunteers.sort((a, b) => b.idleMinutes - a.idleMinutes);
   }, 'getAvailableVolunteers');
 }
 

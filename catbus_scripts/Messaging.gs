@@ -344,6 +344,36 @@ function getVolunteersWithActiveClients() {
     }
   }
 
+  // Sort by most recent message, falling back to assignment timestamp
+  const messagesSheet = getMessagesSheet();
+  if (messagesSheet && messagesSheet.getLastRow() > 1) {
+    const msgData = messagesSheet.getRange(
+      2, 1,
+      messagesSheet.getLastRow() - 1,
+      MESSAGING_CONFIG.COLUMNS.TO_NAME + 1
+    ).getValues();
+
+    const lastMsgTime = {};
+    for (const row of msgData) {
+      const ts = row[MESSAGING_CONFIG.COLUMNS.TIMESTAMP];
+      const from = row[MESSAGING_CONFIG.COLUMNS.FROM_NAME]?.toString().trim();
+      const to   = row[MESSAGING_CONFIG.COLUMNS.TO_NAME]?.toString().trim();
+      if (!ts) continue;
+      const t = new Date(ts);
+      [from, to].forEach(name => {
+        if (seenVolunteers.has(name) && (!lastMsgTime[name] || t > lastMsgTime[name])) {
+          lastMsgTime[name] = t;
+        }
+      });
+    }
+
+    activeVolunteers.sort((a, b) => {
+      const ta = lastMsgTime[a.name] || new Date(a.timestamp);
+      const tb = lastMsgTime[b.name] || new Date(b.timestamp);
+      return tb - ta;
+    });
+  }
+
   return activeVolunteers;
 }
 

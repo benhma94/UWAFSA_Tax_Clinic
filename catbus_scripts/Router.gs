@@ -23,6 +23,8 @@ function doGet(e) {
       return doGetControlSheet();
     case 'admin':
       return doGetAdminDashboard();
+    case 'alerts':
+      return doGetAlertDashboard();
     case 'schedule':
       return doGetVolunteerScheduleViewer();
     case 'assignment':
@@ -42,6 +44,8 @@ function doGet(e) {
       return doGetProductCodeDistribution();
     case 'reviewer':
       return doGetReviewerPage();
+    case 'quiz':
+      return doGetQuizSubmission();
     default:
       return doGetClientIntake(); // Default fallback to intake
   }

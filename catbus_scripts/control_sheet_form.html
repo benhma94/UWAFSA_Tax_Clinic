@@ -221,6 +221,44 @@
       background-color: #888 !important;
     }
 
+    /* Finalize button: green when enabled to distinguish from secondary actions */
+    #finalizeBtn:not(:disabled) {
+      background-color: #27ae60;
+    }
+    #finalizeBtn:not(:disabled):hover {
+      background-color: #219a52;
+      box-shadow: 0 4px 8px rgba(39, 174, 96, 0.3);
+    }
+    @keyframes pulse-ready {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.6); }
+      50%       { box-shadow: 0 0 0 10px rgba(39, 174, 96, 0); }
+    }
+    #finalizeBtn.ready-to-finalize {
+      animation: pulse-ready 1.4s ease-in-out infinite;
+    }
+
+    /* "Complete Filing" section divider */
+    .finalize-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0 16px;
+    }
+    .finalize-divider::before,
+    .finalize-divider::after {
+      content: '';
+      flex: 1;
+      border-top: 1px solid #ccc;
+    }
+    .finalize-divider span {
+      color: #666;
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
     #messageBox, #errorBox {
       display: none;
       padding: 10px;
@@ -1709,13 +1747,14 @@
 
   <br>
   <button onclick="addTaxYearRow()">Add Additional Tax Year</button>
-  <br><br>
+
+  <div class="finalize-divider"><span>Complete Filing</span></div>
 
   <div id="messageBox"></div>
   <div id="errorBox"><span id="errorBoxText"></span><button id="errorBoxClose" onclick="document.getElementById('errorBox').style.display='none'" aria-label="Dismiss">&times;</button></div>
   <div id="spinner"><div class="lds-ring"><div></div><div></div><div></div><div></div></div></div>
 
-  <button id="finalizeBtn" onclick="finalizeReturns()" disabled>Finalize Returns</button>
+  <button id="finalizeBtn" onclick="finalizeReturns()" disabled>&#10003; Finalize Returns</button>
   <br><br>
   <button id="cancelClientBtn" onclick="openCancelClientModal()" disabled style="background-color: #c0392b;">Cancel Client</button>
 
@@ -1781,7 +1820,7 @@
           </div>
           
           <div class="email-form-field">
-            <label for="gstHstReceipt">Total GST/HST Credit</label>
+            <label for="gstHstReceipt">Total CGEB or GST/HST Credit</label>
             <input type="text" id="gstHstReceipt" class="number-input" placeholder="Enter amount (e.g., 150.00)" oninput="formatAccountingNumber(this, 'gstHst')" onblur="finalizeAccountingFormat(this)">
             <div class="number-input-hint">Enter as number (e.g., 150.00)</div>
           </div>
@@ -1832,7 +1871,7 @@
       
       <div class="email-modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeEmailReceiptDialog()">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="sendReceiptEmail()">Send</button>
+        <button type="button" class="btn btn-primary" onclick="sendReceiptEmail(this)">Send</button>
       </div>
     </div>
   </div>
@@ -1967,6 +2006,19 @@
       hideDraftBanner();
     }
 
+    function hasDirtyWork() {
+      var clientEl = document.getElementById('client');
+      if (clientEl && clientEl.value) return true;
+      try {
+        var raw = sessionStorage.getItem(DRAFT_KEY);
+        if (raw) {
+          var draft = JSON.parse(raw);
+          if (draft && draft.client) return true;
+        }
+      } catch (e) {}
+      return false;
+    }
+
     function hideDraftBanner() {
       document.getElementById('draftBanner').classList.remove('show');
     }
@@ -2087,6 +2139,17 @@
       if (cancelClientBtn) {
         cancelClientBtn.disabled = !(volunteer && client);
       }
+      // Pulse when all rows have a filing status selected
+      if (finalizeBtn) {
+        const allGroups = {};
+        document.querySelectorAll('input[type="radio"][name^="filingStatus"]').forEach(function(r) {
+          if (!allGroups[r.name]) allGroups[r.name] = false;
+          if (r.checked) allGroups[r.name] = true;
+        });
+        const groupNames = Object.keys(allGroups);
+        const allFiled = groupNames.length > 0 && groupNames.every(function(n) { return allGroups[n]; });
+        finalizeBtn.classList.toggle('ready-to-finalize', !finalizeBtn.disabled && allFiled);
+      }
     }
 
     function loadDropdowns() {
@@ -2108,6 +2171,12 @@
         const n = e.target.name;
         if (!isRestoring && (e.target.id === 'volunteer' || n === 'reviewer' || n === 'secondaryReviewer')) {
           scheduleSaveDraft();
+        }
+      });
+      window.addEventListener('beforeunload', function(e) {
+        if (hasDirtyWork()) {
+          e.preventDefault();
+          e.returnValue = '';
         }
       });
       document.getElementById('volunteer').focus();
@@ -2151,6 +2220,12 @@
       while (table.rows.length > 1) table.deleteRow(1);
       rowCount = 1;
       currentClientData = null; // Clear stored client data
+
+      // Auto-select if volunteer has exactly one assigned client
+      if (volunteerMap[volunteer] && volunteerMap[volunteer].length === 1) {
+        clientSelect.value = volunteerMap[volunteer][0];
+        clientSelect.dispatchEvent(new Event('change'));
+      }
     }
 
     document.getElementById('client').addEventListener('change', function () {
@@ -2853,6 +2928,7 @@
     function removeRow(button) {
       const row = button.closest('tr');
       row.remove();
+      checkFormReady();
     }
 
     let helpActive = false;
@@ -3009,13 +3085,14 @@
       const emailBtn = document.getElementById(`emailReceiptBtn${rowId}`);
       
       if (!emailBtn) return;
-      
+
       // Show button if EFILE or Paper is selected
       if (efileRadio && efileRadio.checked || paperRadio && paperRadio.checked) {
         emailBtn.classList.add('show');
       } else {
         emailBtn.classList.remove('show');
       }
+      checkFormReady();
     }
 
     function openEmailReceiptDialog(rowId, rowCount) {
@@ -3245,7 +3322,7 @@
       input.classList.remove('negative');
     }
 
-    function sendReceiptEmail() {
+    function sendReceiptEmail(btn) {
       const emailForm = document.getElementById('emailReceiptForm');
       
       if (!emailForm.checkValidity()) {
@@ -3343,7 +3420,7 @@
         return;
       }
 
-      const sendBtn = event.target;
+      const sendBtn = btn;
       const originalText = sendBtn.textContent;
       sendBtn.textContent = 'Sending...';
       sendBtn.disabled = true;

@@ -270,6 +270,8 @@
             <th>Status</th>
             <th>Volunteer 2</th>
             <th>Status</th>
+            <th>Volunteer 3</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody id="resultsBody"></tbody>
@@ -292,10 +294,12 @@
             <th>Status</th>
             <th>Volunteer 2</th>
             <th>Status</th>
+            <th>Volunteer 3</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody id="logBody">
-          <tr><td colspan="6" style="text-align:center; color:#999;">Click Refresh to load</td></tr>
+          <tr><td colspan="8" style="text-align:center; color:#999;">Click Refresh to load</td></tr>
         </tbody>
       </table>
     </div>
@@ -401,7 +405,7 @@
       statBox(data.remainingVolunteers, 'Need Codes') +
       statBox(data.filerCount, 'Filers Remaining') +
       statBox(data.mentorCount, 'Mentors Remaining') +
-      statBox(data.willDistribute, 'Pairs to Distribute') +
+      statBox(data.willDistribute, 'Groups to Distribute') +
       statBox(data.codesRemaining, 'Codes Left After');
 
     document.getElementById('previewCard').classList.remove('hidden');
@@ -426,8 +430,9 @@
         select.innerHTML = '<option value="">-- Select a volunteer --</option>';
         for (var i = 0; i < list.length; i++) {
           var v = list[i];
-          var label = v.name + ' (' + v.email + ')';
-          if (v.hasCode) label += ' - already has code';
+          var roleLabel = v.role ? ' [' + v.role + ']' : '';
+          var label = v.name + roleLabel + ' (' + v.email + ')';
+          if (v.hasCode) label += ' ✓ has code';
           var opt = document.createElement('option');
           opt.value = v.email;
           opt.textContent = label;
@@ -526,6 +531,8 @@
         '<td class="' + (r.sent1 ? 'status-sent' : 'status-failed') + '">' + (r.sent1 ? 'Sent' : 'Failed') + '</td>' +
         '<td>' + r.volunteer2 + '</td>' +
         '<td class="' + (r.sent2 ? 'status-sent' : 'status-failed') + '">' + (r.sent2 ? 'Sent' : 'Failed') + '</td>' +
+        '<td>' + r.volunteer3 + '</td>' +
+        '<td class="' + (r.sent3 ? 'status-sent' : 'status-failed') + '">' + (r.sent3 ? 'Sent' : 'Failed') + '</td>' +
         '</tr>';
     }
     tbody.innerHTML = html;
@@ -535,13 +542,13 @@
 
   function loadLog() {
     var tbody = document.getElementById('logBody');
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#999;">Loading...</td></tr>';
 
     google.script.run
       .withSuccessHandler(function(entries) {
         tbody.innerHTML = '';
         if (entries.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">No distributions yet</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#999;">No distributions yet</td></tr>';
           return;
         }
         var logHtml = '';
@@ -555,12 +562,14 @@
             '<td class="' + (e.v1Status === 'Sent' ? 'status-sent' : 'status-failed') + '">' + e.v1Status + '</td>' +
             '<td>' + e.v2Name + '</td>' +
             '<td class="' + (e.v2Status === 'Sent' ? 'status-sent' : 'status-failed') + '">' + e.v2Status + '</td>' +
+            '<td>' + (e.v3Name || '') + '</td>' +
+            '<td class="' + (e.v3Status === 'Sent' ? 'status-sent' : (e.v3Status ? 'status-failed' : '')) + '">' + (e.v3Status || '') + '</td>' +
             '</tr>';
         }
         tbody.innerHTML = logHtml;
       })
       .withFailureHandler(function(err) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#c0392b;">Failed to load: ' + err.message + '</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#c0392b;">Failed to load: ' + err.message + '</td></tr>';
       })
       .getDistributionLog(getYear());
   }

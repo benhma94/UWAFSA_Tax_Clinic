@@ -904,20 +904,24 @@ function createSchedule(spreadsheetId, availabilitySheetName, outputSheetName, o
 
   // Send change notifications if enabled
   let notificationsSent = 0;
+  let notificationRecipients = [];
   if (options.notifyChanges && oldAssignments) {
     Logger.log('Sending schedule change notifications...');
-    notificationsSent = sendScheduleChangeNotifications(
+    const notifResult = sendScheduleChangeNotifications(
       oldAssignments,
       scheduleResult.volunteerAssignments,
       scheduleResult.volunteers,
       options.dayLabels
     );
+    notificationsSent = notifResult.count;
+    notificationRecipients = notifResult.recipients;
   }
 
   Logger.log('Schedule generation complete');
 
-  // Add notifications count to result
+  // Add notifications count and recipients to result
   scheduleResult.notificationsSent = notificationsSent;
+  scheduleResult.notificationRecipients = notificationRecipients;
 
   // Add previous mentor designations for dashboard pre-selection
   scheduleResult.previousSeniorMentors = getSeniorMentorDesignations();

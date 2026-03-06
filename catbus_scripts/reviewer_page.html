@@ -39,31 +39,6 @@
       white-space: nowrap;
     }
 
-    #reviewerSelect {
-      padding: 10px 14px;
-      border-radius: 8px;
-      border: 2px solid var(--border-light);
-      font-size: 14px;
-      min-width: 220px;
-    }
-
-    body.light #reviewerSelect {
-      background-color: var(--input-bg-light);
-      color: var(--text-color-light);
-      border-color: var(--border-light);
-    }
-
-    body.dark #reviewerSelect {
-      background-color: var(--input-bg-dark);
-      color: var(--text-color-dark);
-      border-color: var(--border-dark);
-    }
-
-    #reviewerSelect:focus {
-      outline: 2px solid var(--accent-color); outline-offset: 2px;
-      border-color: var(--accent-color);
-    }
-
     .status-badge {
       padding: 4px 12px;
       border-radius: 20px;
@@ -422,7 +397,7 @@
         gap: 10px;
       }
 
-      #reviewerSelect {
+      #reviewerInput {
         width: 100%;
         min-width: unset;
       }
@@ -468,10 +443,20 @@
 
   <!-- Reviewer identity bar -->
   <div id="identityBar">
-    <label for="reviewerSelect">You are:</label>
-    <select id="reviewerSelect" onchange="onReviewerChange()">
-      <option value="">— Select your name —</option>
-    </select>
+    <label for="reviewerInput">You are:</label>
+    <div class="autocomplete-container" style="min-width: 220px;">
+      <input
+        type="text"
+        id="reviewerInput"
+        placeholder="— Type your name —"
+        autocomplete="off"
+        role="combobox"
+        aria-expanded="false"
+        aria-autocomplete="list"
+        aria-controls="reviewerDropdown"
+      >
+      <div id="reviewerDropdown" class="autocomplete-dropdown" role="listbox"></div>
+    </div>
     <span id="readyBadge" class="status-badge waiting">Select your name to begin</span>
     <span class="refresh-info" id="refreshInfo">Auto-refreshes every 15s</span>
   </div>
@@ -488,6 +473,7 @@
   <?!= include('shared_scripts') ?>
   <script defer>
     let selectedReviewer = '';
+    let mentorNames = [];
     let refreshTimer = null;
     // cardState persists UI across renderCards() calls. Key: volunteerName.
     // Value: { reasonOpen: bool, reasonText: string, infoOpen: bool }
@@ -513,14 +499,8 @@
     function loadReviewerList() {
       google.script.run
         .withSuccessHandler(data => {
-          const sel = document.getElementById('reviewerSelect');
-          const mentors = data.reviewers || [];
-          mentors.forEach(name => {
-            const opt = document.createElement('option');
-            opt.value = name;
-            opt.textContent = name;
-            sel.appendChild(opt);
-          });
+          mentorNames = data.reviewers || [];
+          setupReviewerAutocomplete();
         })
         .withFailureHandler(err => {
           console.error('Failed to load mentor list:', err);
@@ -528,8 +508,21 @@
         .getMentorList();
     }
 
-    function onReviewerChange() {
-      selectedReviewer = document.getElementById('reviewerSelect').value;
+    function setupReviewerAutocomplete() {
+      createAutocomplete({
+        inputId: 'reviewerInput',
+        dropdownId: 'reviewerDropdown',
+        idPrefix: 'rv-option-',
+        wrapAround: false,
+        getItems: () => mentorNames,
+        filterItem: (name, term) => name.toLowerCase().includes(term),
+        renderItem: (name, i, term) => autocompleteHighlightMatch(name, term),
+        onSelect: (name) => onReviewerChange(name),
+      });
+    }
+
+    function onReviewerChange(name) {
+      selectedReviewer = name || '';
       const badge = document.getElementById('readyBadge');
       if (selectedReviewer) {
         badge.textContent = `Ready as ${selectedReviewer}`;
@@ -625,6 +618,8 @@
             reasonArea.style.display = 'block';
             const returnBtn = card.querySelector('.return-btn');
             if (returnBtn) returnBtn.style.display = 'none';
+            const approveBtn = card.querySelector('.approve-btn');
+            if (approveBtn) approveBtn.disabled = true;
           }
           if (textarea && st.reasonText) {
             textarea.value = st.reasonText;
@@ -673,6 +668,11 @@
       if (reasonArea) {
         reasonArea.style.display = 'block';
         btn.style.display = 'none';
+        const card = document.getElementById(`card_${CSS.escape(volunteerName)}`);
+        if (card) {
+          const approveBtn = card.querySelector('.approve-btn');
+          if (approveBtn) approveBtn.disabled = true;
+        }
       }
     }
 
@@ -685,6 +685,8 @@
         if (card) {
           const returnBtn = card.querySelector('.return-btn');
           if (returnBtn) returnBtn.style.display = '';
+          const approveBtn = card.querySelector('.approve-btn');
+          if (approveBtn) approveBtn.disabled = false;
         }
       }
       if (cardState[volunteerName]) cardState[volunteerName].reasonOpen = false;

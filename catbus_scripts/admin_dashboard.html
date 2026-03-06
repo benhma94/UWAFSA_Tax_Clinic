@@ -4,33 +4,6 @@
   <base target="_top">
   <?!= include('shared_styles') ?>
   <style>
-    .request {
-      padding: 16px 20px;
-      border-radius: 12px;
-      margin-bottom: 12px;
-      color: white;
-      font-weight: 600;
-      box-shadow: var(--shadow-light);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .request:hover {
-      transform: translateX(4px);
-      box-shadow: var(--shadow-hover);
-    }
-    .request.active {
-      background-color: #f4b400;
-    }
-
-    .request.escalated {
-      background-color: #d93025;
-      animation: pulse 1.2s infinite;
-    }
-
-    .request.review {
-      background-color: #4285f4;
-    }
-
     h3 {
       margin-top: 40px;
       margin-bottom: 20px;
@@ -42,12 +15,6 @@
 
     h3:first-of-type {
       margin-top: 0;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.03); opacity: 0.9; }
-      100% { transform: scale(1); opacity: 1; }
     }
 
     .summary-box {
@@ -77,37 +44,8 @@
     canvas {
       margin-top: 20px;
       width: 100%;
-      max-width: 400px;  /* controls how wide the chart can go */
+      max-width: 400px;
       height: auto;
-    }
-
-    .return-item {
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 15px;
-      border: 2px solid var(--border-light);
-      box-shadow: var(--shadow-light);
-      transition: transform 0.2s, box-shadow 0.2s, background 0.3s, border 0.3s;
-    }
-
-    .return-item:hover {
-      transform: translateX(4px);
-      box-shadow: var(--shadow-hover);
-    }
-
-    body.light .return-item {
-      background-color: var(--input-bg-light);
-      border-color: var(--border-light);
-    }
-
-    body.dark .return-item {
-      background-color: var(--input-bg-dark);
-      border-color: var(--border-dark);
-    }
-
-    .return-info strong {
-      color: var(--accent-color);
-      font-size: 1.1em;
     }
 
     /* Volunteer performance lists */
@@ -152,6 +90,153 @@
       color: var(--accent-color);
     }
 
+    /* Active returns cards */
+    .active-returns-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .active-return-card {
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 2px solid var(--border-light);
+      box-shadow: var(--shadow-light);
+      transition: transform 0.2s, box-shadow 0.2s, background 0.3s, border 0.3s;
+    }
+
+    .active-return-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    body.light .active-return-card {
+      background: var(--input-bg-light);
+    }
+
+    body.dark .active-return-card {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+
+    .card-volunteer {
+      font-size: 1.1em;
+      font-weight: 700;
+      color: var(--accent-color);
+      margin-bottom: 2px;
+    }
+
+    .card-client-id {
+      font-size: 0.88em;
+      font-weight: 600;
+      margin-bottom: 8px;
+      opacity: 0.75;
+    }
+
+    .card-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 0.72em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge.priority {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .badge.senior-review {
+      background: #3498db;
+      color: white;
+    }
+
+    .card-detail {
+      font-size: 0.87em;
+      margin-top: 4px;
+      opacity: 0.85;
+    }
+
+    .card-timing {
+      margin-top: 10px;
+      padding-top: 10px;
+      font-size: 0.83em;
+      font-weight: 600;
+      border-top: 1px solid var(--border-light);
+    }
+
+    body.dark .card-timing {
+      border-color: var(--border-dark);
+    }
+
+    .empty-state {
+      padding: 30px;
+      text-align: center;
+      opacity: 0.6;
+      font-style: italic;
+    }
+
+    .nav-link {
+      font-size: 0.85em;
+      color: var(--accent-color);
+      text-decoration: none;
+      font-weight: 600;
+      opacity: 0.8;
+    }
+
+    .nav-link:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+
+    .card-message-link {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .card-message-link:hover {
+      text-decoration: underline;
+    }
+
+    .admin-toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      min-width: 240px;
+      max-width: 360px;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-size: 0.95em;
+      font-weight: 600;
+      color: white;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.22);
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .admin-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .admin-toast.success { background: #2ecc71; }
+    .admin-toast.error   { background: #e74c3c; }
+    .admin-toast.info    { background: #3498db; }
   </style>
 </head>
 <body class="light">
@@ -162,19 +247,22 @@
   </header>
 
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-    <h3 style="margin: 0;">🚨 AFSA Tax Clinic QQ Dashboard</h3>
-    <button onclick="refresh()" style="padding: 8px 16px; font-size: 0.9em; background-color: var(--accent-color); color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 Refresh</button>
+    <h3 style="margin: 0;">📊 Admin Dashboard</h3>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a class="nav-link" id="alertLink" href="#">🚨 Alert Dashboard</a>
+      <button onclick="clearStaleSessions()" style="padding: 8px 16px; font-size: 0.9em; background-color: #888; color: white; border: none; border-radius: 5px; cursor: pointer;">🧹 Clear Stale</button>
+      <button onclick="refresh()" style="padding: 8px 16px; font-size: 0.9em; background-color: var(--accent-color); color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 Refresh</button>
+    </div>
   </div>
-  <div id="container">Loading help requests...</div>
 
-  <h3>📋 Review Requests</h3>
-  <div id="reviewContainer">Loading review requests...</div>
+  <h3>🔄 Active Returns</h3>
+  <div id="activeReturnsContainer">Loading active returns...</div>
 
   <div class="summary-box">
     <h3>📊 Return Completion Summary</h3>
     <p>Total Completed: <strong id="totalCount">0</strong></p>
     <p>Completed Today: <strong id="todayCount">0</strong></p>
-    <canvas id="completionChart" width = "400" height = "200"></canvas>
+    <canvas id="completionChart" width="400" height="200"></canvas>
   </div>
 
   <div class="summary-box">
@@ -195,66 +283,75 @@
 <?!= include('shared_scripts') ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  let lastRequestsSerialized = "";
-  let lastReviewRequestsSerialized = "";
+  const BASE_URL = <?!= JSON.stringify(baseUrl) ?>;
+
+  let lastActiveReturnsSerialized = "";
   let lastSummarySerialized = "";
   let lastPerformanceSerialized = "";
-  let chartInstance = null;   // persist chart instead of recreating
+  let chartInstance = null;
 
-
-  function render(requests) {
-    const serialized = JSON.stringify(requests);
-    if (serialized === lastRequestsSerialized) return;  // no changes → do nothing
-    lastRequestsSerialized = serialized;
-
-    const container = document.getElementById("container");
-    container.innerHTML = "";
-
-    if (requests.length === 0) {
-      container.innerHTML = "<p>No active or escalated help requests.</p>";
-      return;
-    }
-
-    for (const req of requests) {
-      const div = document.createElement("div");
-      div.className = `request ${req.status}`;
-      div.innerHTML = `
-        <div><strong>${escapeHtml(req.volunteer)}</strong></div>
-        <div>⏱️ ${req.minutesAgo} minutes ago</div>
-        <div>🕒 ${escapeHtml(req.timestamp)}</div>
-      `;
-      container.appendChild(div);
-    }
+  function formatDuration(minutes) {
+    if (minutes === null || minutes === undefined) return '';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 
-  function renderReviewRequests(requests) {
-    const serialized = JSON.stringify(requests);
-    if (serialized === lastReviewRequestsSerialized) return;  // no changes → do nothing
-    lastReviewRequestsSerialized = serialized;
+  function getMessagingUrl(volunteerName) {
+    return BASE_URL + '?app=messaging&volunteer=' + encodeURIComponent(volunteerName);
+  }
 
-    const container = document.getElementById("reviewContainer");
+  // Build link to alert dashboard using server-injected deployment URL
+  document.getElementById('alertLink').href = BASE_URL + '?app=alerts';
+
+  function renderActiveReturns(returns) {
+    const serialized = JSON.stringify(returns);
+    if (serialized === lastActiveReturnsSerialized) return;
+    lastActiveReturnsSerialized = serialized;
+
+    const container = document.getElementById("activeReturnsContainer");
     container.innerHTML = "";
 
-    if (requests.length === 0) {
-      container.innerHTML = "<p>No active review requests.</p>";
+    if (returns.length === 0) {
+      container.innerHTML = '<p class="empty-state">No returns currently in progress.</p>';
       return;
     }
 
-    for (const req of requests) {
-      const div = document.createElement("div");
-      div.className = `request review`;
-      div.innerHTML = `
-        <div><strong>${escapeHtml(req.volunteer)}</strong></div>
-        <div>⏱️ ${req.minutesAgo} minutes ago</div>
-        <div>🕒 ${escapeHtml(req.timestamp)}</div>
+    const grid = document.createElement("div");
+    grid.className = "active-returns-grid";
+
+    for (const r of returns) {
+      const card = document.createElement("div");
+      card.className = "active-return-card";
+
+      const msgUrl = getMessagingUrl(r.volunteer);
+
+      const badges = [];
+      if (r.isHighPriority) badges.push('<span class="badge priority">Priority</span>');
+      if (r.needsSeniorReview) badges.push('<span class="badge senior-review">Senior Review</span>');
+
+      const timingParts = [];
+      if (r.minutesOnClient !== null) timingParts.push(`⏱️ ${formatDuration(r.minutesOnClient)} on client`);
+      if (r.minutesUntilShiftEnd !== null) timingParts.push(`🔔 ${formatDuration(r.minutesUntilShiftEnd)} until shift end`);
+
+      card.innerHTML = `
+        <div class="card-volunteer"><a href="${escapeHtml(msgUrl)}" class="card-message-link">${escapeHtml(r.volunteer)} 💬</a></div>
+        <div class="card-client-id">Client ${escapeHtml(r.clientId)}</div>
+        ${badges.length ? `<div class="card-badges">${badges.join('')}</div>` : ''}
+        ${r.filingYears ? `<div class="card-detail">📅 ${escapeHtml(r.filingYears)}</div>` : ''}
+        ${r.situations ? `<div class="card-detail">📋 ${escapeHtml(r.situations)}</div>` : ''}
+        ${r.notes ? `<div class="card-detail">📝 ${escapeHtml(r.notes)}</div>` : ''}
+        ${timingParts.length ? `<div class="card-timing">${timingParts.join(' &nbsp;•&nbsp; ')}</div>` : ''}
       `;
-      container.appendChild(div);
+      grid.appendChild(card);
     }
+
+    container.appendChild(grid);
   }
 
   function renderSummary(data) {
     const serialized = JSON.stringify(data);
-    if (serialized === lastSummarySerialized) return; // unchanged → skip
+    if (serialized === lastSummarySerialized) return;
     lastSummarySerialized = serialized;
 
     document.getElementById("totalCount").textContent = data.totalCompleted;
@@ -265,7 +362,6 @@
 
     const ctx = document.getElementById("completionChart").getContext("2d");
 
-    // If a chart exists, update it instead of creating a new one
     if (chartInstance) {
       chartInstance.data.labels = labels;
       chartInstance.data.datasets[0].data = counts;
@@ -294,16 +390,14 @@
     }
   }
 
-
   function renderPerformanceMetrics(data) {
     const serialized = JSON.stringify(data);
-    if (serialized === lastPerformanceSerialized) return; // unchanged → skip
+    if (serialized === lastPerformanceSerialized) return;
     lastPerformanceSerialized = serialized;
 
     document.getElementById("totalVolunteers").textContent = data.totalVolunteers;
     document.getElementById("avgReturns").textContent = data.avgReturnsPerVolunteer;
 
-    // Render top all-time volunteers
     const allTimeContainer = document.getElementById("topVolunteersAllTime");
     allTimeContainer.innerHTML = "";
     if (data.topVolunteers.length === 0) {
@@ -319,7 +413,6 @@
       allTimeContainer.appendChild(allTimeList);
     }
 
-    // Render top today volunteers
     const todayContainer = document.getElementById("topVolunteersToday");
     todayContainer.innerHTML = "";
     if (data.todayVolunteers.length === 0) {
@@ -336,16 +429,39 @@
     }
   }
 
+  function showAdminToast(message, type = 'info', duration = 4000) {
+    const toast = document.getElementById('adminToast');
+    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+    toast.innerHTML = `<span>${icons[type] || ''}</span><span>${message}</span>`;
+    toast.className = `admin-toast ${type} show`;
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
+  }
+
+  function clearStaleSessions() {
+    if (!confirm('Sign out all volunteers who have been signed in for more than 12 hours. Continue?')) return;
+    google.script.run
+      .withSuccessHandler(result => {
+        showAdminToast(
+          result.cleared === 0 ? 'No stale sessions found.' : `Cleared ${result.cleared} stale session(s).`,
+          result.cleared === 0 ? 'info' : 'success'
+        );
+        refresh();
+      })
+      .withFailureHandler(err => {
+        showAdminToast('Error: ' + (err.message || err), 'error');
+      })
+      .clearStaleSessions(12);
+  }
+
   function refresh() {
     google.script.run.withSuccessHandler(function(data) {
-      render(data.helpRequests);
-      renderReviewRequests(data.reviewRequests);
+      renderActiveReturns(data.activeReturns);
       renderSummary(data.returnSummary);
       renderPerformanceMetrics(data.performanceMetrics);
     }).getAdminDashboardData();
   }
 
-  // Initial load
   window.addEventListener('load', function() {
     refresh();
   });
@@ -353,6 +469,7 @@
   // Auto-refresh every 30 seconds
   setInterval(refresh, 30000);
 </script>
+<div id="adminToast" class="admin-toast"></div>
 <div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
 </body>
 </html>

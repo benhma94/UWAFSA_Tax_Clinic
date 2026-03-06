@@ -367,62 +367,6 @@
       background-color: rgba(142, 0, 0, 0.15);
     }
 
-    .edit-schedule-btn {
-      width: auto;
-      min-width: 140px;
-      margin-top: 15px;
-      padding: 10px 20px;
-      font-size: 14px;
-      background-color: #555;
-    }
-
-    .edit-schedule-btn:hover:not(:disabled) {
-      background-color: #444;
-    }
-
-    .edit-grid-container {
-      margin-top: 15px;
-      padding: 20px;
-      border-radius: 8px;
-      border: 2px solid var(--accent-color);
-      animation: fadeIn 0.3s ease-in;
-    }
-
-    body.light .edit-grid-container {
-      background-color: rgba(142, 0, 0, 0.03);
-    }
-
-    body.dark .edit-grid-container {
-      background-color: rgba(142, 0, 0, 0.08);
-    }
-
-    .edit-grid-container input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
-      cursor: pointer;
-      accent-color: var(--accent-color);
-    }
-
-    .edit-actions {
-      margin-top: 15px;
-      display: flex;
-      gap: 10px;
-    }
-
-    .edit-actions button {
-      width: auto;
-      min-width: 130px;
-    }
-
-    .edit-cancel-btn {
-      background-color: #666 !important;
-    }
-
-    #editStatus {
-      margin-top: 10px;
-      font-weight: 500;
-    }
-
     /* Mobile */
     @media (max-width: 768px) {
       body {
@@ -701,13 +645,6 @@
       <div class="total-shifts">📊 Total Shifts: ${result.shifts.length}</div>
     `;
 
-    // Edit schedule button
-    const escapedVolName = result.volunteerName.replace(/'/g, "\\'");
-    html += `
-      <button class="edit-schedule-btn" id="editToggleBtn" onclick="toggleEditMode('${escapedVolName}')">✏️ Edit Schedule</button>
-      <div id="editGridPanel" style="display: none;"></div>
-    `;
-
     // Show "My Senior Mentor" section if volunteer is a mentor with senior assignments
     if (result.seniorsByDay && Object.keys(result.seniorsByDay).length > 0) {
       html += `
@@ -891,113 +828,6 @@
     }
 
     dayResultsContent.innerHTML = html;
-  }
-
-  // === Schedule Editing ===
-  let editingVolunteerName = '';
-  let currentShiftMap = {};
-
-  function toggleEditMode(volunteerName) {
-    const panel = document.getElementById('editGridPanel');
-    const btn = document.getElementById('editToggleBtn');
-
-    if (panel.style.display === 'none') {
-      editingVolunteerName = volunteerName;
-      btn.textContent = '✖️ Cancel Edit';
-      btn.classList.add('edit-cancel-btn');
-      panel.style.display = 'block';
-      panel.innerHTML = '<div class="loading"></div> Loading shift data...';
-
-      google.script.run
-        .withSuccessHandler(shiftMap => {
-          currentShiftMap = shiftMap;
-          renderEditGrid(shiftMap);
-        })
-        .withFailureHandler(error => {
-          panel.innerHTML = '<div class="no-results">Error loading shift data: ' + (error.message || error) + '</div>';
-        })
-        .getVolunteerShiftMap(volunteerName);
-    } else {
-      panel.style.display = 'none';
-      btn.textContent = '✏️ Edit Schedule';
-      btn.classList.remove('edit-cancel-btn');
-    }
-  }
-
-  function renderEditGrid(shiftMap) {
-    const panel = document.getElementById('editGridPanel');
-    const slotKeys = ['A', 'B', 'C'];
-
-    let html = '<div class="edit-grid-container"><h3>Toggle Shifts</h3>';
-    html += '<div style="overflow-x: auto;"><table class="schedule-table"><thead><tr><th>Shift</th>';
-
-    // Day headers from loaded config
-    for (let d = 1; d <= 4; d++) {
-      const option = document.getElementById('dayOption' + d);
-      const dayLabel = option ? option.textContent : 'Day ' + d;
-      html += '<th>' + escapeHtml(dayLabel) + '</th>';
-    }
-    html += '</tr></thead><tbody>';
-
-    for (const slotKey of slotKeys) {
-      const slotInfo = SHIFT_CONFIG.TIME_SLOTS[slotKey];
-      const label = slotInfo ? slotInfo.label + ' (' + slotInfo.display + ')' : slotKey;
-      html += '<tr><td>' + escapeHtml(label) + '</td>';
-
-      for (let d = 1; d <= 4; d++) {
-        const shiftId = 'D' + d + slotKey;
-        const checked = shiftMap[shiftId] ? 'checked' : '';
-        html += '<td style="text-align: center;">';
-        html += '<input type="checkbox" id="edit_' + shiftId + '" ' + checked + ' ';
-        html += 'onchange="onShiftToggle(\'' + shiftId + '\', this.checked)">';
-        html += '</td>';
-      }
-      html += '</tr>';
-    }
-
-    html += '</tbody></table></div>';
-    html += '<div class="edit-actions">';
-    html += '<button onclick="saveScheduleEdits()" id="saveEditsBtn">💾 Save Changes</button>';
-    html += '<button class="edit-cancel-btn" onclick="toggleEditMode()">✖️ Cancel</button>';
-    html += '</div>';
-    html += '<div id="editStatus"></div>';
-    html += '</div>';
-
-    panel.innerHTML = html;
-  }
-
-  function onShiftToggle(shiftId, isChecked) {
-    currentShiftMap[shiftId] = isChecked;
-  }
-
-  function saveScheduleEdits() {
-    const saveBtn = document.getElementById('saveEditsBtn');
-    const status = document.getElementById('editStatus');
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving...';
-    status.innerHTML = '<div class="loading"></div> Saving changes...';
-
-    google.script.run
-      .withSuccessHandler(result => {
-        status.innerHTML = '<div style="color: var(--success-color); font-weight: 600;">Saved! ' +
-          result.changesApplied + ' shift(s) updated.</div>';
-        saveBtn.disabled = false;
-        saveBtn.textContent = '💾 Save Changes';
-
-        // Refresh the schedule display
-        setTimeout(() => {
-          searchByName();
-          document.getElementById('editGridPanel').style.display = 'none';
-          document.getElementById('editToggleBtn').textContent = '✏️ Edit Schedule';
-          document.getElementById('editToggleBtn').classList.remove('edit-cancel-btn');
-        }, 1000);
-      })
-      .withFailureHandler(error => {
-        status.innerHTML = '<div style="color: red;">Error saving: ' + (error.message || error) + '</div>';
-        saveBtn.disabled = false;
-        saveBtn.textContent = '💾 Save Changes';
-      })
-      .saveVolunteerScheduleEdits(editingVolunteerName, currentShiftMap);
   }
 
   // Enter key handling is now in setupAutocomplete() for better autocomplete integration

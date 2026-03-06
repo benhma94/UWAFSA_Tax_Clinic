@@ -472,23 +472,38 @@
     queueCount.textContent = `Total clients in queue: ${sortedQueue.length}`;
   }
 
+  function formatIdle(mins) {
+    if (mins < 1) return '<1m';
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+
   function populateVolunteerDropdown() {
     const volunteerSelect = document.getElementById('volunteerSelect');
     const clientSelect = document.getElementById('clientSelect');
-    volunteerSelect.innerHTML = '<option value="">Select Volunteer</option>';
-    clientSelect.innerHTML = '<option value="">Select Client</option>';
 
+    // Volunteers are pre-sorted by idle time (longest first) from the backend
     let volunteerOptions = '';
-    volunteers.forEach(name => {
-      volunteerOptions += `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
+    volunteers.forEach(v => {
+      const idleText = ` (idle ${formatIdle(v.idleMinutes)})`;
+      volunteerOptions += `<option value="${escapeHtml(v.displayText)}">${escapeHtml(v.displayText)}${escapeHtml(idleText)}</option>`;
     });
-    volunteerSelect.innerHTML += volunteerOptions;
+    volunteerSelect.innerHTML = volunteerOptions;
 
+    // Sort clients the same way the queue display does: high priority first, then longest wait
+    const sortedClients = [...clientQueue].sort((a, b) => {
+      const aPriority = a.isHighPriority === true;
+      const bPriority = b.isHighPriority === true;
+      if (aPriority !== bPriority) return bPriority ? 1 : -1;
+      return parseWaitTimeToMinutes(b.waitTime) - parseWaitTimeToMinutes(a.waitTime);
+    });
     let clientOptions = '';
-    clientQueue.forEach(c => {
+    sortedClients.forEach(c => {
       clientOptions += `<option value="${escapeHtml(c.clientId)}">${escapeHtml(c.clientId)}</option>`;
     });
-    clientSelect.innerHTML += clientOptions;
+    clientSelect.innerHTML = clientOptions;
   }
 
   function assignClient() {

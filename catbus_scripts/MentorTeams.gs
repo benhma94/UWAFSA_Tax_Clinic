@@ -292,6 +292,20 @@ function outputMentorTeamsToSheet(teams, seniorMentorNames, firstTimeMentorNames
 }
 
 /**
+ * Formats a Date object to a schedule label string like "Saturday March 21, 2026".
+ * @param {Date} d
+ * @returns {string}
+ */
+function formatDateToScheduleLabel(d) {
+  const tz = Session.getScriptTimeZone();
+  const dayOfWeek = Utilities.formatDate(d, tz, 'EEEE');
+  const month     = Utilities.formatDate(d, tz, 'MMMM');
+  const day       = Utilities.formatDate(d, tz, 'd');
+  const year      = Utilities.formatDate(d, tz, 'yyyy');
+  return `${dayOfWeek} ${month} ${day}, ${year}`;
+}
+
+/**
  * Main entry point called from dashboard to compute and save mentor teams
  * @param {Array<string>} seniorMentorNames - Names designated as senior mentors
  * @param {Array<string>} firstTimeMentorNames - Names designated as first-time mentors

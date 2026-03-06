@@ -27,7 +27,7 @@ const CONFIG = {
     VOLUNTEER_LIST: 'Volunteer List',
     SIGNOUT: 'SignOut',
     SCHEDULE_AVAILABILITY: 'Schedule Availability', // Form responses for volunteer availability
-    SCHEDULE_OUTPUT: 'Schedule Output', // Generated schedule
+    SCHEDULE_OUTPUT: 'Shift Schedule', // Generated schedule
     PRODUCT_CODES: 'UFILE Keys', // Product codes for distribution
     PRODUCT_CODE_DISTRIBUTION_LOG: 'Product Code Distribution Log', // Distribution tracking
     VOLUNTEER_TAGS: 'Volunteer Tags', // Custom display tags for volunteers
@@ -213,8 +213,16 @@ const ELIGIBILITY_CONFIG = {
   // Clinic operating hours for walk-ins
   CLINIC_HOURS: '10:00 AM - 7:30 PM',
 
-  // Clinic location (TBD until confirmed)
+  // Clinic location fallback (used if date not found in DATE_LOCATIONS)
   CLINIC_LOCATION: 'TBD',
+
+  // Per-date location mapping for appointment confirmation emails
+  DATE_LOCATIONS: {
+    'Saturday, March 21, 2026': { room: 'STC 1012', mapsUrl: 'https://maps.app.goo.gl/BfzfkUicXcDb6QNS8' },
+    'Sunday, March 22, 2026':   { room: 'STC 1012', mapsUrl: 'https://maps.app.goo.gl/BfzfkUicXcDb6QNS8' },
+    'Saturday, March 28, 2026': { room: 'RCH 301',  mapsUrl: 'https://maps.app.goo.gl/Z6pM2eRKRk65TpsQ9' },
+    'Sunday, March 29, 2026':   { room: 'STC 1012', mapsUrl: 'https://maps.app.goo.gl/BfzfkUicXcDb6QNS8' }
+  },
 
   // Complexity thresholds
   COMPLEXITY: {

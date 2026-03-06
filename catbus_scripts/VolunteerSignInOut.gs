@@ -9,11 +9,17 @@
  */
 function getAvailableStations() {
   return safeExecute(() => {
-    const signInSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
-    const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
-    
+    const ss = getSpreadsheet();
+    const signInSheet = ss.getSheetByName(CONFIG.SHEETS.VOLUNTEER_LIST);
+    const signOutSheet = ss.getSheetByName(CONFIG.SHEETS.SIGNOUT);
+
     const stationList = Array.from({ length: CONFIG.SIGN_IN_OUT.STATION_COUNT }, (_, i) => (i + 1).toString());
     const exceptionStations = CONFIG.SIGN_IN_OUT.EXCEPTION_STATIONS;
+
+    // If sheets don't exist yet (no sign-ins have occurred), all stations are available
+    if (!signInSheet || !signOutSheet) {
+      return [...exceptionStations, ...stationList];
+    }
 
     const signInData = signInSheet.getDataRange().getValues();
     const signOutData = signOutSheet.getDataRange().getValues();
@@ -53,8 +59,12 @@ function getAvailableStations() {
  */
 function getActiveSessions() {
   return safeExecute(() => {
-    const signInSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
-    const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
+    const ss = getSpreadsheet();
+    const signInSheet = ss.getSheetByName(CONFIG.SHEETS.VOLUNTEER_LIST);
+    const signOutSheet = ss.getSheetByName(CONFIG.SHEETS.SIGNOUT);
+
+    // If sheets don't exist yet, no one has signed in
+    if (!signInSheet || !signOutSheet) return [];
 
     const signInData = signInSheet.getDataRange().getValues();
     const signOutData = signOutSheet.getDataRange().getValues();
@@ -124,7 +134,16 @@ function signInVolunteer(volunteerName, station) {
         throw new Error(`Station "${station}" is not available. Please select another station.`);
       }
 
-      const sheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
+      // Prevent duplicate sign-ins for the same volunteer
+      const activeSessions = getActiveSessions();
+      const alreadySignedIn = activeSessions.some(
+        s => s.name.toLowerCase() === volunteerName.trim().toLowerCase()
+      );
+      if (alreadySignedIn) {
+        throw new Error(`${volunteerName.trim()} is already signed in. Please sign out first.`);
+      }
+
+      const sheet = getOrCreateSignInSheet_();
 
       // Generate session ID
       const sessionId = Utilities.getUuid();
@@ -190,7 +209,7 @@ function signOutVolunteer(sessionId) {
     }
     
     // Check if already signed out today
-    const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
+    const signOutSheet = getOrCreateSignOutSheet_();
     const signOutData = signOutSheet.getDataRange().getValues();
 
     // Check if already signed out (no date filter — catches previous-day sessions)
@@ -224,6 +243,40 @@ function signOutVolunteer(sessionId) {
 }
 
 /**
+ * Gets or creates the Volunteer List (sign-in) sheet with headers.
+ * @returns {Sheet}
+ */
+function getOrCreateSignInSheet_() {
+  const ss = getSpreadsheet();
+  let sheet = ss.getSheetByName(CONFIG.SHEETS.VOLUNTEER_LIST);
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
+    sheet.getRange(1, 1, 1, 4).setValues([['Timestamp', 'Name', 'Station', 'Session ID']]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, 4).setFontWeight('bold');
+    Logger.log('Created Volunteer List sheet');
+  }
+  return sheet;
+}
+
+/**
+ * Gets or creates the SignOut sheet with headers.
+ * @returns {Sheet}
+ */
+function getOrCreateSignOutSheet_() {
+  const ss = getSpreadsheet();
+  let sheet = ss.getSheetByName(CONFIG.SHEETS.SIGNOUT);
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.SHEETS.SIGNOUT);
+    sheet.getRange(1, 1, 1, 3).setValues([['Timestamp', 'Volunteer', 'Session ID']]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, 3).setFontWeight('bold');
+    Logger.log('Created SignOut sheet');
+  }
+  return sheet;
+}
+
+/**
  * Gets current sign-in statistics
  * @returns {Object} Statistics about current sign-ins
  */
@@ -243,6 +296,80 @@ function getSignInStats() {
       activeSessions: activeSessions
     };
   }, 'getSignInStats');
+}
+
+/**
+ * Clears stale volunteer sessions (signed in but never signed out) older than hoursThreshold hours.
+ * Writes a sign-out record for each stale session so they stop appearing as active.
+ * @param {number} hoursThreshold - Sessions older than this many hours are cleared (default 12)
+ * @returns {Object} { cleared: number } count of sessions cleared
+ */
+function clearStaleSessions(hoursThreshold) {
+  return safeExecute(() => {
+    hoursThreshold = hoursThreshold || 12;
+    const signInSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
+    const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
+
+    const signInData = signInSheet.getDataRange().getValues();
+    const signOutData = signOutSheet.getDataRange().getValues();
+
+    // Build set of already-signed-out session IDs
+    const signedOutIds = new Set();
+    for (let i = 1; i < signOutData.length; i++) {
+      const outId = signOutData[i][CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim();
+      if (outId) signedOutIds.add(outId);
+    }
+
+    const cutoff = new Date(Date.now() - hoursThreshold * 3600000);
+    const now = new Date();
+    const rows = [];
+
+    for (let i = 1; i < signInData.length; i++) {
+      const name      = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
+      const sessionId = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
+      const timestamp = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP];
+
+      if (!name || !sessionId) continue;
+      if (signedOutIds.has(sessionId)) continue; // Already signed out
+
+      const signInTime = new Date(timestamp);
+      if (signInTime < cutoff) {
+        rows.push([now, name, sessionId]);
+      }
+    }
+
+    if (rows.length > 0) {
+      signOutSheet.getRange(signOutSheet.getLastRow() + 1, 1, rows.length, 3).setValues(rows);
+      invalidateCache(CACHE_CONFIG.KEYS.MENTOR_LIST);
+      Logger.log(`clearStaleSessions: cleared ${rows.length} sessions older than ${hoursThreshold}h`);
+
+      // Also complete any active CLIENT_ASSIGNMENT rows for these volunteers
+      // so they no longer appear under Active Returns on the admin dashboard
+      const staleNames = new Set(rows.map(r => r[1]));
+      const assignmentSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+      const assignLastRow = assignmentSheet.getLastRow();
+      if (assignLastRow > 1) {
+        const assignData = assignmentSheet.getRange(
+          2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, assignLastRow - 1, 4
+        ).getValues();
+        for (let i = 0; i < assignData.length; i++) {
+          const vol = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
+          const completed = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
+          if (vol && staleNames.has(vol) && completed !== 'complete') {
+            assignmentSheet.getRange(
+              i + 2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1
+            ).setValue('complete');
+          }
+        }
+        invalidateMultiple([
+          CACHE_CONFIG.KEYS.QUEUE,
+          CACHE_CONFIG.KEYS.VOLUNTEER_LIST
+        ]);
+      }
+    }
+
+    return { cleared: rows.length };
+  }, 'clearStaleSessions');
 }
 
 /**

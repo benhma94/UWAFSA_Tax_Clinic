@@ -296,6 +296,9 @@
 
 <?!= include('shared_scripts') ?>
 <script>
+  const INITIAL_VOLUNTEER = <?!= JSON.stringify(initialVolunteer) ?>;
+  let initialVolunteerSelected = false;
+
   let activeVolunteers = [];
   let currentRecipient = null;
   let currentConversationId = null;
@@ -363,6 +366,10 @@
           `;
         });
         container.innerHTML = html;
+        if (INITIAL_VOLUNTEER && !initialVolunteerSelected) {
+          initialVolunteerSelected = true;
+          selectVolunteer(INITIAL_VOLUNTEER);
+        }
       })
       .withFailureHandler(() => {
         // Show list without unread counts
@@ -377,6 +384,10 @@
           `;
         });
         container.innerHTML = html;
+        if (INITIAL_VOLUNTEER && !initialVolunteerSelected) {
+          initialVolunteerSelected = true;
+          selectVolunteer(INITIAL_VOLUNTEER);
+        }
       })
       .getUnreadCountsByVolunteer();
   }

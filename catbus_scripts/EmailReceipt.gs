@@ -64,7 +64,8 @@ function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
     const emailOptions = {
       to: clientEmail,
       subject: subject,
-      htmlBody: emailBody
+      htmlBody: emailBody,
+      name: 'AFSA Tax Clinic'
     };
 
     if (attachments.length > 0) {
@@ -84,7 +85,8 @@ function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
       MailApp.sendEmail({
         to: clientEmail,
         subject: passwordSubject,
-        htmlBody: passwordBody
+        htmlBody: passwordBody,
+        name: 'AFSA Tax Clinic'
       });
       Logger.log(`UFILE password email sent to ${clientEmail}`);
     }
@@ -148,7 +150,7 @@ function buildReceiptEmailBody(emailData, filingStatus) {
             ` : ''}
 
             ${emailData.gstHst ? `
-              <p><strong>GST/HST Credit:</strong> ${escapeHtmlServer(emailData.gstHst)}, paid over 4 quarterly payments</p>
+              <p><strong>CGEB or GST/HST Credit:</strong> ${escapeHtmlServer(emailData.gstHst)}, paid over 4 quarterly payments</p>
             ` : ''}
 
             ${emailData.onBen ? `

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <?!= include('shared_styles') ?>
+  <style>
+    .request {
+      padding: 16px 20px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      color: white;
+      font-weight: 600;
+      box-shadow: var(--shadow-light);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .request:hover {
+      transform: translateX(4px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .request.active {
+      background-color: #f4b400;
+    }
+
+    .request.escalated {
+      background-color: #d93025;
+      animation: pulse 1.2s infinite;
+    }
+
+    .request.review {
+      background-color: #4285f4;
+    }
+
+    h3 {
+      margin-top: 40px;
+      margin-bottom: 20px;
+      font-size: 1.3em;
+      color: var(--accent-color);
+      border-bottom: 2px solid var(--accent-color);
+      padding-bottom: 8px;
+    }
+
+    h3:first-of-type {
+      margin-top: 0;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.03); opacity: 0.9; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .nav-link {
+      font-size: 0.85em;
+      color: var(--accent-color);
+      text-decoration: none;
+      font-weight: 600;
+      opacity: 0.8;
+    }
+
+    .nav-link:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body class="light">
+  <header>
+    <div>
+      <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
+    </div>
+  </header>
+
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <h3 style="margin: 0;">🚨 Alert Dashboard</h3>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a class="nav-link" id="adminLink" href="#">📊 Admin Dashboard</a>
+      <button onclick="refresh()" style="padding: 8px 16px; font-size: 0.9em; background-color: var(--accent-color); color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <h3>🆘 Help Requests</h3>
+  <div id="container">Loading help requests...</div>
+
+  <h3>📋 Review Requests</h3>
+  <div id="reviewContainer">Loading review requests...</div>
+
+  <div id="messageBox"></div>
+  <div id="errorBox"></div>
+
+<?!= include('shared_scripts') ?>
+<script>
+  const BASE_URL = <?!= JSON.stringify(baseUrl) ?>;
+
+  let lastRequestsSerialized = "";
+  let lastReviewRequestsSerialized = "";
+
+  function formatDuration(minutes) {
+    if (minutes === null || minutes === undefined) return '';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  // Build link to admin dashboard using server-injected deployment URL
+  document.getElementById('adminLink').href = BASE_URL + '?app=admin';
+
+  function render(requests) {
+    const serialized = JSON.stringify(requests);
+    if (serialized === lastRequestsSerialized) return;
+    lastRequestsSerialized = serialized;
+
+    const container = document.getElementById("container");
+    container.innerHTML = "";
+
+    if (requests.length === 0) {
+      container.innerHTML = "<p>No active or escalated help requests.</p>";
+      return;
+    }
+
+    for (const req of requests) {
+      const div = document.createElement("div");
+      div.className = `request ${req.status}`;
+      div.innerHTML = `
+        <div><strong>${escapeHtml(req.volunteer)}</strong></div>
+        <div>⏱️ ${formatDuration(req.minutesAgo)} ago</div>
+        <div>🕒 ${escapeHtml(req.timestamp)}</div>
+      `;
+      container.appendChild(div);
+    }
+  }
+
+  function renderReviewRequests(requests) {
+    const serialized = JSON.stringify(requests);
+    if (serialized === lastReviewRequestsSerialized) return;
+    lastReviewRequestsSerialized = serialized;
+
+    const container = document.getElementById("reviewContainer");
+    container.innerHTML = "";
+
+    if (requests.length === 0) {
+      container.innerHTML = "<p>No active review requests.</p>";
+      return;
+    }
+
+    for (const req of requests) {
+      const div = document.createElement("div");
+      div.className = `request review`;
+      div.innerHTML = `
+        <div><strong>${escapeHtml(req.volunteer)}</strong></div>
+        <div>⏱️ ${formatDuration(req.minutesAgo)} ago</div>
+        <div>🕒 ${escapeHtml(req.timestamp)}</div>
+      `;
+      container.appendChild(div);
+    }
+  }
+
+  function refresh() {
+    google.script.run.withSuccessHandler(function(data) {
+      render(data.helpRequests);
+      renderReviewRequests(data.reviewRequests);
+    }).getAlertDashboardData();
+  }
+
+  window.addEventListener('load', function() {
+    refresh();
+  });
+
+  // Auto-refresh every 15 seconds (alerts are time-sensitive)
+  setInterval(refresh, 15000);
+</script>
+<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+</body>
+</html>

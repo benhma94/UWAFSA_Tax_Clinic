@@ -65,6 +65,17 @@ function onAppointmentFormSubmit(e) {
 }
 
 /**
+ * Returns the location for a given clinic date.
+ * Falls back to ELIGIBILITY_CONFIG.CLINIC_LOCATION if the date is not mapped.
+ * @param {string} date - Date string matching a key in ELIGIBILITY_CONFIG.DATE_LOCATIONS
+ * @returns {{room: string, mapsUrl: string|null}}
+ */
+function getLocationForDate(date) {
+  const loc = ELIGIBILITY_CONFIG.DATE_LOCATIONS[date];
+  return loc || { room: ELIGIBILITY_CONFIG.CLINIC_LOCATION, mapsUrl: null };
+}
+
+/**
  * Helper function to safely get form values
  * @param {Object} namedValues - Form named values object
  * @param {string} fieldName - Name of the field to get
@@ -214,6 +225,11 @@ function sendAppointmentConfirmation(data) {
 function buildConfirmationEmailBody(data) {
   const situations = (data.situations || '').toLowerCase();
 
+  const location = getLocationForDate(data.preferredDate);
+  const locationDisplay = location.mapsUrl
+    ? `<a href="${location.mapsUrl}" style="color: #8e0000;">${location.room}</a>`
+    : location.room;
+
   // Build situation-specific document requirements
   let situationDocs = '';
 
@@ -255,7 +271,7 @@ function buildConfirmationEmailBody(data) {
             <h3 style="margin-top: 0; color: #8e0000;">Appointment Details</h3>
             <p><strong>Date:</strong> ${data.preferredDate}</p>
             <p><strong>Time:</strong> ${data.preferredTime}</p>
-            <p><strong>Location:</strong> ${ELIGIBILITY_CONFIG.CLINIC_LOCATION}</p>
+            <p><strong>Location:</strong> ${locationDisplay}</p>
           </div>
 
           <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">

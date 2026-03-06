@@ -371,16 +371,13 @@
       <h2>🚪 Sign Out</h2>
       <form id="signOutForm" onsubmit="handleSignOut(event)">
         <div class="form-group">
-          <label for="sessionSearch">Search by Name:</label>
-          <input type="text" id="sessionSearch" placeholder="Type to search for a volunteer..." oninput="filterSessions()">
-          <div class="help-text">Start typing a name to filter the list</div>
-        </div>
-        
-        <div class="form-group">
-          <label for="sessionSelect">Select Your Session:</label>
-          <select id="sessionSelect" required>
-            <option value="">Loading active sessions...</option>
-          </select>
+          <label for="sessionInput">Select Your Session:</label>
+          <div class="autocomplete-container">
+            <input type="text" id="sessionInput" placeholder="Type your name to find your session…"
+              autocomplete="off" role="combobox" aria-expanded="false"
+              aria-autocomplete="list" aria-controls="sessionDropdown">
+            <div id="sessionDropdown" class="autocomplete-dropdown" role="listbox"></div>
+          </div>
           <div class="help-text">Shows currently signed-in volunteers</div>
         </div>
         
@@ -416,8 +413,9 @@
 <?!= include('shared_scripts') ?>
 <script>
   let refreshInterval = null;
-  let allSessions = []; // Store all sessions for filtering
+  let allSessions = []; // Store all sessions for autocomplete
   let allVolunteers = []; // Store volunteer data: [{name: string, role: string}]
+  let selectedSession = null; // Currently selected sign-out session object
 
 
   /**
@@ -562,64 +560,28 @@
   function loadActiveSessions() {
     google.script.run
       .withSuccessHandler(sessions => {
-        allSessions = sessions || []; // Store all sessions for filtering
-        filterSessions(); // Apply current filter (if any)
+        allSessions = sessions || [];
       })
       .withFailureHandler(error => {
-        const select = document.getElementById('sessionSelect');
-        select.innerHTML = '<option value="">Error loading sessions</option>';
         allSessions = [];
         console.error('Error loading sessions:', error);
       })
       .getActiveSessions();
   }
 
-  function filterSessions() {
-    const select = document.getElementById('sessionSelect');
-    const searchInput = document.getElementById('sessionSearch');
-    const searchTerm = (searchInput.value || '').trim().toLowerCase();
-    
-    select.innerHTML = '';
-    
-    if (allSessions.length === 0) {
-      const option = document.createElement('option');
-      option.value = '';
-      option.textContent = 'No active sessions';
-      option.disabled = true;
-      select.appendChild(option);
-      return;
-    }
-    
-    // Filter sessions based on search term
-    const filteredSessions = searchTerm 
-      ? allSessions.filter(session => 
-          session.name.toLowerCase().includes(searchTerm) ||
-          session.displayText.toLowerCase().includes(searchTerm)
-        )
-      : allSessions;
-    
-    if (filteredSessions.length === 0) {
-      const option = document.createElement('option');
-      option.value = '';
-      option.textContent = searchTerm ? 'No matching volunteers found' : 'No active sessions';
-      option.disabled = true;
-      select.appendChild(option);
-    } else {
-      filteredSessions.forEach(session => {
-        const option = document.createElement('option');
-        option.value = session.sessionId;
-        option.textContent = session.displayText;
-        option.dataset.name = session.name;
-        option.dataset.station = session.station;
-        select.appendChild(option);
-      });
-    }
-  }
-
-  function refreshActiveSessions() {
-    // Clear search when refreshing
-    document.getElementById('sessionSearch').value = '';
-    loadActiveSessions();
+  function setupSessionAutocomplete() {
+    createAutocomplete({
+      inputId: 'sessionInput',
+      dropdownId: 'sessionDropdown',
+      idPrefix: 'so-option-',
+      wrapAround: false,
+      getItems: () => allSessions,
+      filterItem: (s, term) =>
+        s.name.toLowerCase().includes(term) ||
+        s.displayText.toLowerCase().includes(term),
+      renderItem: (s, i, term) => autocompleteHighlightMatch(s.displayText, term),
+      onSelect: (s) => { selectedSession = s; }
+    });
   }
 
   function refreshStats() {
@@ -701,21 +663,19 @@
 
   function handleSignOut(event) {
     event.preventDefault();
-    
-    const sessionId = document.getElementById('sessionSelect').value;
-    const selectedOption = document.getElementById('sessionSelect').selectedOptions[0];
-    const volunteerName = selectedOption ? selectedOption.dataset.name : '';
-    
-    if (!sessionId) {
+
+    if (!selectedSession) {
       showMessage('Please select a session to sign out', 'error');
       return;
     }
-    
+
+    const sessionId = selectedSession.sessionId;
+
     const btn = document.getElementById('signOutBtn');
     const originalText = btn.textContent;
     btn.disabled = true;
     btn.innerHTML = '<span class="loading"></span> Signing Out...';
-    
+
     google.script.run
       .withSuccessHandler(result => {
         btn.disabled = false;
@@ -723,9 +683,10 @@
 
         showMessage(`Successfully signed out. Thank you, ${result.volunteerName || 'volunteer'}!`, 'success');
 
-        // Reset form and clear search
+        // Reset form, clear autocomplete input and selected session
         document.getElementById('signOutForm').reset();
-        document.getElementById('sessionSearch').value = '';
+        document.getElementById('sessionInput').value = '';
+        selectedSession = null;
 
         // Refresh all data immediately
         loadAvailableStations();
@@ -747,7 +708,8 @@
   // Initialize on page load
   window.addEventListener('load', () => {
     loadVolunteerData();          // Load volunteer data for autocomplete
-    setupVolunteerAutocomplete(); // Setup autocomplete event handlers
+    setupVolunteerAutocomplete(); // Setup sign-in autocomplete
+    setupSessionAutocomplete();   // Setup sign-out autocomplete
     loadAvailableStations();
     loadActiveSessions();
     refreshStats();

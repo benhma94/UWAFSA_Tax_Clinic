@@ -66,10 +66,11 @@ function buildScheduleChangeEmailBody(name, oldShifts, newShifts, dayLabels) {
 function sendScheduleChangeNotifications(oldAssignments, newAssignments, volunteers, dayLabels) {
   if (!oldAssignments) {
     Logger.log('No previous schedule to compare - skipping notifications');
-    return 0;
+    return { count: 0, recipients: [] };
   }
 
   let emailsSent = 0;
+  const notifiedRecipients = [];
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   // Build email lookup from volunteers array
@@ -114,11 +115,12 @@ function sendScheduleChangeNotifications(oldAssignments, newAssignments, volunte
 
       Logger.log(`Schedule change notification sent to ${name} (${email})`);
       emailsSent++;
+      notifiedRecipients.push({ name, email });
     } catch (e) {
       Logger.log(`Failed to send notification to ${name}: ${e.message}`);
     }
   }
 
   Logger.log(`Schedule change notifications sent: ${emailsSent}`);
-  return emailsSent;
+  return { count: emailsSent, recipients: notifiedRecipients };
 }

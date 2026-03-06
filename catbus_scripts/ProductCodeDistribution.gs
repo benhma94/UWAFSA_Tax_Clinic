@@ -19,8 +19,9 @@ function getAlreadyDistributedEmails(year) {
 
   if (lastRow < 2) return distributed;
 
-  // Columns: 0=Timestamp, 1=Year, 2=Code, 3=V1Email, 4=V1Name, 5=V1Status, 6=V2Email, 7=V2Name, 8=V2Status
-  const data = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
+  // Columns: 0=Timestamp, 1=Year, 2=Code, 3=V1Email, 4=V1Name, 5=V1Status,
+  //          6=V2Email, 7=V2Name, 8=V2Status, 9=V3Email, 10=V3Name, 11=V3Status
+  const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
 
   for (const row of data) {
     const logYear = parseInt(row[1], 10);
@@ -30,9 +31,12 @@ function getAlreadyDistributedEmails(year) {
     const v1Status = row[5]?.toString().trim();
     const v2Email = row[6]?.toString().trim().toLowerCase();
     const v2Status = row[8]?.toString().trim();
+    const v3Email = row[9]?.toString().trim().toLowerCase();
+    const v3Status = row[11]?.toString().trim();
 
     if (v1Email && v1Status === 'Sent') distributed.add(v1Email);
     if (v2Email && v2Status === 'Sent') distributed.add(v2Email);
+    if (v3Email && v3Status === 'Sent') distributed.add(v3Email);
   }
 
   return distributed;
@@ -62,16 +66,16 @@ function distributeProductCodes(year) {
     const alreadySent = getAlreadyDistributedEmails(year);
     const volunteers = allVolunteers.filter(v => !alreadySent.has(v.email));
 
-    if (volunteers.length < 2) {
+    if (volunteers.length < 3) {
       return {
         success: false,
-        message: 'Not enough new volunteers to distribute to. ' +
+        message: 'Not enough new volunteers to distribute to (need at least 3). ' +
           alreadySent.size + ' volunteer(s) already have codes.'
       };
     }
 
-    // Calculate how many codes we can distribute
-    const maxPairs = Math.floor(volunteers.length / 2);
+    // Calculate how many codes we can distribute (3 volunteers per code)
+    const maxPairs = Math.floor(volunteers.length / 3);
     const codesToDistribute = Math.min(codesData.length, maxPairs);
 
     if (codesToDistribute === 0) {
@@ -89,15 +93,17 @@ function distributeProductCodes(year) {
 
     for (let i = 0; i < codesToDistribute; i++) {
       const codeInfo = codesData[i];
-      const volunteer1 = shuffled[i * 2];
-      const volunteer2 = shuffled[i * 2 + 1];
+      const volunteer1 = shuffled[i * 3];
+      const volunteer2 = shuffled[i * 3 + 1];
+      const volunteer3 = shuffled[i * 3 + 2];
 
       const sent1 = sendCodeEmail(volunteer1.email, volunteer1.name, codeInfo.key, year);
       const sent2 = sendCodeEmail(volunteer2.email, volunteer2.name, codeInfo.key, year);
+      const sent3 = sendCodeEmail(volunteer3.email, volunteer3.name, codeInfo.key, year);
 
       // Update usage count in Product Codes sheet
-      if (sent1 || sent2) {
-        const newUsageCount = codeInfo.timesUsed + (sent1 ? 1 : 0) + (sent2 ? 1 : 0);
+      if (sent1 || sent2 || sent3) {
+        const newUsageCount = codeInfo.timesUsed + (sent1 ? 1 : 0) + (sent2 ? 1 : 0) + (sent3 ? 1 : 0);
         codeSheet.getRange(codeInfo.row, PRODUCT_CODE_CONFIG.COLUMNS.TIMES_USED + 1)
           .setValue(newUsageCount);
       }
@@ -112,20 +118,25 @@ function distributeProductCodes(year) {
         sent1 ? 'Sent' : 'Failed',
         volunteer2.email,
         volunteer2.name,
-        sent2 ? 'Sent' : 'Failed'
+        sent2 ? 'Sent' : 'Failed',
+        volunteer3.email,
+        volunteer3.name,
+        sent3 ? 'Sent' : 'Failed'
       ]);
 
       results.push({
         code: codeInfo.key,
         volunteer1: volunteer1.email,
         volunteer2: volunteer2.email,
+        volunteer3: volunteer3.email,
         sent1: sent1,
-        sent2: sent2
+        sent2: sent2,
+        sent3: sent3
       });
     }
 
     const codesRemaining = codesData.length - codesToDistribute;
-    const volunteersRemaining = volunteers.length - (codesToDistribute * 2);
+    const volunteersRemaining = volunteers.length - (codesToDistribute * 3);
 
     return {
       success: true,
@@ -161,7 +172,7 @@ function getAvailableProductCodes(year) {
     const key = data[i][PRODUCT_CODE_CONFIG.COLUMNS.KEY]?.toString().trim();
     const timesUsed = parseInt(data[i][PRODUCT_CODE_CONFIG.COLUMNS.TIMES_USED], 10) || 0;
 
-    if (rowYear === year && key && timesUsed < 2) {
+    if (rowYear === year && key && timesUsed < 3) {
       available.push({
         key,
         timesUsed,
@@ -175,11 +186,14 @@ function getAvailableProductCodes(year) {
 
 /**
  * Gets volunteer emails from Schedule Availability sheet
- * Prioritizes: Filers first, then Mentors
- * Excludes: Frontline volunteers
+ * Prioritizes: Filers (+ Frontline when included) first, then Mentors
+ * Excludes: Receptionists always; Frontline only when includeAllRoles is false
+ * @param {boolean} [includeAllRoles=false] - When true, include Frontline volunteers
  * @returns {Array<{email: string, name: string, role: string}>}
  */
-function getVolunteerEmailsForCodes() {
+function getVolunteerEmailsForCodes(includeAllRoles) {
+  includeAllRoles = includeAllRoles === true;
+
   const sheet = getSheet(CONFIG.SHEETS.SCHEDULE_AVAILABILITY);
   const lastRow = sheet.getLastRow();
 
@@ -200,7 +214,11 @@ function getVolunteerEmailsForCodes() {
 
     if (!email || !email.includes('@') || seenEmails.has(email)) continue;
 
-    if (role.includes('frontline') || role.includes('front line') || role.includes('receptionist')) {
+    // Always exclude receptionists
+    if (role.includes('receptionist')) continue;
+
+    // Exclude frontline only when includeAllRoles is false
+    if (!includeAllRoles && (role.includes('frontline') || role.includes('front line'))) {
       continue;
     }
 
@@ -214,6 +232,7 @@ function getVolunteerEmailsForCodes() {
     if (role.includes('mentor') || role.includes('senior')) {
       mentors.push(volunteer);
     } else {
+      // Filers and Frontline (when included) go into the filers group
       filers.push(volunteer);
     }
   }
@@ -374,7 +393,8 @@ function getOrCreateDistributionLogSheet() {
     sheet = ss.insertSheet(sheetName);
     const headers = ['Timestamp', 'Year', 'Product Code',
                      'Volunteer 1 Email', 'Volunteer 1 Name', 'Volunteer 1 Status',
-                     'Volunteer 2 Email', 'Volunteer 2 Name', 'Volunteer 2 Status'];
+                     'Volunteer 2 Email', 'Volunteer 2 Name', 'Volunteer 2 Status',
+                     'Volunteer 3 Email', 'Volunteer 3 Name', 'Volunteer 3 Status'];
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
@@ -389,7 +409,7 @@ function getOrCreateDistributionLogSheet() {
  * @returns {Array<{email: string, name: string, role: string, hasCode: boolean}>}
  */
 function getVolunteerListForDropdown(year) {
-  const volunteers = getVolunteerEmailsForCodes();
+  const volunteers = getVolunteerEmailsForCodes(true); // include frontline for individual send
   const alreadySent = getAlreadyDistributedEmails(year);
 
   var list = volunteers.map(function(v) {
@@ -420,8 +440,8 @@ function sendCodeToIndividual(email, year) {
   try {
     lock.waitLock(CONFIG.PERFORMANCE.LOCK_TIMEOUT_MS || 10000);
 
-    // Look up volunteer name
-    var volunteers = getVolunteerEmailsForCodes();
+    // Look up volunteer name (include frontline for individual targeted send)
+    var volunteers = getVolunteerEmailsForCodes(true);
     var volunteer = null;
     for (var i = 0; i < volunteers.length; i++) {
       if (volunteers[i].email === email.toLowerCase().trim()) {
@@ -496,7 +516,7 @@ function previewDistribution(year) {
   const remaining = allVolunteers.filter(v => !alreadySent.has(v.email));
   const { filers, mentors } = separateByRole(remaining);
 
-  const maxPairs = Math.floor(remaining.length / 2);
+  const maxPairs = Math.floor(remaining.length / 3);
   const codesToDistribute = Math.min(codes.length, maxPairs);
 
   return {
@@ -510,7 +530,7 @@ function previewDistribution(year) {
     possiblePairs: maxPairs,
     willDistribute: codesToDistribute,
     codesRemaining: codes.length - codesToDistribute,
-    volunteersWithoutCodes: remaining.length - (codesToDistribute * 2)
+    volunteersWithoutCodes: remaining.length - (codesToDistribute * 3)
   };
 }
 
@@ -525,7 +545,7 @@ function getDistributionLog(year) {
 
   if (lastRow < 2) return [];
 
-  const data = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
+  const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
   const entries = [];
 
   for (let i = data.length - 1; i >= 0; i--) {
@@ -540,7 +560,10 @@ function getDistributionLog(year) {
       v1Status: data[i][5],
       v2Email: data[i][6],
       v2Name: data[i][7],
-      v2Status: data[i][8]
+      v2Status: data[i][8],
+      v3Email: data[i][9],
+      v3Name: data[i][10],
+      v3Status: data[i][11]
     });
 
     if (entries.length >= 50) break;
