@@ -226,7 +226,7 @@ const ELIGIBILITY_CONFIG = {
 
   // Complexity thresholds
   COMPLEXITY: {
-    MAX_SIMPLE_TAX_YEARS: 4  // 5+ years = complex case
+    MAX_SIMPLE_TAX_YEARS: 2  // 3+ years = complex case
   }
 };
 

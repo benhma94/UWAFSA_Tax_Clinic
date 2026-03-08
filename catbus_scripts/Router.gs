@@ -12,8 +12,40 @@
  * @returns {HtmlOutput} The HTML output for the requested app
  */
 function doGet(e) {
+  // Handle API actions from static web pages (GET with action= parameter)
+  const action = e?.parameter?.action;
+  if (action === 'volunteerApplication') {
+    try {
+      submitVolunteerApplication(e.parameter);
+      return ContentService.createTextOutput('OK');
+    } catch (err) {
+      Logger.log('volunteerApplication error: ' + err.message);
+      return ContentService.createTextOutput('Error: ' + err.message);
+    }
+  }
+
+  if (action === 'appointmentBooking') {
+    try {
+      submitAppointmentBooking(e.parameter);
+      return ContentService.createTextOutput('OK');
+    } catch (err) {
+      Logger.log('appointmentBooking error: ' + err.message);
+      return ContentService.createTextOutput('Error: ' + err.message);
+    }
+  }
+
+  if (action === 'feedback') {
+    try {
+      submitFeedback(e.parameter);
+      return ContentService.createTextOutput('OK');
+    } catch (err) {
+      Logger.log('feedback error: ' + err.message);
+      return ContentService.createTextOutput('Error: ' + err.message);
+    }
+  }
+
   const app = e?.parameter?.app || 'intake'; // Default to intake if no parameter
-  
+
   switch(app) {
     case 'intake':
       return doGetClientIntake();
@@ -46,7 +78,31 @@ function doGet(e) {
       return doGetReviewerPage();
     case 'quiz':
       return doGetQuizSubmission();
+    case 'quizreview':
+      return doGetQuizReview();
     default:
       return doGetClientIntake(); // Default fallback to intake
+  }
+}
+
+/**
+ * Handles POST requests from static web pages (e.g. volunteer application form).
+ * Uses URL-encoded form data (e.parameter) since fetch is called with no-cors mode.
+ *
+ * @param {Object} e - Event object with POST parameters
+ * @returns {TextOutput}
+ */
+function doPost(e) {
+  try {
+    const action = e?.parameter?.action;
+    if (action === 'volunteerApplication') {
+      submitVolunteerApplication(e.parameter);
+      return ContentService.createTextOutput('OK');
+    }
+    Logger.log('doPost: unknown action: ' + action);
+    return ContentService.createTextOutput('Unknown action');
+  } catch (err) {
+    Logger.log('doPost error: ' + err.message);
+    return ContentService.createTextOutput('Error: ' + err.message);
   }
 }

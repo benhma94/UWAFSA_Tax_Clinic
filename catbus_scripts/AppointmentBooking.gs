@@ -4,6 +4,132 @@
  * Generates Priority Client IDs and sends confirmation emails
  */
 
+// ============================================================================
+// DIRECT SUBMISSION HANDLER (replaces Google Form flow)
+// Called by doGet() in Router.gs when action=appointmentBooking
+// ============================================================================
+
+/**
+ * Handles appointment booking submissions from the static screening page.
+ * Writes to 'Appointment Bookings' sheet, generates a Priority Client ID,
+ * and sends a confirmation email.
+ * @param {Object} params - URL parameters from the fetch request
+ */
+function submitAppointmentBooking(params) {
+  const email = (params.email || '').trim();
+  const preferredDate = (params.preferredDate || '').trim();
+  const preferredTime = (params.preferredTime || '').trim();
+  const taxYears = parseInt(params.taxYears || '0', 10);
+  const hasChildren = params.hasChildren === 'yes';
+  const hasForeignIncome = params.hasForeignIncome === 'yes';
+
+  // Validate required fields
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailPattern.test(email)) throw new Error('Invalid email: ' + email);
+
+  // Build situations string from screening answers (compatible with buildConfirmationEmailBody)
+  const situationsList = [];
+  if (taxYears >= 3) situationsList.push('Three or more years of late tax returns');
+  if (hasChildren) situationsList.push('Childcare expenses');
+  if (hasForeignIncome) situationsList.push('Foreign co-op income');
+  const situations = situationsList.join('; ');
+
+  const sheet = getOrCreateAppointmentBookingsSheet();
+  const clientId = generatePriorityClientIdDirect(sheet);
+
+  // Read headers and write data by column name, not position
+  // This is robust against pre-existing sheets with different column orders
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const rowData = new Array(headers.length).fill('');
+  const setCol = (headerName, value) => {
+    const idx = headers.indexOf(headerName);
+    if (idx >= 0) rowData[idx] = value;
+  };
+  setCol('Timestamp', new Date());
+  setCol('Email', email);
+  setCol('Preferred Date', preferredDate);
+  setCol('Preferred Time', preferredTime);
+  setCol('Situations', situations);
+  setCol('Client ID', clientId);
+  sheet.appendRow(rowData);
+
+  const lastRow = sheet.getLastRow();
+  const statusColIdx = headers.indexOf('Confirmation Sent');
+
+  try {
+    sendAppointmentConfirmation({ email, preferredDate, preferredTime, situations, clientId });
+    if (statusColIdx >= 0) sheet.getRange(lastRow, statusColIdx + 1).setValue('Sent');
+    Logger.log('Appointment booked: ' + clientId + ' for ' + email + ' on ' + preferredDate);
+  } catch (err) {
+    if (statusColIdx >= 0) sheet.getRange(lastRow, statusColIdx + 1).setValue('Failed');
+    Logger.log('Email failed for ' + clientId + ': ' + err.message);
+  }
+}
+
+/**
+ * Gets or creates the 'Appointment Bookings' sheet with headers.
+ * @returns {Sheet}
+ */
+function getOrCreateAppointmentBookingsSheet() {
+  const ss = getSpreadsheet();
+  const sheetName = 'Appointment Bookings';
+  const expectedHeaders = [
+    'Timestamp', 'Email',
+    'Preferred Date', 'Preferred Time', 'Situations',
+    'Client ID', 'Confirmation Sent'
+  ];
+
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.appendRow(expectedHeaders);
+  } else {
+    // Add any missing headers at the end so column-name lookups work correctly
+    const existingHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const missing = expectedHeaders.filter(h => !existingHeaders.includes(h));
+    if (missing.length > 0) {
+      sheet.getRange(1, existingHeaders.length + 1, 1, missing.length).setValues([missing]);
+    }
+  }
+  return sheet;
+}
+
+/**
+ * Generates the next Priority Client ID (P001, P002, ...) from the Appointment Bookings sheet.
+ * Uses LockService to prevent race conditions.
+ * @param {Sheet} bookingSheet
+ * @returns {string}
+ */
+function generatePriorityClientIdDirect(bookingSheet) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(CONFIG.PERFORMANCE.LOCK_TIMEOUT_MS || 10000);
+
+    const lastRow = bookingSheet.getLastRow();
+    if (lastRow <= 1) return 'P001';
+
+    const headers = bookingSheet.getRange(1, 1, 1, bookingSheet.getLastColumn()).getValues()[0];
+    const clientIdCol = headers.indexOf('Client ID') + 1;
+    if (clientIdCol === 0) return 'P001';
+
+    const data = bookingSheet.getRange(2, clientIdCol, lastRow - 1, 1).getValues();
+    let maxNumber = 0;
+    for (const [id] of data) {
+      if (id && typeof id === 'string' && id.startsWith('P')) {
+        const num = parseInt(id.substring(1), 10);
+        if (!isNaN(num) && num > maxNumber) maxNumber = num;
+      }
+    }
+    return 'P' + String(maxNumber + 1).padStart(3, '0');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ============================================================================
+// GOOGLE FORM TRIGGER (legacy — kept for backward compatibility)
+// ============================================================================
+
 /**
  * Trigger function for Google Form submissions
  * Set up as an installable trigger on the form's linked spreadsheet
@@ -206,7 +332,8 @@ function sendAppointmentConfirmation(data) {
     MailApp.sendEmail({
       to: data.email,
       subject: subject,
-      htmlBody: emailBody
+      htmlBody: emailBody,
+      name: 'UW AFSA Tax Clinic'
     });
 
     Logger.log(`Confirmation email sent to ${data.email} for ${data.clientId}`);

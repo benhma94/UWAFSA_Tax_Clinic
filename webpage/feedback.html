@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tax Clinic &mdash; Accounting &amp; Finance Student Association</title>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico"/>
+    <link rel="canonical" href="https://taxclinic.uwaterloo.ca"/>
+    <meta property="og:site_name" content="Accounting &amp; Finance Student Association"/>
+    <meta property="og:title" content="Tax Clinic &mdash; Accounting &amp; Finance Student Association"/>
+    <meta property="og:url" content="https://taxclinic.uwaterloo.ca"/>
+    <meta property="og:type" content="website"/>
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="shared.css">
+    <style>
+      /* Star rating widget */
+      .star-group {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+        gap: 2px;
+        margin-top: 6px;
+        margin-bottom: 4px;
+      }
+      .star-group input[type="radio"] {
+        display: none;
+      }
+      .star-group label {
+        font-size: 2rem;
+        color: #ccc;
+        cursor: pointer;
+        line-height: 1;
+        transition: color 0.1s;
+        padding: 0 2px;
+      }
+      .star-group input[type="radio"]:checked ~ label,
+      .star-group label:hover,
+      .star-group label:hover ~ label {
+        color: #f5a623;
+      }
+
+      /* Checkbox / radio group layout */
+      .check-group {
+        margin-top: 6px;
+      }
+      .check-group label {
+        display: block;
+        font-weight: normal !important;
+        margin-top: 0 !important;
+        margin-bottom: 6px;
+        cursor: pointer;
+      }
+      .check-group input[type="checkbox"] {
+        margin-right: 8px;
+      }
+
+      /* Form field styles (mirrors volunteerapplications.html) */
+      .app-form label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 4px;
+        margin-top: 20px;
+      }
+      .app-form .optional {
+        font-weight: normal;
+        color: #888;
+        font-size: 0.9em;
+        margin-left: 4px;
+      }
+      .app-form select,
+      .app-form textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-family: inherit;
+        box-sizing: border-box;
+      }
+      .app-form select {
+        height: 38px;
+      }
+      .app-form textarea {
+        min-height: 90px;
+        resize: vertical;
+      }
+      .app-form button[type="submit"] {
+        margin-top: 20px;
+        padding: 10px 28px;
+        background: #8e0000;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      .app-form button[type="submit"]:hover:not(:disabled) {
+        opacity: 0.85;
+      }
+      .app-form button[type="submit"]:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .status-msg {
+        margin-top: 14px;
+        padding: 10px 14px;
+        border-radius: 4px;
+        display: none;
+      }
+      .status-msg.success {
+        background: #d5f5e3;
+        color: #1e8449;
+        display: block;
+      }
+      .status-msg.error {
+        background: #fadbd8;
+        color: #922b21;
+        display: block;
+      }
+      .status-msg.loading {
+        background: #d6eaf8;
+        color: #21618c;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+
+  <div id="site-header"></div>
+  <div id="site-nav"></div>
+
+  <div id="content">
+    <div class="sqs-html-content">
+      <h2><strong>2026 Tax Clinic &mdash; Feedback</strong></h2>
+      <div id="feedback-root"></div>
+    </div>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="shared.js"></script>
+  <script>
+    // Toggle this to open or close the feedback form
+    var FEEDBACK_OPEN = true;
+
+    var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP2xC_8ebErP8m-tZsbRLxuhCZWz6EL4OOXpHVhkzBpUX-V8iYX0JjVxYMcQFJGyTzCQ/exec';
+
+    var root = document.getElementById('feedback-root');
+
+    if (!FEEDBACK_OPEN) {
+      root.innerHTML = '<p><strong>The feedback form is currently closed. Thank you for visiting the AFSA Tax Clinic!</strong></p>';
+    } else {
+      root.innerHTML = buildFormHTML();
+    }
+
+    function buildStarWidget(name) {
+      // Render 5→1 in DOM; CSS row-reverse displays as 1→5 visually.
+      // :checked ~ label fills all stars to the left of the selected one.
+      var html = '<div class="star-group" role="radiogroup" aria-label="' + name + ' rating">';
+      for (var i = 5; i >= 1; i--) {
+        html += '<input type="radio" name="' + name + '" id="' + name + '_' + i + '" value="' + i + '">';
+        html += '<label for="' + name + '_' + i + '" title="' + i + ' star' + (i > 1 ? 's' : '') + '">&#9733;</label>';
+      }
+      html += '</div>';
+      return html;
+    }
+
+    function buildFormHTML() {
+      return (
+        '<p>Please take a moment to share your experience at the AFSA Tax Clinic. Your feedback helps us improve.</p>' +
+        '<form id="feedbackForm" class="app-form" onsubmit="handleSubmit(event)" novalidate>' +
+
+        '<label>1. How would you rate your wait time?</label>' +
+        buildStarWidget('waitTime') +
+
+        '<label>2. How helpful were the receptionists?</label>' +
+        buildStarWidget('receptionist') +
+
+        '<label>3. How was the performance of your tax filer?</label>' +
+        buildStarWidget('taxFiler') +
+
+        '<label>4. How accessible was the clinic location?</label>' +
+        buildStarWidget('location') +
+
+        '<label>5. Overall, how would you rate your experience?</label>' +
+        buildStarWidget('overall') +
+
+        '<label>6. How did you hear about us? <span class="optional">(select all that apply)</span></label>' +
+        '<div class="check-group">' +
+          '<label><input type="checkbox" name="heardFrom" value="Word of mouth"> Word of mouth</label>' +
+          '<label><input type="checkbox" name="heardFrom" value="Social media"> Social media (Instagram, Facebook, etc.)</label>' +
+          '<label><input type="checkbox" name="heardFrom" value="Poster or flyer"> Poster or flyer</label>' +
+          '<label><input type="checkbox" name="heardFrom" value="UW website"> UW website</label>' +
+          '<label><input type="checkbox" name="heardFrom" value="Email newsletter"> Email newsletter</label>' +
+          '<label><input type="checkbox" name="heardFrom" value="Professor or class announcement"> Professor or class announcement</label>' +
+          '<label><input type="checkbox" name="heardFrom" value="Used the clinic before"> Used the clinic before</label>' +
+        '</div>' +
+
+        '<label for="faculty">7. What is your faculty? <span class="optional">(optional)</span></label>' +
+        '<select id="faculty">' +
+          '<option value="">-- Select --</option>' +
+          '<option>Math</option>' +
+          '<option>Engineering</option>' +
+          '<option>Science</option>' +
+          '<option>Arts</option>' +
+          '<option>Environment</option>' +
+          '<option>Health</option>' +
+          '<option>Other</option>' +
+        '</select>' +
+
+        '<label>8. How did you get to the clinic? <span class="optional">(select all that apply)</span></label>' +
+        '<div class="check-group">' +
+          '<label><input type="checkbox" name="transportation" value="Walked"> Walked</label>' +
+          '<label><input type="checkbox" name="transportation" value="Biked"> Biked</label>' +
+          '<label><input type="checkbox" name="transportation" value="Bus or transit"> Bus or transit</label>' +
+          '<label><input type="checkbox" name="transportation" value="Drove"> Drove</label>' +
+          '<label><input type="checkbox" name="transportation" value="Other"> Other</label>' +
+        '</div>' +
+
+        '<label for="otherFeedback">9. Any other feedback? <span class="optional">(optional)</span></label>' +
+        '<textarea id="otherFeedback" placeholder="Tell us what we did well or what we can improve..."></textarea>' +
+
+        '<button type="submit" id="submitBtn">Submit Feedback</button>' +
+        '</form>' +
+        '<div id="statusMsg" class="status-msg"></div>'
+      );
+    }
+
+    function showStatus(msg, type) {
+      var el = document.getElementById('statusMsg');
+      if (!el) return;
+      el.textContent = msg;
+      el.className = 'status-msg ' + type;
+    }
+
+    function getRadioValue(name) {
+      var checked = document.querySelector('input[name="' + name + '"]:checked');
+      return checked ? checked.value : '';
+    }
+
+    function getCheckedValues(name) {
+      var boxes = document.querySelectorAll('input[name="' + name + '"]:checked');
+      var values = [];
+      for (var i = 0; i < boxes.length; i++) {
+        values.push(boxes[i].value);
+      }
+      return values;
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+
+      var waitTime     = getRadioValue('waitTime');
+      var receptionist = getRadioValue('receptionist');
+      var taxFiler     = getRadioValue('taxFiler');
+      var location     = getRadioValue('location');
+      var overall      = getRadioValue('overall');
+
+      if (!waitTime || !receptionist || !taxFiler || !location || !overall) {
+        showStatus('Please rate all five categories before submitting.', 'error');
+        return;
+      }
+
+      var heardFrom      = getCheckedValues('heardFrom').join(', ');
+      var transportation = getCheckedValues('transportation').join(', ');
+      var faculty        = document.getElementById('faculty').value;
+      var otherFeedback  = document.getElementById('otherFeedback').value.trim();
+
+      var btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      showStatus('Submitting...', 'loading');
+
+      var params = new URLSearchParams({
+        action: 'feedback',
+        waitTime: waitTime,
+        receptionist: receptionist,
+        taxFiler: taxFiler,
+        location: location,
+        overall: overall,
+        heardFrom: heardFrom,
+        faculty: faculty,
+        transportation: transportation,
+        otherFeedback: otherFeedback
+      });
+
+      fetch(APPS_SCRIPT_URL + '?' + params.toString(), { method: 'GET', mode: 'no-cors' })
+        .then(function() {
+          document.getElementById('feedbackForm').style.display = 'none';
+          showStatus('Thank you for your feedback!', 'success');
+        })
+        .catch(function() {
+          showStatus('Submission failed. Please try again or email us directly.', 'error');
+          btn.disabled = false;
+        });
+    }
+  </script>
+  </body>
+</html>

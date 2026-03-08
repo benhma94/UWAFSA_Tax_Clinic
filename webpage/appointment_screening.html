@@ -148,6 +148,92 @@
             cursor: not-allowed;
         }
 
+        /* Inline booking form */
+        .booking-form {
+            margin-top: 20px;
+        }
+
+        .booking-field {
+            margin-bottom: 15px;
+        }
+
+        .booking-field label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #333;
+            font-size: 0.95rem;
+        }
+
+        .booking-field input,
+        .booking-field select {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background-color: #fff;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .booking-field input:focus,
+        .booking-field select:focus {
+            outline: none;
+            border-color: #856404;
+            box-shadow: 0 0 0 3px rgba(133,100,4,0.15);
+        }
+
+        .opt-label {
+            font-weight: normal;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .book-submit-btn {
+            width: 100%;
+            padding: 13px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            background-color: #856404;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 5px;
+            transition: background-color 0.2s;
+        }
+
+        .book-submit-btn:hover {
+            background-color: #6d5203;
+        }
+
+        .book-submit-btn:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+        }
+
+        .booking-success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 5px;
+        }
+
+        .booking-success h3 {
+            color: #155724;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .booking-error {
+            color: #721c24;
+            margin-top: 10px;
+            font-size: 0.95rem;
+            display: none;
+        }
+
         /* Income table */
         .income-table {
             width: 100%;
@@ -533,7 +619,6 @@
                     <table id="simpleClinicDates">
                         <!-- Populated dynamically from CONFIG -->
                     </table>
-                    <p style="margin-top: 10px;"><strong>Location:</strong> <span id="simpleClinicLocation"></span></p>
                 </div>
 
                 <p class="note">Don't forget to bring your documents! Check our <a href="http://taxclinic.uwaterloo.ca" target="_blank">main page</a> for the full checklist.</p>
@@ -542,9 +627,42 @@
             <!-- Complex Case Result -->
             <div id="complexResult" class="result complex">
                 <h2>We recommend booking an appointment</h2>
-                <p>Based on your answers, your tax situation may require extra time. Booking an appointment ensures we can give you the attention you need.</p>
+                <p>Based on your answers, your tax situation may require extra time. Fill out the form below to book — you'll get a confirmation email with your Client ID.</p>
 
-                <a id="bookingLink" href="#" target="_blank" class="book-btn">Book an Appointment</a>
+                <form id="bookingForm" class="booking-form" onsubmit="submitBooking(event)">
+                    <div class="booking-field">
+                        <label for="bookEmail">Email *</label>
+                        <input type="email" id="bookEmail" required placeholder="your@email.com">
+                    </div>
+                    <div class="booking-field">
+                        <label for="bookDate">Preferred Date *</label>
+                        <select id="bookDate" required>
+                            <option value="">Select a date...</option>
+                            <!-- Populated dynamically from CONFIG -->
+                        </select>
+                    </div>
+                    <div class="booking-field">
+                        <label for="bookTime">Preferred Time *</label>
+                        <select id="bookTime" required>
+                            <option value="">Select a time...</option>
+                            <option value="10:00 AM">10:00 AM</option>
+                            <option value="11:00 AM">11:00 AM</option>
+                            <option value="12:00 PM">12:00 PM</option>
+                            <option value="1:00 PM">1:00 PM</option>
+                            <option value="2:00 PM">2:00 PM</option>
+                            <option value="3:00 PM">3:00 PM</option>
+                            <option value="4:00 PM">4:00 PM</option>
+                            <option value="5:00 PM">5:00 PM</option>
+                            <option value="6:00 PM">6:00 PM</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="book-submit-btn" id="bookSubmitBtn">Book Appointment</button>
+                    <p id="bookingError" class="booking-error"></p>
+                </form>
+
+                <div id="bookingSuccess" class="booking-success" style="display:none;">
+                    <p>Thank you for booking an appointment — a confirmation email should be sent shortly.</p>
+                </div>
 
                 <p class="note">You can still walk in during clinic hours, but wait times may be longer for complex situations.</p>
 
@@ -553,7 +671,6 @@
                     <table id="complexClinicDates">
                         <!-- Populated dynamically from CONFIG -->
                     </table>
-                    <p style="margin-top: 10px;"><strong>Location:</strong> <span id="complexClinicLocation"></span></p>
                 </div>
             </div>
         </div>
@@ -577,8 +694,8 @@
                 PER_DEPENDANT: 5000
             },
 
-            // Appointment booking Google Form URL
-            BOOKING_URL: 'https://forms.gle/yeHteMXsHYVBhdSF6',
+            // Apps Script web app URL for form submission
+            APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyP2xC_8ebErP8m-tZsbRLxuhCZWz6EL4OOXpHVhkzBpUX-V8iYX0JjVxYMcQFJGyTzCQ/exec',
 
             // Clinic dates
             CLINIC_DATES: [
@@ -591,18 +708,20 @@
             // Clinic operating hours for walk-ins
             CLINIC_HOURS: '10:00 AM - 7:30 PM',
 
-            // Clinic location
-            CLINIC_LOCATION: 'Please see taxclinic.uwaterloo.ca for the full list of locations and times.',
+            // Per-date location mapping — MIRRORS Config.gs ELIGIBILITY_CONFIG.DATE_LOCATIONS
+            DATE_LOCATIONS: {
+                'Saturday, March 21, 2026': { room: 'STC 1012', mapsUrl: 'https://maps.app.goo.gl/BfzfkUicXcDb6QNS8' },
+                'Sunday, March 22, 2026':   { room: 'STC 1012', mapsUrl: 'https://maps.app.goo.gl/BfzfkUicXcDb6QNS8' },
+                'Saturday, March 28, 2026': { room: 'RCH 301',  mapsUrl: 'https://maps.app.goo.gl/Z6pM2eRKRk65TpsQ9' },
+                'Sunday, March 29, 2026':   { room: 'STC 1012', mapsUrl: 'https://maps.app.goo.gl/BfzfkUicXcDb6QNS8' }
+            },
 
             // Complexity thresholds
-            MAX_SIMPLE_TAX_YEARS: 4
+            MAX_SIMPLE_TAX_YEARS: 2
         };
 
         // Initialize page with CONFIG values
         function initializeFromConfig() {
-            // Set the booking link
-            document.getElementById('bookingLink').href = CONFIG.BOOKING_URL;
-
             // Populate income limit table
             const incomeTable = document.getElementById('incomeLimitTable');
             const incomeRows = [
@@ -620,17 +739,26 @@
             const populateClinicTable = (tableId) => {
                 const table = document.getElementById(tableId);
                 CONFIG.CLINIC_DATES.forEach(date => {
+                    const loc = CONFIG.DATE_LOCATIONS[date];
+                    const locationCell = loc
+                        ? `<a href="${loc.mapsUrl}" target="_blank">${loc.room}</a>`
+                        : 'TBD';
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${date}</td><td>${CONFIG.CLINIC_HOURS}</td>`;
+                    tr.innerHTML = `<td>${date}</td><td>${CONFIG.CLINIC_HOURS}</td><td>${locationCell}</td>`;
                     table.appendChild(tr);
                 });
             };
             populateClinicTable('simpleClinicDates');
             populateClinicTable('complexClinicDates');
 
-            // Set clinic locations
-            document.getElementById('simpleClinicLocation').textContent = CONFIG.CLINIC_LOCATION;
-            document.getElementById('complexClinicLocation').textContent = CONFIG.CLINIC_LOCATION;
+            // Populate booking date select
+            const bookDate = document.getElementById('bookDate');
+            CONFIG.CLINIC_DATES.forEach(function(date) {
+                const option = document.createElement('option');
+                option.value = date;
+                option.textContent = date;
+                bookDate.appendChild(option);
+            });
         }
 
         // Run initialization when DOM is ready
@@ -727,8 +855,8 @@
             // Check complexity
             const reasons = [];
 
-            if (taxYears >= 5) {
-                reasons.push('Filing for 5 or more tax years');
+            if (taxYears >= 3) {
+                reasons.push('Filing for 3 or more tax years');
             }
 
             if (hasChildren) {
@@ -753,6 +881,44 @@
             // Scroll to result
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
+
+        // Booking form submission
+        function submitBooking(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('bookEmail').value.trim();
+            const preferredDate = document.getElementById('bookDate').value;
+            const preferredTime = document.getElementById('bookTime').value;
+
+            // Pass along screening answers so the backend can build the situations list
+            const taxYears = document.getElementById('taxYears').value;
+            const hasChildren = document.querySelector('input[name="children"]:checked')?.value || 'no';
+            const hasForeignIncome = document.querySelector('input[name="foreignIncome"]:checked')?.value || 'no';
+
+            const btn = document.getElementById('bookSubmitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Submitting...';
+            document.getElementById('bookingError').style.display = 'none';
+
+            const params = new URLSearchParams({
+                action: 'appointmentBooking',
+                email, preferredDate, preferredTime,
+                taxYears, hasChildren, hasForeignIncome
+            });
+
+            fetch(CONFIG.APPS_SCRIPT_URL + '?' + params.toString(), { method: 'GET', mode: 'no-cors' })
+                .then(function() {
+                    document.getElementById('bookingForm').style.display = 'none';
+                    document.getElementById('bookingSuccess').style.display = 'block';
+                })
+                .catch(function() {
+                    const err = document.getElementById('bookingError');
+                    err.textContent = 'Submission failed. Please try again or email taxclinic@uwafsa.com.';
+                    err.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Book Appointment';
+                });
+        }
 
         // Reset form function
         function resetForm() {

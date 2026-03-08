@@ -84,6 +84,106 @@ function submitQuizResponse(data) {
 }
 
 /**
+ * Returns all quiz submissions for the review dashboard.
+ * @returns {Object[]} Array of submission objects sorted newest-first
+ */
+function getQuizSubmissionsForReview() {
+  const sheet = getOrCreateQuizSubmissionsSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const data = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
+  const submissions = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const volunteer = row[1] ? row[1].toString().trim() : '';
+    if (!volunteer) continue;
+
+    submissions.push({
+      rowIndex: i + 2, // 1-indexed sheet row
+      timestamp: row[0] ? new Date(row[0]).toLocaleString() : '',
+      volunteer: volunteer,
+      partner: row[2] ? row[2].toString().trim() : '',
+      q1: row[3] ? row[3].toString().trim() : '',
+      q2: row[4] ? row[4].toString().trim() : '',
+      q4: row[5] !== '' ? row[5] : '',
+      q5: row[6] !== '' ? row[6] : '',
+      q6: row[7] !== '' ? row[7] : '',
+      email1: row[8] ? row[8].toString().trim() : '',
+      email2: row[9] ? row[9].toString().trim() : '',
+      status: row[10] ? row[10].toString().trim() : ''
+    });
+  }
+
+  submissions.reverse();
+  return submissions;
+}
+
+/**
+ * Sends quiz result email and updates the Status column.
+ * @param {Object} data - { rowIndex, verdict, comments }
+ * @returns {Object} { success, message }
+ */
+function sendQuizResult(data) {
+  try {
+    if (!data.rowIndex || !data.verdict) {
+      return { success: false, message: 'Missing required fields.' };
+    }
+
+    const sheet = getOrCreateQuizSubmissionsSheet();
+    const row = sheet.getRange(data.rowIndex, 1, 1, 11).getValues()[0];
+
+    const volunteer = row[1] ? row[1].toString().trim() : '';
+    const partner = row[2] ? row[2].toString().trim() : '';
+    const email1 = row[8] ? row[8].toString().trim() : '';
+    const email2 = row[9] ? row[9].toString().trim() : '';
+
+    if (!email1) {
+      return { success: false, message: 'No email address found for this submission.' };
+    }
+
+    const verdict = data.verdict === 'Pass' ? 'PASS' : 'FAIL';
+    const commentsLine = data.comments && data.comments.trim()
+      ? data.comments.trim()
+      : 'No additional comments.';
+
+    const greeting = partner
+      ? 'Hi ' + volunteer + ' and ' + partner + ','
+      : 'Hi ' + volunteer + ',';
+
+    const failLine = verdict === 'FAIL' ? 'Please resubmit and try again.\n\n' : '';
+
+    const body = greeting + '\n\n' +
+      'Your quiz submission has been reviewed.\n\n' +
+      'Result: ' + verdict + '\n\n' +
+      'Comments:\n' + commentsLine + '\n\n' +
+      failLine +
+      'Thank you,\n' +
+      'UW AFSA Tax Clinic';
+
+    const recipients = email2 ? email1 + ',' + email2 : email1;
+
+    MailApp.sendEmail({
+      to: recipients,
+      subject: 'Training Quiz Results',
+      body: body,
+      name: 'UW AFSA Tax Clinic'
+    });
+
+    // Update Status column (col K = index 11)
+    sheet.getRange(data.rowIndex, 11).setValue(data.verdict);
+
+    Logger.log('Quiz result sent for row ' + data.rowIndex + ': ' + data.verdict);
+    return { success: true, message: 'Result sent to ' + volunteer + '.' };
+
+  } catch (error) {
+    Logger.log('sendQuizResult error: ' + error.message);
+    return { success: false, message: 'Failed to send result: ' + error.message };
+  }
+}
+
+/**
  * Gets or creates the Quiz Submissions sheet with headers
  * @returns {Sheet}
  */
