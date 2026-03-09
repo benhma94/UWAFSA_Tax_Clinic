@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Search &mdash; Tax Clinic</title>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico"/>
+    <link rel="stylesheet" href="shared.css?v=2">
+    <style>
+      .search-bar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+      }
+      .search-bar input[type="search"] {
+        flex: 1;
+        padding: 10px 14px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-family: inherit;
+      }
+      .search-bar button {
+        padding: 10px 18px;
+        background: #8e0000;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      .search-bar button:hover { opacity: 0.85; }
+
+      .search-result {
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 14px 18px;
+        margin-bottom: 14px;
+        background: #fafafa;
+      }
+      .search-result-meta {
+        font-size: 0.85rem;
+        color: #888;
+        margin-bottom: 4px;
+      }
+      .search-result-section {
+        font-weight: bold;
+        font-size: 1rem;
+        margin-bottom: 6px;
+      }
+      .search-result-section a {
+        color: #8e0000;
+        text-decoration: none;
+      }
+      .search-result-section a:hover { text-decoration: underline; }
+      .search-result-snippet {
+        font-size: 0.95rem;
+        color: #444;
+        line-height: 1.5;
+      }
+      .search-result-snippet mark {
+        background: #fff3cd;
+        color: inherit;
+        padding: 0 2px;
+        border-radius: 2px;
+      }
+      #search-status {
+        color: #666;
+        margin-bottom: 20px;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+
+  <div id="site-header"></div>
+  <div id="site-nav"></div>
+
+  <div id="content">
+    <div class="sqs-html-content">
+      <h2>Search</h2>
+
+      <form class="search-bar" id="searchForm">
+        <input type="search" id="searchInput" name="q" placeholder="Search the Tax Clinic website&hellip;" aria-label="Search">
+        <button type="submit">Search</button>
+      </form>
+
+      <div id="search-status"></div>
+      <div id="search-results"></div>
+    </div>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="search-index.js"></script>
+  <script src="shared.js?v=2"></script>
+  <script>
+    var params = new URLSearchParams(window.location.search);
+    var query = (params.get('q') || '').trim();
+
+    var input = document.getElementById('searchInput');
+    var status = document.getElementById('search-status');
+
+    if (query) {
+      input.value = query;
+      runSearch(query);
+    } else {
+      status.textContent = 'Enter a search term above to get started.';
+    }
+
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var q = input.value.trim();
+      if (!q) return;
+      var url = new URL(window.location.href);
+      url.searchParams.set('q', q);
+      window.history.replaceState(null, '', url.toString());
+      runSearch(q);
+    });
+
+    function runSearch(q) {
+      var lower = q.toLowerCase();
+      var terms = lower.split(/\s+/).filter(Boolean);
+
+      var results = SEARCH_INDEX.filter(function(entry) {
+        var haystack = (entry.section + ' ' + entry.text + ' ' + entry.page).toLowerCase();
+        return terms.every(function(term) { return haystack.indexOf(term) !== -1; });
+      });
+
+      var container = document.getElementById('search-results');
+      container.innerHTML = '';
+
+      if (results.length === 0) {
+        status.textContent = 'No results found for \u201c' + escHtml(q) + '\u201d.';
+        return;
+      }
+
+      status.textContent = results.length + ' result' + (results.length === 1 ? '' : 's') + ' for \u201c' + escHtml(q) + '\u201d:';
+
+      results.forEach(function(entry) {
+        var snippet = buildSnippet(entry.text, terms, 180);
+        var div = document.createElement('div');
+        div.className = 'search-result';
+        div.innerHTML =
+          '<div class="search-result-meta">' + escHtml(entry.page) + '</div>' +
+          '<div class="search-result-section"><a href="' + escHtml(entry.url) + '">' + escHtml(entry.section) + '</a></div>' +
+          '<div class="search-result-snippet">' + snippet + '</div>';
+        container.appendChild(div);
+      });
+    }
+
+    function buildSnippet(text, terms, maxLen) {
+      // Find the earliest match position for any term
+      var lower = text.toLowerCase();
+      var firstMatch = text.length;
+      terms.forEach(function(term) {
+        var idx = lower.indexOf(term);
+        if (idx !== -1 && idx < firstMatch) firstMatch = idx;
+      });
+
+      // Window of text around the first match
+      var start = Math.max(0, firstMatch - 60);
+      var excerpt = (start > 0 ? '\u2026' : '') + text.slice(start, start + maxLen) + (start + maxLen < text.length ? '\u2026' : '');
+
+      // Bold each matched term (case-insensitive)
+      var result = escHtml(excerpt);
+      terms.forEach(function(term) {
+        var escaped = escHtml(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        result = result.replace(new RegExp(escaped, 'gi'), function(m) {
+          return '<mark>' + m + '</mark>';
+        });
+      });
+      return result;
+    }
+
+    function escHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+  </body>
+</html>

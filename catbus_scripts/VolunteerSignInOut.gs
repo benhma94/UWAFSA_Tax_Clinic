@@ -140,6 +140,12 @@ function signInVolunteer(volunteerName, station) {
         s => s.name.toLowerCase() === volunteerName.trim().toLowerCase()
       );
       if (alreadySignedIn) {
+        const existingSession = activeSessions.find(
+          s => s.name.toLowerCase() === volunteerName.trim().toLowerCase()
+        );
+        if (existingSession && existingSession.station === 'Quiz') {
+          throw new Error(`${volunteerName.trim()} is already signed in at the quiz station.`);
+        }
         throw new Error(`${volunteerName.trim()} is already signed in. Please sign out first.`);
       }
 

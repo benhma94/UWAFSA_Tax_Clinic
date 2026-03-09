@@ -28,15 +28,16 @@ function safeExecute(operation, context = 'Operation', maxRetries = 3) {
       lastError = error;
       const errorMsg = error.message || error.toString();
       
-      // Check if it's a rate limit or quota error
-      const isRateLimit = errorMsg.toLowerCase().includes('rate') || 
+      // Check if it's a rate limit, quota, or transient timeout error
+      const isRateLimit = errorMsg.toLowerCase().includes('rate') ||
                          errorMsg.toLowerCase().includes('quota') ||
                          errorMsg.toLowerCase().includes('too many') ||
-                         errorMsg.toLowerCase().includes('service invoked');
-      
+                         errorMsg.toLowerCase().includes('service invoked') ||
+                         errorMsg.toLowerCase().includes('timed out');
+
       if (isRateLimit && attempt < maxRetries - 1) {
-        // Exponential backoff: 100ms, 200ms, 400ms
-        const delay = 100 * Math.pow(2, attempt);
+        // Exponential backoff: 500ms, 1000ms, 2000ms
+        const delay = 500 * Math.pow(2, attempt);
         Logger.log(`${context} Rate limit hit, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
         Utilities.sleep(delay);
         continue;
@@ -101,7 +102,27 @@ function translateError(error, context = 'Operation') {
   if (lowerMsg.includes('busy generating') || lowerMsg.includes('lock')) {
     return new Error('The system is busy processing another request. Please try again in a moment.');
   }
-  
+
+  // Quiz station — volunteer hasn't passed the quiz yet
+  if (lowerMsg.includes('quiz station')) {
+    return new Error('Volunteer has not yet passed the quiz, please direct them to a part of the room to complete the quiz');
+  }
+
+  // Already signed in (volunteer duplicate)
+  if (lowerMsg.includes('already signed in')) {
+    return new Error('This volunteer is already signed in. Please sign out first.');
+  }
+
+  // Station not available
+  if (lowerMsg.includes('not available')) {
+    return new Error('This station is not available. Please select another station.');
+  }
+
+  // Already signed out
+  if (lowerMsg.includes('already signed out')) {
+    return new Error('This volunteer has already been signed out.');
+  }
+
   // Generic fallback - keep original message but make it more user-friendly
   if (errorMsg.startsWith(context)) {
     return error; // Already has context

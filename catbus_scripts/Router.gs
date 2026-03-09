@@ -97,12 +97,15 @@ function doPost(e) {
     const action = e?.parameter?.action;
     if (action === 'volunteerApplication') {
       submitVolunteerApplication(e.parameter);
-      return ContentService.createTextOutput('OK');
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
     Logger.log('doPost: unknown action: ' + action);
-    return ContentService.createTextOutput('Unknown action');
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Unknown action' }))
+      .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     Logger.log('doPost error: ' + err.message);
-    return ContentService.createTextOutput('Error: ' + err.message);
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }

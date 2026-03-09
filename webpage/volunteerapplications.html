@@ -162,7 +162,7 @@
     // Toggle this to open or close all applications
     var APPLICATIONS_OPEN = false;
 
-    var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyP2xC_8ebErP8m-tZsbRLxuhCZWz6EL4OOXpHVhkzBpUX-V8iYX0JjVxYMcQFJGyTzCQ/exec';
+    var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec';
 
     var root = document.getElementById('app-root');
 
@@ -193,7 +193,6 @@
       // Attach screening listeners after DOM is built
       attachFilerScreening();
       attachFrontlineScreening();
-      attachMentorScreening();
     }
 
     // -----------------------------------------------------------------------
@@ -296,11 +295,11 @@
             '<input type="text" id="filer-term" placeholder="e.g. Yes, 1A &mdash; or &mdash; 3B" required>' +
 
             '<label for="filer-area">Area of Closest Affiliation</label>' +
-            '<p style="margin:4px 0 6px;font-size:0.9em;color:#555;">We work with other tax clinics and would like to let you know about future volunteering opportunities. Please select the area you associate most closely with (e.g. if your parents live in Markham, select Markham/Richmond Hill; if you will be living/working in KW, select KW).</p>' +
+            '<p style="margin:4px 0 6px;font-size:0.9em;color:#555;">We work with other tax clinics and would like to let you know about future volunteering opportunities. Please select the area you associate most closely with (e.g. if your parents live in Markham, select Markham/Richmond Hill; if you will be living/working in Kitchener-Waterloo, select Kitchener-Waterloo).</p>' +
             '<select id="filer-area" required>' +
               '<option value="">-- Select --</option>' +
               '<option>Greater Toronto Area</option>' +
-              '<option>KW</option>' +
+              '<option>Kitchener-Waterloo</option>' +
               '<option>Markham/Richmond Hill</option>' +
             '</select>' +
 
@@ -324,9 +323,9 @@
             '</div>' +
 
             '<button type="submit" id="filerSubmitBtn">Submit Application</button>' +
-            '<div id="filerStatus" class="status-msg"></div>' +
           '</form>' +
-        '</div>'
+        '</div>' +
+        '<div id="filerStatus" class="status-msg"></div>'
       );
     }
 
@@ -412,11 +411,11 @@
             '<input type="text" id="frontline-term" placeholder="e.g. Yes, 1A &mdash; or &mdash; 3B" required>' +
 
             '<label for="frontline-area">Area of Closest Affiliation</label>' +
-            '<p style="margin:4px 0 6px;font-size:0.9em;color:#555;">We work with other tax clinics and would like to let you know about future volunteering opportunities. Please select the area you associate most closely with (e.g. if your parents live in Markham, select Markham/Richmond Hill; if you will be living/working in KW, select KW).</p>' +
+            '<p style="margin:4px 0 6px;font-size:0.9em;color:#555;">We work with other tax clinics and would like to let you know about future volunteering opportunities. Please select the area you associate most closely with (e.g. if your parents live in Markham, select Markham/Richmond Hill; if you will be living/working in Kitchener-Waterloo, select Kitchener-Waterloo).</p>' +
             '<select id="frontline-area" required>' +
               '<option value="">-- Select --</option>' +
               '<option>Greater Toronto Area</option>' +
-              '<option>KW</option>' +
+              '<option>Kitchener-Waterloo</option>' +
               '<option>Markham/Richmond Hill</option>' +
             '</select>' +
 
@@ -440,9 +439,9 @@
             '</div>' +
 
             '<button type="submit" id="frontlineSubmitBtn">Submit Application</button>' +
-            '<div id="frontlineStatus" class="status-msg"></div>' +
           '</form>' +
-        '</div>'
+        '</div>' +
+        '<div id="frontlineStatus" class="status-msg"></div>'
       );
     }
 
@@ -585,20 +584,13 @@
 
         fetch(APPS_SCRIPT_URL, {
           method: 'POST',
-          mode: 'cors',
+          mode: 'no-cors',
           body: params
         })
-          .then(function(res) { return res.json(); })
-          .then(function(data) {
-            if (data.status === 'ok') {
-              showFrontlineStatus('Application submitted! We will be in touch.', 'success');
-              document.getElementById('frontlineForm').reset();
-              document.getElementById('frontline-main-form').classList.remove('show');
-              document.querySelectorAll('input[name^="frontline-q"]').forEach(function(r) { r.checked = false; });
-              document.querySelectorAll('#form-frontline .disqualify-msg').forEach(function(m) { m.classList.remove('show'); });
-            } else {
-              showFrontlineStatus('Submission failed: ' + (data.message || 'Unknown error') + '. Please try again or email us directly.', 'error');
-            }
+          .then(function() {
+            showFrontlineStatus('Application submitted! We will be in touch.', 'success');
+            document.getElementById('frontlineForm').reset();
+            document.getElementById('frontline-main-form').classList.remove('show');
           })
           .catch(function() {
             showFrontlineStatus('Submission failed. Please try again or email us directly.', 'error');
@@ -751,20 +743,13 @@
 
         fetch(APPS_SCRIPT_URL, {
           method: 'POST',
-          mode: 'cors',
+          mode: 'no-cors',
           body: params
         })
-          .then(function(res) { return res.json(); })
-          .then(function(data) {
-            if (data.status === 'ok') {
-              showFilerStatus('Application submitted! We will be in touch.', 'success');
-              document.getElementById('filerForm').reset();
-              document.getElementById('filer-main-form').classList.remove('show');
-              document.querySelectorAll('input[name^="filer-q"]').forEach(function(r) { r.checked = false; });
-              document.querySelectorAll('.disqualify-msg').forEach(function(m) { m.classList.remove('show'); });
-            } else {
-              showFilerStatus('Submission failed: ' + (data.message || 'Unknown error') + '. Please try again or email us directly.', 'error');
-            }
+          .then(function() {
+            showFilerStatus('Application submitted! We will be in touch.', 'success');
+            document.getElementById('filerForm').reset();
+            document.getElementById('filer-main-form').classList.remove('show');
           })
           .catch(function() {
             showFilerStatus('Submission failed. Please try again or email us directly.', 'error');
@@ -806,30 +791,7 @@
         '<p>If you have a copy of UFILE 2024, you may feel free to open the test case with Password1!</p>' +
         '<p>Feel free to reach out to us anytime at <a href="mailto:taxclinic@uwafsa.com">taxclinic@uwafsa.com</a>!</p>' +
 
-        // Screening section
-        '<div class="screening-section">' +
-          '<h3>Eligibility Screening</h3>' +
-          '<p style="margin:0 0 12px 0;color:#555;font-size:0.95em;">Please answer all questions below. Your application form will appear if you meet the requirements.</p>' +
-
-          screeningQ('mentor-q1',
-            'Are you over the age of 18?',
-            'You must be over the age of 18 to apply as a Mentor.',
-            'evalMentorScreening') +
-
-          screeningQ('mentor-q2',
-            'Are you able to attend the mandatory training session on February 28th?',
-            'Attendance at the training session on February 28th is mandatory. You are not eligible to apply as a Mentor.',
-            'evalMentorScreening') +
-
-          screeningQ('mentor-q3',
-            'Are you able to volunteer in person for the Tax Clinic, tentatively scheduled for March 21&ndash;22 and March 28&ndash;29?',
-            'You must be available to volunteer in person on the clinic dates to apply as a Mentor.',
-            'evalMentorScreening') +
-
-        '</div>' +
-
-        // Main form (hidden until screening passes)
-        '<div id="mentor-main-form" class="main-form-section">' +
+        '<div id="mentor-main-form">' +
           '<form class="app-form" id="mentorForm" onsubmit="handleMentorSubmit(event)" novalidate>' +
 
             '<label for="mentor-email">Email Address</label>' +
@@ -894,46 +856,10 @@
             '<textarea id="mentor-caseQ3" placeholder="Your response..." required></textarea>' +
 
             '<button type="submit" id="mentorSubmitBtn">Submit Application</button>' +
-            '<div id="mentorStatus" class="status-msg"></div>' +
           '</form>' +
-        '</div>'
+        '</div>' +
+        '<div id="mentorStatus" class="status-msg"></div>'
       );
-    }
-
-    // -----------------------------------------------------------------------
-    // Mentor screening logic
-    // -----------------------------------------------------------------------
-    var MENTOR_SCREENING = [
-      { id: 'mentor-q1', disqualifyOn: 'No' },
-      { id: 'mentor-q2', disqualifyOn: 'No' },
-      { id: 'mentor-q3', disqualifyOn: 'No' }
-    ];
-
-    function attachMentorScreening() {
-      // listeners are already inline via onchange
-    }
-
-    function evalMentorScreening() {
-      var allPass = true;
-
-      MENTOR_SCREENING.forEach(function(q) {
-        var selected = document.querySelector('input[name="' + q.id + '"]:checked');
-        var msgEl = document.getElementById(q.id + '-msg');
-        if (selected && selected.value === q.disqualifyOn) {
-          msgEl.classList.add('show');
-          allPass = false;
-        } else {
-          msgEl.classList.remove('show');
-          if (!selected) allPass = false;
-        }
-      });
-
-      var mainForm = document.getElementById('mentor-main-form');
-      if (allPass) {
-        mainForm.classList.add('show');
-      } else {
-        mainForm.classList.remove('show');
-      }
     }
 
     function evalMentorPrevVolunteer() {
@@ -1021,21 +947,12 @@
 
       fetch(APPS_SCRIPT_URL, {
         method: 'POST',
-        mode: 'cors',
+        mode: 'no-cors',
         body: params
       })
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-          if (data.status === 'ok') {
-            showMentorStatus('Application submitted! We will be in touch.', 'success');
-            document.getElementById('mentorForm').reset();
-            document.getElementById('mentor-main-form').classList.remove('show');
-            document.getElementById('mentor-tax-exp-section').classList.remove('show');
-            document.querySelectorAll('input[name^="mentor-q"]').forEach(function(r) { r.checked = false; });
-            document.querySelectorAll('#form-mentor .disqualify-msg').forEach(function(m) { m.classList.remove('show'); });
-          } else {
-            showMentorStatus('Submission failed: ' + (data.message || 'Unknown error') + '. Please try again or email us directly.', 'error');
-          }
+        .then(function() {
+          showMentorStatus('Application submitted! We will be in touch.', 'success');
+          document.getElementById('mentorForm').reset();
         })
         .catch(function() {
           showMentorStatus('Submission failed. Please try again or email us directly.', 'error');

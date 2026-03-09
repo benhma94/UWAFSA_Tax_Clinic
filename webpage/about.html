@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Tax Clinic &mdash; Accounting &amp; Finance Student Association</title>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico"/>
-    <link rel="canonical" href="https://taxclinic.uwaterloo.ca"/>
+    <link rel="canonical" href="https://taxclinic.uwaterloo.ca/about.html"/>
     <meta property="og:site_name" content="Accounting &amp; Finance Student Association"/>
-    <meta property="og:title" content="Tax Clinic &mdash; Accounting &amp; Finance Student Association"/>
-    <meta property="og:url" content="https://taxclinic.uwaterloo.ca"/>
+    <meta property="og:title" content="About Us &mdash; UW AFSA Tax Clinic"/>
+    <meta property="og:url" content="https://taxclinic.uwaterloo.ca/about.html"/>
     <meta property="og:type" content="website"/>
-    <meta name="description" content="" />
-    <link rel="stylesheet" href="shared.css">
+    <meta name="description" content="Learn about the UW AFSA Tax Clinic, a student-run free tax filing service serving the Waterloo Region since 2009." />
+    <link rel="stylesheet" href="shared.css?v=2">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
     <style>
-      .sqs-html-content p > strong:only-child {
-        display: block;
-        border-left: 3px solid #333;
-        padding-left: 10px;
-        margin-top: 20px;
+      .stats-note {
+        font-size: 13px;
+        color: #888;
+        margin-top: 4px;
       }
     </style>
   </head>
@@ -28,14 +28,83 @@
 
   <div id="content">
     <div class="sqs-html-content">
-      <h2 style="white-space:pre-wrap;"><strong>About Us</strong></h2>
+      <h2>About Us</h2>
 
-      <p>Welcome to the UW AFSA Tax Clinic. This page is under construction &mdash; check back soon.</p>
+      <p>Welcome to the UW AFSA Tax Clinic! We're a student-run Tax Clinic under the Accounting &amp; Finance Student Association (AFSA) Internal Services division.</p>
+      <p>Our earliest records date back to 2009, when we were a small group of students who wanted to help out our community.</p>
+      <p>We started as a small operation, operating for two or three days in the SLC's Multipurpose Room (maximum capacity of probably 50 people, it was a tight fit!).</p>
+      <p>Over the years, we've grown into a team of over 150 students who help file taxes for over 1,000 residents of the KW and UW community every year.</p>
+      <p>Our longest serving volunteer has been with us since 2013!</p>
+
+      <p>Our volunteers consist of many returning alumni, many of whom have become successful in their careers.</p>
+      <p>Our management team consists of:</p>
+      <ul>
+        <li>Current students from the School of Accounting &amp; Finance programs</li>
+        <li>A student doing their PhD with a focus in Taxation</li>
+        <li>Several CPAs</li>
+        <li>Former senior managers from the Big 4 accounting firms</li>
+        <li>A CFA Charterholder</li>
+        <li>A CFP Certificant</li>
+        <li>Several individuals who have placed on the Honour Roll for the CFE</li>
+        <li>And one Ontario Gold Medalist on the CFE!</li>
+      </ul>
+
+      <h2>Statistics</h2>
+      <p>Starting in 2019, we started tracking the number of returns filed at the clinic.</p>
+      <div style="margin: 24px 0 8px;">
+        <canvas id="returnsChart" height="220"></canvas>
+      </div>
+      <p class="stats-note">Returns filed across the five seasons shown: 5,989.</p>
     </div>
   </div>
 
   <div id="site-footer"></div>
 
-  <script src="shared.js"></script>
+  <script>
+    new Chart(document.getElementById('returnsChart'), {
+      type: 'bar',
+      data: {
+        labels: ['2019','2022','2023','2024','2025'],
+        datasets: [{
+          label: 'Returns filed',
+          data: [1281, 1191, 1142, 1364, 1011],
+          backgroundColor: '#980000',
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => `Returns filed: ${ctx.parsed.y.toLocaleString()}`
+            },
+            bodyFont: { family: 'Roboto, Arial, sans-serif' },
+            titleFont: { family: 'Roboto, Arial, sans-serif' }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 1600,
+            ticks: {
+              font: { family: 'Roboto, Arial, sans-serif', size: 12 },
+              color: '#888',
+              callback: v => v.toLocaleString()
+            },
+            grid: { color: '#f0f0f0' },
+            border: { display: false }
+          },
+          x: {
+            ticks: { font: { family: 'Roboto, Arial, sans-serif', size: 13 }, color: '#555' },
+            grid: { display: false },
+            border: { display: false }
+          }
+        }
+      }
+    });
+  </script>
+  <script src="shared.js?v=2"></script>
   </body>
 </html>

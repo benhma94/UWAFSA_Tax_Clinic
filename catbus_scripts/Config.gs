@@ -3,6 +3,9 @@
  * Centralized configuration for all CATBUS scripts
  */
 
+// Folder ID for filer application resume uploads
+const RESUME_FOLDER_ID = '1BxPu07FLl3-SL5q5w3XMyCDokLdBv16i';
+
 const CONFIG = {
   SPREADSHEET_ID: '1W669LwuA8IpB03BlmhwnUkkupMZW2Cg0I_6cvSp0pwI',
 
@@ -410,3 +413,5 @@ const VOLUNTEER_TAGS = {
   // Example: 'John Smith': 'The Tax Wizard',
   'Ben Ma': "Unpaid Tax Slave"
 };
+
+

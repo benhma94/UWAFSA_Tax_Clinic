@@ -647,11 +647,7 @@
         // Refresh all data immediately
         loadAvailableStations();
         loadActiveSessions();
-
-        // Refresh stats with a slight delay to ensure backend is updated
-        setTimeout(() => {
-          refreshStats();
-        }, 500);
+        refreshStats();
       })
       .withFailureHandler(error => {
         btn.disabled = false;
@@ -681,6 +677,7 @@
         btn.disabled = false;
         btn.textContent = originalText;
 
+        showToast('Volunteer signed out!');
         showMessage(`Successfully signed out. Thank you, ${result.volunteerName || 'volunteer'}!`, 'success');
 
         // Reset form, clear autocomplete input and selected session
@@ -691,16 +688,12 @@
         // Refresh all data immediately
         loadAvailableStations();
         loadActiveSessions();
-
-        // Refresh stats with a slight delay to ensure backend is updated
-        setTimeout(() => {
-          refreshStats();
-        }, 500);
+        refreshStats();
       })
       .withFailureHandler(error => {
         btn.disabled = false;
         btn.textContent = originalText;
-        showMessage('Error signing out: ' + (error.message || error), 'error');
+        showMessage('Sign out failed. ' + (error.message || 'Please try again.'), 'error');
       })
       .signOutVolunteer(sessionId);
   }

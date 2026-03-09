@@ -189,6 +189,8 @@ function buildReceiptEmailBody(emailData, filingStatus) {
 
           <p>Two files have been attached for your records. The UFILE file is the softcopy version of your tax return. You will not be able to open it without UFILE installed. It is provided to you in the event you need to update or modify your tax return. The UFILE password will be sent in a separate email. The PDF is a copy of your tax return for your reading purposes.</p>
 
+          <p>We would appreciate your <a href="${CONFIG.CLINIC_WEBSITE_URL}/feedback" style="color: #8e0000; text-decoration: underline;">feedback</a>, as it helps us improve future operations.</p>
+
           <p>For Post-Filing questions, please go to <a href="${CONFIG.CLINIC_WEBSITE_URL}/PostFiling" style="color: #8e0000; text-decoration: underline;">taxclinic.uwaterloo.ca/PostFiling</a>. If you have any further questions, please contact us at <a href="mailto:${CONFIG.CLINIC_EMAIL}" style="color: #8e0000; text-decoration: underline;">${CONFIG.CLINIC_EMAIL}</a>.</p>
           
           <p>Thank you,<br>

@@ -616,7 +616,8 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
       // Create new sheet
       Logger.log(`Creating new sheet: ${outputSheetName}`);
       sheet = ss.insertSheet(outputSheetName);
-      
+      SpreadsheetApp.flush(); // Ensure sheet creation is committed before writing
+
       if (!sheet) {
         throw new Error(`Failed to create sheet: ${outputSheetName}`);
       }

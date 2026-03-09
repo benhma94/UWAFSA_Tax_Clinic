@@ -11,7 +11,7 @@
     <meta property="og:url" content="https://taxclinic.uwaterloo.ca"/>
     <meta property="og:type" content="website"/>
     <meta name="description" content="" />
-    <link rel="stylesheet" href="shared.css">
+    <link rel="stylesheet" href="shared.css?v=2">
     <style>
       .sqs-html-content table {
         border-collapse: collapse;
@@ -51,7 +51,7 @@
 
   <div id="content">
     <div class="sqs-html-content">
-  <h2 style="white-space:pre-wrap;"><strong>Tax Clinic 2026</strong></h2>
+  <h2 id="clinic-dates" style="white-space:pre-wrap;"><strong>Tax Clinic 2026</strong></h2>
 <table>
     <thead>
         <tr>
@@ -85,13 +85,13 @@
 
     </tbody>
 </table>
-<div class="callout-box">
-  <p>It is not required to book an appointment for the Tax Clinic, we generally work on a walk-in basis. However, if you believe your situation is slightly complex and may take more time, please use our <a href="appointment_screening.html"><strong>screening tool</strong></a> to determine if you need to book an appointment.</p>
-  <p><strong>To assist you in preparing your tax return, we have provided a checklist for you to use.</strong></p>
+<div id="appointment-booking" class="callout-box">
+  <p style="margin-bottom: 4px;">It is not required to book an appointment for the Tax Clinic, we generally work on a walk-in basis. However, if you believe your situation is slightly complex and may take more time, please use our <a href="appointment_screening.html"><strong>screening tool</strong></a> to determine if you need to book an appointment.</p>
+  <p style="margin-top: 4px; margin-bottom: 4px;"><strong>To assist you in preparing your tax return, we have provided a checklist for you to use.</strong></p>
   <a href="https://www.dropbox.com/scl/fi/pynfatxfkfu4qkl185zeq/2026-TAX-CLINIC-EXTERNAL-CHECKLIST.pdf?rlkey=j3itlif7890a1lvlgj1q844u6&st=tln8yit9&dl=0"><strong>Checklist</strong></a>
-  <p><strong>If you have any questions or concerns about the Tax Clinic this year, please feel free to email us at <a href="mailto:taxclinic@uwafsa.com">taxclinic@uwafsa.com</a></strong></p>
+  <p style="margin-top: 4px;"><strong>If you have any questions or concerns about the Tax Clinic this year, please feel free to email us at <a href="mailto:taxclinic@uwafsa.com">taxclinic@uwafsa.com</a></strong></p>
 </div><hr class="section-divider">
-  <p><strong>Eligibility:</strong></p>
+  <p id="eligibility"><strong>Eligibility:</strong></p>
   <p><strong>Regrettably, we will not be able to prepare your return if it involves any of the following items:</strong></p>
   <ul data-rte-list="default">
   <li><p >Self-employed (including 'independent contractors', Uber, Doordash);</p></li>
@@ -104,6 +104,7 @@
   <li><p >Deceased persons; or</p></li>
   <li><p >Total income above the following income thresholds (except those claiming a T2202 tuition credit during the year):</p></li>
   </ul>
+<span id="income-limits"></span>
 <table>
   <thead>
     <tr>
@@ -128,14 +129,14 @@
 </table>
 
   <p >To clarify, the Tax Clinic will serve any individual who is claiming T2202 tuition credits during the year, irrespective of total income or interest income. The restrictions on other scenarios and other income types (e.g. capital gains or rental income) in the above-noted list still apply to individuals claiming T2202 tuition credits during the year</p>
-  <p ><strong>International Students:</strong> International students are welcome and encouraged to file a tax return even if they don't have any income! We will walk you through the process of getting an Individual Tax Number (ITN) if you're not eligible for a Social Insurance Number (SIN) and don't already have an ITN.</p>
+  <p id="international-students"><strong>International Students:</strong> International students are welcome and encouraged to file a tax return even if they don't have any income! We will walk you through the process of getting an Individual Tax Number (ITN) if you're not eligible for a Social Insurance Number (SIN) and don't already have an ITN.</p>
   <p ><strong>International Taxes:</strong> We cannot prepare tax returns for other countries at this time (eg. US tax returns for students that had co-op in the US). However, if you bring your <strong>completed</strong> foreign tax return, we <em>may</em> be able to complete the Canadian return.</p>
   <hr class="section-divider">
-  <p ><strong>What to Bring to Tax Clinic:</strong></p>
+  <p id="what-to-bring"><strong>What to Bring to Tax Clinic:</strong></p>
   <p class="sqs-block-content">
     <a href="https://www.dropbox.com/scl/fi/pynfatxfkfu4qkl185zeq/2026-TAX-CLINIC-EXTERNAL-CHECKLIST.pdf?rlkey=j3itlif7890a1lvlgj1q844u6&st=tln8yit9&dl=0"><strong>Checklist</strong></a>
   </p>
-  <p ><strong>All: </strong></p>
+  <p id="what-to-bring-all"><strong>All: </strong></p>
   <ul data-rte-list="default">
   <li>
     <p ><strong>Government-issued photo ID (required)</strong></p></li>
@@ -146,7 +147,7 @@
   <li><p >Any other information not listed below that may be applicable</p></li>
   </ul>
 
-  <p ><strong>Students (see links below):</strong></p>
+  <p id="what-to-bring-students"><strong>Students (see links below):</strong></p>
   <ul data-rte-list="default">
   <li><p >Tuition Slip (T2202)</p></li>
   <li><p >T4; Employment slip </p></li>
@@ -155,7 +156,7 @@
   <li><p >T4E; Employment Insurance claims</p></li>
   <li><p >Rent or property tax paid in Ontario</p></li>
   </ul>
-  <p ><strong>Less Common Items:</strong></p>
+  <p id="what-to-bring-less-common"><strong>Less Common Items:</strong></p>
   <ul data-rte-list="default">
   <li><p >Foreign Income</p></li>
   <li><p >Medical Expenses</p></li>
@@ -171,7 +172,7 @@
   </ul>
   <hr class="section-divider">
 
-  <p ><strong>What Not to Bring to Tax Clinic:</strong></p>
+  <p id="what-not-to-bring"><strong>What Not to Bring to Tax Clinic:</strong></p>
   <ul data-rte-list="default">
   <li><p >Home Office Expenses</p></li>
   <li><p >Pay Stubs</p></li>
@@ -185,9 +186,9 @@
   <p ><a href="https://uwaterloo.ca/workday/">Workday</a>→ Main Menu → Personal → Documents</p>
   <p ><strong>T2202 Tuition Slip</strong></p>
   <p ><a href="https://uwaterloo.ca/quest/">Quest</a> → Finances → Tax Receipts → PRINT (don't choose View). You may have taken courses at an online university or other universities to replace a Waterloo course; make sure you get a T2202 from them as well (eg. Athabasca University T2202).</p>
-  <p ><strong>Charitable Donations to Endowment Fund(s)</strong></p>
+  <p id="charitable-donations"><strong>Charitable Donations to Endowment Fund(s)</strong></p>
   <p ><a href="https://uwaterloo.ca/quest/">Quest</a> → Finances → Tax Receipts → Scroll down all the way → PRINT.<br>All UW students contribute to endowment fund(s) as part of your student fees, unless they opt out at the start of the term. If you're unsure, then you didn't opt out!</p>
-  <p ><strong>Rent Receipts</strong></p>
+  <p id="rent-receipts"><strong>Rent Receipts</strong></p>
   <p >You should get a letter/receipt from your landlord (or sublettor) confirming the below in case the CRA reviews your claim in the future. The easiest way is to write the letter yourself, print it off and get them to sign it. Make sure the letter contains the below four items as well as your name!</p>
   <ul data-rte-list="default">
   <li><p >The address you lived at (including postal code)</p></li>
@@ -196,9 +197,9 @@
   <li><p >The name of the landlord/company that owned it, or the person you subletted from</p></li>
   </ul>
   <p ><strong>Lived in Residence in 2025?</strong> No evidence/receipt is needed. If you are a student and live in a designated Ontario university, college or private school residence, you may qualify for $25. Make sure your preparer knows!</p>
-  <p ><strong>Health/Dental Plan Premiums (medical expense)</strong></p>
+  <p id="health-dental"><strong>Health/Dental Plan Premiums (medical expense)</strong></p>
   <p >Either call the health/dental office or visit them in person and ask them for a receipt/letter stating the total amount of premiums you paid for the calendar year 2025. They will probably email it to you. Medical expenses may be transferable to parents depending on the situation. Find this <a href="https://www.studentcare.ca">here</a>.</p>
-  <p ><strong>Moving Expenses</strong> </p>
+  <p id="moving-expenses"><strong>Moving Expenses</strong> </p>
   <p >If you moved and are now 40 km closer to your new workplace, you may be able to deduct moving expenses against the income you earned (eg. move from studying at Waterloo → your parents' house in Toronto for co-op). The information needed is:</p>
   <ul data-rte-list="default">
   <li><p >Use <a href="https://web.archive.org/web/20210331031954/https:/maps.google.ca/"></a><a href="https://maps.google.com">Google Maps</a> to determine the distance between:</p>
@@ -219,25 +220,11 @@
     </ul>
   </li>
   </ul>
-  <hr class="section-divider">
-  <p class="" style="white-space:prewrap;"><strong>CRA Direct Deposit</strong></p>
-  <p class="" style="white-space:prewrap;">Direct deposit allows your tax refund and government benefits such as the GST/HST Credit and Ontario Trillium Benefit to be deposited directly into your bank account. If you do not have direct deposit set up, the CRA will mail you a cheque to your mailing address.</p>
-  <p class="" style="white-space:prewrap;">As of March 24, 2025, the CRA will <b>no longer</b> accept direct deposit application through your tax return. Direct deposit should now be set up directly within online banking of your bank account. If you would like to set up direct deposit, refer to your own bank for guidance on how to set this up.</p>
-  <ul>
-    <li><a href="https://www.cibc.com/en/personal-banking/ways-to-bank/cra-direct-deposit.html">CIBC</a></li>
-    <li><a href="https://www.simplii.com/en/banking-simplii/cra-direct-deposit.html">Simplii</a></li>
-    <li><a href="https://www.nbc.ca/personal/accounts/services/online/features/direct-deposit.html">National Bank</a></li>
-    <li><a href="https://www.bmo.com/main/personal/ways-to-bank/cra-direct-deposit/">BMO</a></li>
-    <li><a href="https://www.scotiabank.com/ca/en/personal/bank-your-way/digital-banking-guide/banking-basics/enrol-for-cra-direct-deposit.html">Scotiabank</a></li>
-    <li><a href="https://www.td.com/ca/en/personal-banking/advice/day-to-day-banking/what-is-direct-deposit#:~:text=To%20start%20your%20enrollment%2C%20you,need%20to%20re-enroll%20again.">TD</a></li>
-    <li><a href="https://www.tangerine.ca/en/faq/canada-revenue-agency-cra-direct-deposit">Tangerine</a></li>
-    <li><a href="https://www.rbcroyalbank.com/ways-to-bank/tutorials/send-and-receive-money/set-up-direct-deposit-cra.html">RBC</a></li>
-  </ul>
     </div>
   </div>
 
   <div id="site-footer"></div>
 
-  <script src="shared.js"></script>
+  <script src="shared.js?v=2"></script>
   </body>
 </html>
