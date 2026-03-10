@@ -1170,7 +1170,7 @@ function getVolunteerDistribution() {
     }
 
     // Compute consecutive shift analysis
-    // For each day, find volunteers doing A+B (Morning+Afternoon) and B+C (Afternoon+Evening)
+    // For each day, count unique volunteers across combined time windows (union)
     const consecutiveAnalysis = [];
     for (let dayIdx = 0; dayIdx < SCHEDULE_CONFIG.DAYS_COUNT; dayIdx++) {
       const dayNum = dayIdx + 1;
@@ -1182,29 +1182,16 @@ function getVolunteerDistribution() {
       const setB = new Set(schedule[shiftB] || []);
       const setC = new Set(schedule[shiftC] || []);
 
-      // Morning + Afternoon (A+B)
-      const morningAfternoon = [];
-      for (const name of setA) {
-        if (setB.has(name)) morningAfternoon.push(name);
-      }
-
-      // Afternoon + Evening (B+C)
-      const afternoonEvening = [];
-      for (const name of setB) {
-        if (setC.has(name)) afternoonEvening.push(name);
-      }
-
-      // All three (A+B+C)
-      const allThree = [];
-      for (const name of setA) {
-        if (setB.has(name) && setC.has(name)) allThree.push(name);
-      }
+      // Union counts: unique volunteers across combined time windows
+      const morningAfternoonCount = new Set([...setA, ...setB]).size;
+      const afternoonEveningCount = new Set([...setB, ...setC]).size;
+      const allThreeCount = new Set([...setA, ...setB, ...setC]).size;
 
       consecutiveAnalysis.push({
         day: dayNum,
-        morningAfternoonCount: morningAfternoon.length,
-        afternoonEveningCount: afternoonEvening.length,
-        allThreeCount: allThree.length
+        morningAfternoonCount,
+        afternoonEveningCount,
+        allThreeCount
       });
     }
 
