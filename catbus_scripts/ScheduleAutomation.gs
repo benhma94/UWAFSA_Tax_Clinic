@@ -1202,11 +1202,8 @@ function getVolunteerDistribution() {
 
       consecutiveAnalysis.push({
         day: dayNum,
-        morningAfternoon: morningAfternoon.sort(),
         morningAfternoonCount: morningAfternoon.length,
-        afternoonEvening: afternoonEvening.sort(),
         afternoonEveningCount: afternoonEvening.length,
-        allThree: allThree.sort(),
         allThreeCount: allThree.length
       });
     }
@@ -1232,9 +1229,7 @@ function getVolunteerDistribution() {
       totalAssignments: Object.values(existingAssignments).reduce((sum, s) => sum + s.length, 0),
       shiftRoleCounts: shiftRoleCounts,
       consecutiveAnalysis: consecutiveAnalysis,
-      shiftCountDistribution: shiftCountDistribution,
-      roleCounts: roleCounts,
-      volunteerShiftCounts: volunteerShiftCounts
+      roleCounts: roleCounts
     };
   }, 'getVolunteerDistribution');
 }

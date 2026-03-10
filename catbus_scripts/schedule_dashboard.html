@@ -950,21 +950,6 @@
       </div>
     `;
 
-    // Shift count distribution (how many volunteers have N shifts)
-    if (result.shiftCountDistribution) {
-      html += '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-light);">';
-      html += '<h4 style="margin: 0 0 10px 0;">Shifts per Volunteer</h4>';
-      const keys = Object.keys(result.shiftCountDistribution).map(Number).sort((a, b) => a - b);
-      for (const count of keys) {
-        const numVols = result.shiftCountDistribution[count];
-        html += `<div class="stat-item">
-          <span class="stat-label">${count} shift${count !== 1 ? 's' : ''}:</span>
-          <span class="stat-value">${numVols} volunteer${numVols !== 1 ? 's' : ''}</span>
-        </div>`;
-      }
-      html += '</div>';
-    }
-
     // Shift distribution stacked bars (same style as generation results)
     if (result.shiftRoleCounts) {
       const slotKeys = ['A', 'B', 'C'];
@@ -1036,24 +1021,17 @@
         // Morning + Afternoon
         html += '<div style="margin-bottom: 8px;">';
         html += '<div style="font-size: 13px; font-weight: 500; margin-bottom: 4px;">Morning + Afternoon: <span style="color: var(--accent-color); font-weight: bold;">' + day.morningAfternoonCount + '</span></div>';
-        if (day.morningAfternoon.length > 0) {
-          html += '<div style="font-size: 12px; color: #555; padding-left: 8px;">' + day.morningAfternoon.map(n => escapeHtml(n)).join(', ') + '</div>';
-        }
         html += '</div>';
 
         // Afternoon + Evening
         html += '<div style="margin-bottom: 8px;">';
         html += '<div style="font-size: 13px; font-weight: 500; margin-bottom: 4px;">Afternoon + Evening: <span style="color: var(--accent-color); font-weight: bold;">' + day.afternoonEveningCount + '</span></div>';
-        if (day.afternoonEvening.length > 0) {
-          html += '<div style="font-size: 12px; color: #555; padding-left: 8px;">' + day.afternoonEvening.map(n => escapeHtml(n)).join(', ') + '</div>';
-        }
         html += '</div>';
 
         // All three
         if (day.allThreeCount > 0) {
           html += '<div>';
           html += '<div style="font-size: 13px; font-weight: 500; margin-bottom: 4px;">All Three (Morning + Afternoon + Evening): <span style="color: var(--accent-color); font-weight: bold;">' + day.allThreeCount + '</span></div>';
-          html += '<div style="font-size: 12px; color: #555; padding-left: 8px;">' + day.allThree.map(n => escapeHtml(n)).join(', ') + '</div>';
           html += '</div>';
         }
 
