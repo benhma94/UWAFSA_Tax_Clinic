@@ -25,4 +25,29 @@
       navList.classList.toggle('nav-open');
     });
   }
+
+  // Mark current page nav link as active
+  var path = window.location.pathname;
+  document.querySelectorAll('nav a').forEach(function(a) {
+    var href = a.getAttribute('href');
+    if (href === path || (path === '/' && href === '/') || (href !== '/' && path.endsWith(href))) {
+      a.classList.add('active');
+    }
+  });
+
+  // Page exit fade before navigation
+  document.addEventListener('click', function(e) {
+    var link = e.target.closest('a[href]');
+    if (!link) return;
+    var href = link.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('mailto:') ||
+        href.startsWith('http') || link.target === '_blank' || link.hasAttribute('download')) return;
+    e.preventDefault();
+    var content = document.getElementById('content');
+    if (content) {
+      content.style.transition = 'opacity 0.2s ease-in';
+      content.style.opacity = '0';
+    }
+    setTimeout(function() { window.location.href = href; }, 210);
+  });
 })();
