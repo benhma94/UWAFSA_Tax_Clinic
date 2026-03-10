@@ -343,6 +343,9 @@
     <button class="btn-primary" onclick="generateSchedule()" id="generateBtn" style="flex: 1; padding: 15px; font-size: 16px;">
       Generate Schedule
     </button>
+    <button class="btn-secondary" onclick="viewDistribution()" id="distributionBtn" style="padding: 15px; font-size: 14px;">
+      View Distribution
+    </button>
     <button onclick="runDiagnostic()" id="diagnosticBtn" style="padding: 15px; font-size: 14px; background-color: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">
       🔍 Debug Data
     </button>
@@ -358,6 +361,11 @@
   <div id="statsBox" class="stats-box" style="display: none;">
     <h2>Schedule Generation Results</h2>
     <div id="statsContent"></div>
+  </div>
+
+  <div id="distributionBox" class="stats-box" style="display: none;">
+    <h2>Volunteer Distribution Analysis</h2>
+    <div id="distributionContent"></div>
   </div>
 
   <div class="form-section">
@@ -873,6 +881,190 @@
         status.innerHTML = '<div style="color:var(--error-color);">Error: ' + (error.message || error) + '</div>';
       })
       .saveVolunteerScheduleEdits(editorVolunteerName, editorShiftMap);
+  }
+
+  function viewDistribution() {
+    const btn = document.getElementById('distributionBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span> Loading...';
+    hideMessage();
+
+    google.script.run
+      .withSuccessHandler(result => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+
+        if (!result) {
+          showMessage('No distribution data returned', 'error');
+          return;
+        }
+        if (result.error) {
+          showMessage(result.error, 'error');
+          return;
+        }
+
+        displayDistribution(result);
+      })
+      .withFailureHandler(error => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        showMessage('Error loading distribution: ' + (error.message || error), 'error');
+      })
+      .getVolunteerDistribution();
+  }
+
+  function displayDistribution(result) {
+    const box = document.getElementById('distributionBox');
+    const content = document.getElementById('distributionContent');
+
+    const dayLabels = [];
+    for (let d = 1; d <= 4; d++) {
+      const el = document.getElementById('day' + d);
+      dayLabels.push(el ? el.value.trim() : 'Day ' + d);
+    }
+
+    let html = '';
+
+    // Summary stats
+    html += `
+      <div class="stat-item">
+        <span class="stat-label">Total Volunteers:</span>
+        <span class="stat-value">${result.totalVolunteers}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Total Assignments:</span>
+        <span class="stat-value">${result.totalAssignments}</span>
+      </div>
+    `;
+
+    // Role counts
+    const rc = result.roleCounts || {};
+    html += `
+      <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-light);">
+        <h4 style="margin: 0 0 10px 0;">Volunteers by Role</h4>
+        <div class="stat-item"><span class="stat-label">Filers:</span><span class="stat-value">${rc.filer || 0}</span></div>
+        <div class="stat-item"><span class="stat-label">Mentors:</span><span class="stat-value">${rc.mentor || 0}</span></div>
+        <div class="stat-item"><span class="stat-label">Frontline:</span><span class="stat-value">${rc.frontline || 0}</span></div>
+        <div class="stat-item"><span class="stat-label">Internal Services:</span><span class="stat-value">${rc.internalServices || 0}</span></div>
+      </div>
+    `;
+
+    // Shift count distribution (how many volunteers have N shifts)
+    if (result.shiftCountDistribution) {
+      html += '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-light);">';
+      html += '<h4 style="margin: 0 0 10px 0;">Shifts per Volunteer</h4>';
+      const keys = Object.keys(result.shiftCountDistribution).map(Number).sort((a, b) => a - b);
+      for (const count of keys) {
+        const numVols = result.shiftCountDistribution[count];
+        html += `<div class="stat-item">
+          <span class="stat-label">${count} shift${count !== 1 ? 's' : ''}:</span>
+          <span class="stat-value">${numVols} volunteer${numVols !== 1 ? 's' : ''}</span>
+        </div>`;
+      }
+      html += '</div>';
+    }
+
+    // Shift distribution stacked bars (same style as generation results)
+    if (result.shiftRoleCounts) {
+      const slotKeys = ['A', 'B', 'C'];
+      const slotLabels = ['Morning', 'Afternoon', 'Evening'];
+      const roleColors = { filer: '#9b59b6', mentor: '#3498db', frontline: '#2ecc71', internalServices: '#e74c3c' };
+
+      html += '<div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-light);"><h3>Shift Distribution</h3>';
+      html += '<div style="display: flex; gap: 8px; margin-bottom: 15px; font-size: 13px;">';
+      html += '<span><span style="display:inline-block;width:12px;height:12px;background:#9b59b6;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Filer</span>';
+      html += '<span><span style="display:inline-block;width:12px;height:12px;background:#3498db;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Mentor</span>';
+      html += '<span><span style="display:inline-block;width:12px;height:12px;background:#2ecc71;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Frontline</span>';
+      html += '<span><span style="display:inline-block;width:12px;height:12px;background:#e74c3c;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Internal Services</span>';
+      html += '</div>';
+      html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">';
+
+      for (let dayIdx = 0; dayIdx < 4; dayIdx++) {
+        let maxTotal = 0;
+        for (const sk of slotKeys) {
+          const shiftId = 'D' + (dayIdx + 1) + sk;
+          const c = result.shiftRoleCounts[shiftId] || { filer: 0, mentor: 0, frontline: 0, internalServices: 0 };
+          const total = c.filer + c.mentor + c.frontline + c.internalServices;
+          if (total > maxTotal) maxTotal = total;
+        }
+        if (maxTotal === 0) maxTotal = 1;
+
+        html += '<div style="background: rgba(0,0,0,0.03); border-radius: 8px; padding: 12px;">';
+        html += '<div style="font-weight: 600; margin-bottom: 10px; font-size: 14px;">' + dayLabels[dayIdx] + '</div>';
+
+        for (let si = 0; si < 3; si++) {
+          const shiftId = 'D' + (dayIdx + 1) + slotKeys[si];
+          const c = result.shiftRoleCounts[shiftId] || { filer: 0, mentor: 0, frontline: 0, internalServices: 0 };
+          const total = c.filer + c.mentor + c.frontline + c.internalServices;
+
+          html += '<div style="margin-bottom: 8px;">';
+          html += '<div style="font-size: 12px; color: #666; margin-bottom: 3px;">' + slotLabels[si] + ' (' + total + ')</div>';
+          html += '<div style="display: flex; height: 22px; border-radius: 4px; overflow: hidden; background: rgba(0,0,0,0.08);">';
+
+          if (total > 0) {
+            const pctFiler = (c.filer / maxTotal) * 100;
+            const pctMentor = (c.mentor / maxTotal) * 100;
+            const pctFrontline = (c.frontline / maxTotal) * 100;
+            const pctInternal = (c.internalServices / maxTotal) * 100;
+
+            if (c.filer > 0) html += '<div style="width:' + pctFiler + '%;background:' + roleColors.filer + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Filers: ' + c.filer + '">' + c.filer + '</div>';
+            if (c.mentor > 0) html += '<div style="width:' + pctMentor + '%;background:' + roleColors.mentor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Mentors: ' + c.mentor + '">' + c.mentor + '</div>';
+            if (c.frontline > 0) html += '<div style="width:' + pctFrontline + '%;background:' + roleColors.frontline + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Frontline: ' + c.frontline + '">' + c.frontline + '</div>';
+            if (c.internalServices > 0) html += '<div style="width:' + pctInternal + '%;background:' + roleColors.internalServices + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Internal Services: ' + c.internalServices + '">' + c.internalServices + '</div>';
+          }
+
+          html += '</div></div>';
+        }
+        html += '</div>';
+      }
+      html += '</div></div>';
+    }
+
+    // Consecutive shift analysis
+    if (result.consecutiveAnalysis) {
+      html += '<div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-light);">';
+      html += '<h3>Consecutive Shift Analysis</h3>';
+      html += '<p style="color: #666; font-size: 13px; margin-top: 0;">Volunteers assigned to back-to-back shifts on the same day.</p>';
+
+      for (const day of result.consecutiveAnalysis) {
+        const dayLabel = dayLabels[day.day - 1] || ('Day ' + day.day);
+
+        html += '<div style="background: rgba(0,0,0,0.03); border-radius: 8px; padding: 12px; margin-bottom: 12px;">';
+        html += '<div style="font-weight: 600; margin-bottom: 10px; font-size: 14px;">' + escapeHtml(dayLabel) + '</div>';
+
+        // Morning + Afternoon
+        html += '<div style="margin-bottom: 8px;">';
+        html += '<div style="font-size: 13px; font-weight: 500; margin-bottom: 4px;">Morning + Afternoon: <span style="color: var(--accent-color); font-weight: bold;">' + day.morningAfternoonCount + '</span></div>';
+        if (day.morningAfternoon.length > 0) {
+          html += '<div style="font-size: 12px; color: #555; padding-left: 8px;">' + day.morningAfternoon.map(n => escapeHtml(n)).join(', ') + '</div>';
+        }
+        html += '</div>';
+
+        // Afternoon + Evening
+        html += '<div style="margin-bottom: 8px;">';
+        html += '<div style="font-size: 13px; font-weight: 500; margin-bottom: 4px;">Afternoon + Evening: <span style="color: var(--accent-color); font-weight: bold;">' + day.afternoonEveningCount + '</span></div>';
+        if (day.afternoonEvening.length > 0) {
+          html += '<div style="font-size: 12px; color: #555; padding-left: 8px;">' + day.afternoonEvening.map(n => escapeHtml(n)).join(', ') + '</div>';
+        }
+        html += '</div>';
+
+        // All three
+        if (day.allThreeCount > 0) {
+          html += '<div>';
+          html += '<div style="font-size: 13px; font-weight: 500; margin-bottom: 4px;">All Three (Morning + Afternoon + Evening): <span style="color: var(--accent-color); font-weight: bold;">' + day.allThreeCount + '</span></div>';
+          html += '<div style="font-size: 12px; color: #555; padding-left: 8px;">' + day.allThree.map(n => escapeHtml(n)).join(', ') + '</div>';
+          html += '</div>';
+        }
+
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+
+    content.innerHTML = html;
+    box.style.display = 'block';
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   function runDiagnostic(retryCount = 0) {

@@ -1108,3 +1108,133 @@ function debugAvailabilitySheet() {
     };
   }, 'debugAvailabilitySheet');
 }
+
+/**
+ * Analyzes the current schedule's volunteer distribution without regenerating.
+ * Reads the existing Shift Schedule sheet and availability data to compute:
+ * - Per-shift headcounts by role
+ * - Per-volunteer shift counts
+ * - Consecutive shift pair analysis (Morning+Afternoon, Afternoon+Evening per day)
+ * @returns {Object} Distribution analysis result
+ */
+function getVolunteerDistribution() {
+  return safeExecute(() => {
+    const spreadsheetId = CONFIG.SPREADSHEET_ID;
+    const outputSheetName = CONFIG.SHEETS.SCHEDULE_OUTPUT;
+
+    // Read the existing schedule from the sheet
+    const existingAssignments = readExistingSchedule(spreadsheetId, outputSheetName);
+    if (!existingAssignments) {
+      return { error: 'No existing schedule found. Please generate a schedule first.' };
+    }
+
+    // Read availability to get role info for each volunteer
+    const volunteers = readAvailabilityResponses(spreadsheetId, CONFIG.SHEETS.SCHEDULE_AVAILABILITY);
+    const roleMap = {};
+    for (const v of volunteers) {
+      roleMap[v.fullName] = classifyRole(v.role);
+    }
+
+    // Build schedule (shiftId -> [names]) from volunteerAssignments (name -> [shiftIds])
+    const schedule = {};
+    for (const shiftId of SHIFT_IDS) {
+      schedule[shiftId] = [];
+    }
+    for (const [name, shifts] of Object.entries(existingAssignments)) {
+      for (const shiftId of shifts) {
+        if (schedule[shiftId]) {
+          schedule[shiftId].push(name);
+        }
+      }
+    }
+
+    // Compute per-shift role counts
+    const shiftRoleCounts = {};
+    for (const shiftId of SHIFT_IDS) {
+      const counts = { filer: 0, mentor: 0, frontline: 0, internalServices: 0 };
+      for (const name of schedule[shiftId]) {
+        const role = roleMap[name] || 'filer';
+        counts[role]++;
+      }
+      shiftRoleCounts[shiftId] = counts;
+    }
+
+    // Compute per-volunteer shift counts
+    const volunteerShiftCounts = {};
+    for (const [name, shifts] of Object.entries(existingAssignments)) {
+      volunteerShiftCounts[name] = {
+        count: shifts.length,
+        role: roleMap[name] || 'unknown',
+        shifts: shifts.sort((a, b) => SHIFT_IDS.indexOf(a) - SHIFT_IDS.indexOf(b))
+      };
+    }
+
+    // Compute consecutive shift analysis
+    // For each day, find volunteers doing A+B (Morning+Afternoon) and B+C (Afternoon+Evening)
+    const consecutiveAnalysis = [];
+    for (let dayIdx = 0; dayIdx < SCHEDULE_CONFIG.DAYS_COUNT; dayIdx++) {
+      const dayNum = dayIdx + 1;
+      const shiftA = 'D' + dayNum + 'A';
+      const shiftB = 'D' + dayNum + 'B';
+      const shiftC = 'D' + dayNum + 'C';
+
+      const setA = new Set(schedule[shiftA] || []);
+      const setB = new Set(schedule[shiftB] || []);
+      const setC = new Set(schedule[shiftC] || []);
+
+      // Morning + Afternoon (A+B)
+      const morningAfternoon = [];
+      for (const name of setA) {
+        if (setB.has(name)) morningAfternoon.push(name);
+      }
+
+      // Afternoon + Evening (B+C)
+      const afternoonEvening = [];
+      for (const name of setB) {
+        if (setC.has(name)) afternoonEvening.push(name);
+      }
+
+      // All three (A+B+C)
+      const allThree = [];
+      for (const name of setA) {
+        if (setB.has(name) && setC.has(name)) allThree.push(name);
+      }
+
+      consecutiveAnalysis.push({
+        day: dayNum,
+        morningAfternoon: morningAfternoon.sort(),
+        morningAfternoonCount: morningAfternoon.length,
+        afternoonEvening: afternoonEvening.sort(),
+        afternoonEveningCount: afternoonEvening.length,
+        allThree: allThree.sort(),
+        allThreeCount: allThree.length
+      });
+    }
+
+    // Compute shift count distribution (how many volunteers have 1 shift, 2 shifts, etc.)
+    const shiftCountDistribution = {};
+    for (const [name, info] of Object.entries(volunteerShiftCounts)) {
+      const count = info.count;
+      if (!shiftCountDistribution[count]) {
+        shiftCountDistribution[count] = 0;
+      }
+      shiftCountDistribution[count]++;
+    }
+
+    // Role distribution summary
+    const roleCounts = { filer: 0, mentor: 0, frontline: 0, internalServices: 0, unknown: 0 };
+    for (const info of Object.values(volunteerShiftCounts)) {
+      roleCounts[info.role] = (roleCounts[info.role] || 0) + 1;
+    }
+
+    return {
+      totalVolunteers: Object.keys(existingAssignments).length,
+      totalAssignments: Object.values(existingAssignments).reduce((sum, s) => sum + s.length, 0),
+      shiftRoleCounts: shiftRoleCounts,
+      consecutiveAnalysis: consecutiveAnalysis,
+      shiftCountDistribution: shiftCountDistribution,
+      roleCounts: roleCounts,
+      volunteerShiftCounts: volunteerShiftCounts
+    };
+  }, 'getVolunteerDistribution');
+}
