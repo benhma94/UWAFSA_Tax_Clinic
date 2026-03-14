@@ -35,7 +35,7 @@ If you prefer using the command line:
 
 ```bash
 # Navigate to the scripts folder
-cd "c:\Users\katma\Dropbox\Tax Clinic\Website\catbus_scripts"
+cd catbus_scripts
 
 # Upload your changes
 clasp push
@@ -52,10 +52,9 @@ clasp deployments
 
 ## Project Info
 
-- **Script ID:** 1Bf-iqnaUk5BADJbNWOCYEHDoWoxt-nMSn1-4AUps6QTSnFlwpsTT6SP5
+- **Script ID:** see `.clasp.json` (gitignored — copy from `.clasp.example.json` and add your Script ID)
 - **Project Type:** Standalone Apps Script Project
-- **Project URL:** https://script.google.com/home/projects/1Bf-iqnaUk5BADJbNWOCYEHDoWoxt-nMSn1-4AUps6QTSnFlwpsTT6SP5
-- **Connected Spreadsheet ID:** 1W669LwuA8IpB03BlmhwnUkkupMZW2Cg0I_6cvSp0pwI
+- **Connected Spreadsheet ID:** see `_Secrets.gs` (gitignored — copy from `_Secrets.example.gs` and fill in values)
 
 ## Files Synced
 
@@ -65,7 +64,8 @@ The following files will be synced:
 - `appsscript.json` - Project manifest
 
 Files ignored (see `.claspignore`):
-- `.clasp.json` - Local configuration
+- `.clasp.json` - Gitignored — copy `.clasp.example.json` → `.clasp.json` and add your Script ID
+- `_Secrets.gs` - Gitignored — copy `_Secrets.example.gs` → `_Secrets.gs` and fill in your values
 - `README.md` and other markdown files
 - `node_modules/`
 - `.git/`
@@ -102,4 +102,4 @@ Files ignored (see `.claspignore`):
 
 - Clasp Documentation: https://github.com/google/clasp
 - Apps Script Documentation: https://developers.google.com/apps-script
-- Your Script Project: https://script.google.com/home/projects/1Bf-iqnaUk5BADJbNWOCYEHDoWoxt-nMSn1-4AUps6QTSnFlwpsTT6SP5
+- Your Script Project: https://script.google.com/home (find your project by name)

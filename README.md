@@ -10,7 +10,10 @@ A Google Apps Script-based volunteer coordination and client management platform
 
 ```
 catbus_scripts/                    # Google Apps Script backend
-├── Config.gs                      # Central configuration
+├── _Secrets.gs                    # Instance-specific secrets (gitignored — copy from _Secrets.example.gs)
+├── _Secrets.example.gs            # Secrets template for new deployments
+├── .clasp.example.json            # Clasp config template (copy to .clasp.json and add Script ID)
+├── Config.gs                      # Central configuration (reads from _Secrets.gs)
 ├── Router.gs                      # Web app URL routing
 │
 ├── # Volunteer Management
@@ -53,6 +56,8 @@ catbus_scripts/                    # Google Apps Script backend
 └── appsscript.json                # Apps Script manifest
 
 webpage/                           # Public-facing website pages
+├── config.js                      # Deployment URL config (gitignored — copy from config.example.js)
+├── config.example.js              # Config template for new deployments
 ├── index.html                     # Main landing page
 ├── about.html                     # About Us page
 ├── appointment_screening.html     # Eligibility + complexity screening
@@ -158,11 +163,11 @@ See [catbus_scripts/README-CLASP.md](catbus_scripts/README-CLASP.md) for full se
    ```
    Or double-click `upload.bat`.
 3. **Test** via the Apps Script editor or web app URL
-4. **Deploy** a new version when ready:
+4. **Deploy** a new version when ready — always use `--deploymentId` to update the existing deployment (bare `clasp deploy` creates a new URL and breaks all links):
    ```bash
-   clasp deploy
+   clasp deploy --deploymentId <your-deployment-id> --description "description"
    ```
-   Or double-click `deploy.bat`. After deploying, copy the new web app URL from the Apps Script console.
+   Or double-click `deploy.bat`.
 5. **Commit** to git:
    ```bash
    git add -A && git commit -m "description of changes"
@@ -181,7 +186,13 @@ Or double-click `download.bat`. This overwrites local files.
 
 ## Configuration
 
-All system configuration lives in [Config.gs](catbus_scripts/Config.gs):
+Instance-specific secrets live in [_Secrets.gs](catbus_scripts/_Secrets.gs) (gitignored):
+- `SPREADSHEET_ID`, `CONSOLIDATED_VOLUNTEERS_SHEET_ID`, `RESUME_FOLDER_ID`
+- `CLINIC_EMAIL`, `CLINIC_WEBSITE_URL`, `BOOKING_FORM_URL`, `WEBAPP_URL`
+
+Copy `_Secrets.example.gs` → `_Secrets.gs` and fill in your values. This file is never committed.
+
+All other system configuration lives in [Config.gs](catbus_scripts/Config.gs):
 - `SCHEDULE_CONFIG` — day labels, shift times, shift ID mappings
 - `APPOINTMENT_CONFIG` — booking settings, client ID format
 - `INCOME_LIMITS` — eligibility thresholds
@@ -190,6 +201,20 @@ All system configuration lives in [Config.gs](catbus_scripts/Config.gs):
 - `MESSAGING_CONFIG` — sheet name, column mappings, polling interval (10s), message retention (7 days)
 - `PRODUCT_CODE_CONFIG` — UFILE code sheet references and email template subject
 - `VOLUNTEER_TAGS` — custom display tags per volunteer
+
+---
+
+## Setup for a New Deployment
+
+To run your own instance of CATBUS:
+
+1. **Create a Google Apps Script project** and a Google Sheet for the database
+2. **Configure secrets** — copy `catbus_scripts/_Secrets.example.gs` → `_Secrets.gs` and fill in your IDs, emails, and URLs
+3. **Configure clasp** — copy `catbus_scripts/.clasp.example.json` → `.clasp.json` and add your Script ID
+4. **Push code** — `cd catbus_scripts && clasp push`
+5. **Deploy** — create an initial web app deployment in Apps Script (Deploy → New Deployment), then record the deployment ID and add it to `_Secrets.gs` as `WEBAPP_URL`
+6. **Configure webpage** — copy `webpage/config.example.js` → `webpage/config.js`, fill in your deployment URL, and upload `config.js` to your server alongside the HTML files
+7. **Update config** — edit `Config.gs` to set your clinic dates, room locations, income limits, and shift schedule
 
 ---
 
@@ -206,10 +231,9 @@ All system configuration lives in [Config.gs](catbus_scripts/Config.gs):
 
 ## License
 
-Internal use only -- UW AFSA Tax Clinic. Redistribution or use by other organizations requires explicit permission.
+Free to fork and adapt for similar tax clinics or volunteer organizations, with attribution to the UW AFSA Tax Clinic. All other uses require explicit permission.
 
 ## Support
 
 - Review Apps Script execution logs for errors
 - See [catbus_scripts/README-CLASP.md](catbus_scripts/README-CLASP.md) for clasp troubleshooting
-- Contact Ben Ma @ UW AFSA Tax Clinic
