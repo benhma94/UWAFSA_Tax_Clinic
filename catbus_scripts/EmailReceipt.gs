@@ -91,6 +91,14 @@ function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
       Logger.log(`UFILE password email sent to ${clientEmail}`);
     }
 
+    // Auto-track the return in Tax Return Tracker so it's captured even if volunteer skips Finalize
+    try {
+      trackReturnOnEmailSent(emailData, filingStatus, taxYear);
+    } catch (trackError) {
+      Logger.log('Warning: Failed to auto-track return after email: ' + trackError.message);
+      // Non-fatal — email was already sent successfully
+    }
+
     return {
       success: true,
       message: 'Email sent successfully',
@@ -242,6 +250,62 @@ function buildPasswordEmailBody(ufilePassword, taxYear) {
       </body>
     </html>
   `;
+}
+
+/**
+ * Writes a row to the Tax Return Tracker when a receipt email is sent.
+ * This ensures returns are captured even if the volunteer skips Finalize.
+ * @param {Object} emailData - Email data object (must include clientID, volunteerName, married, reviewer, secondaryReviewer)
+ * @param {string} filingStatus - 'efile' or 'paper'
+ * @param {string} taxYear - Tax year string
+ */
+function trackReturnOnEmailSent(emailData, filingStatus, taxYear) {
+  if (!emailData.clientID || !taxYear) {
+    Logger.log('trackReturnOnEmailSent: missing clientID or taxYear, skipping');
+    return;
+  }
+
+  const trackerSheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+  if (!trackerSheet) {
+    throw new Error('Tax Return Tracker sheet not found');
+  }
+
+  const volunteerName = emailData.volunteerName || '';
+  const volunteerNameOnly = volunteerName.includes('–')
+    ? volunteerName.split('–')[1].trim()
+    : volunteerName.trim();
+
+  const isEfile = filingStatus === 'efile';
+  const isPaper = filingStatus === 'paper';
+
+  const clientID = emailData.clientID;
+  const trimmedYear = taxYear.trim();
+
+  const row = [
+    new Date(),
+    sanitizeInput(volunteerNameOnly, 100),
+    sanitizeInput(clientID, 10),
+    sanitizeInput(trimmedYear, 10),
+    sanitizeInput(emailData.reviewer || '', 100),
+    sanitizeInput(emailData.secondaryReviewer || '', 100),
+    emailData.married ? 'Yes' : 'No',
+    isEfile ? 'Yes' : '',
+    isPaper ? 'Yes' : '',
+    '', // incomplete — never set via email path
+    CONFIG.TRACKER_STATUS.EMAILED
+  ];
+
+  // Dedup: find a non-Finalized existing row for this client+year and update it in-place.
+  // If only Finalized rows exist (e.g. second spouse), returns -1 and we append a new row.
+  const existingRowNum = findTrackerRowByStatus(trackerSheet, clientID, trimmedYear, null);
+  if (existingRowNum > 0) {
+    trackerSheet.getRange(existingRowNum, 1, 1, row.length).setValues([row]);
+    Logger.log(`Updated existing tracker row ${existingRowNum} to Emailed for client ${clientID}, year ${trimmedYear}`);
+  } else {
+    const lastRow = trackerSheet.getLastRow();
+    trackerSheet.getRange(lastRow + 1, 1, 1, row.length).setValues([row]);
+    Logger.log(`Auto-tracked new Emailed row for client ${clientID}, year ${trimmedYear}`);
+  }
 }
 
 /**

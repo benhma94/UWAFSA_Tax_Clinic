@@ -124,6 +124,7 @@
         display: block;
       }
     </style>
+    <script src="config.js"></script>
   </head>
   <body>
 
@@ -144,7 +145,7 @@
     // Toggle this to open or close the feedback form
     var FEEDBACK_OPEN = true;
 
-    var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec';
+    var APPS_SCRIPT_URL = CATBUS_CONFIG.WEBAPP_URL;
 
     var root = document.getElementById('feedback-root');
 

@@ -453,6 +453,7 @@
             }
         }
     </style>
+    <script src="config.js"></script>
 </head>
 <body>
     <header>
@@ -694,8 +695,8 @@
                 PER_DEPENDANT: 5000
             },
 
-            // Apps Script web app URL for form submission
-            APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec',
+            // Apps Script web app URL for form submission (defined in config.js)
+            APPS_SCRIPT_URL: CATBUS_CONFIG.WEBAPP_URL,
 
             // Clinic dates
             CLINIC_DATES: [

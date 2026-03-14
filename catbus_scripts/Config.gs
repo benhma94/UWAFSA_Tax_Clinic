@@ -3,15 +3,15 @@
  * Centralized configuration for all CATBUS scripts
  */
 
-// Folder ID for filer application resume uploads
-const RESUME_FOLDER_ID = '1BxPu07FLl3-SL5q5w3XMyCDokLdBv16i';
+// Folder ID for filer application resume uploads (defined in Secrets.gs)
+const RESUME_FOLDER_ID = SECRETS.RESUME_FOLDER_ID;
 
 const CONFIG = {
-  SPREADSHEET_ID: '1W669LwuA8IpB03BlmhwnUkkupMZW2Cg0I_6cvSp0pwI',
+  SPREADSHEET_ID: SECRETS.SPREADSHEET_ID,
 
   EXTERNAL_SPREADSHEETS: {
     CONSOLIDATED_VOLUNTEERS: {
-      ID: '1HvJ3HFwcQySPaRMk0_5XIDo7qcjnhiah4DEM23Dknqg',
+      ID: SECRETS.CONSOLIDATED_VOLUNTEERS_SHEET_ID,
       SHEET_NAME: 'Consolidated List',
       COLUMNS: {
         ROLE: 0,
@@ -39,8 +39,8 @@ const CONFIG = {
   },
 
   // Clinic contact info (used in emails and public pages)
-  CLINIC_EMAIL: 'taxclinic@uwafsa.com',
-  CLINIC_WEBSITE_URL: 'https://taxclinic.uwaterloo.ca',
+  CLINIC_EMAIL: SECRETS.CLINIC_EMAIL,
+  CLINIC_WEBSITE_URL: SECRETS.CLINIC_WEBSITE_URL,
   
   // Column Mappings (0-indexed)
   COLUMNS: {
@@ -84,7 +84,8 @@ const CONFIG = {
       MARRIED: 6,
       EFILE: 7,
       PAPER: 8,
-      INCOMPLETE: 9
+      INCOMPLETE: 9,
+      STATUS: 10
     },
     VOLUNTEER_LIST: {
       TIMESTAMP: 0,
@@ -112,6 +113,12 @@ const CONFIG = {
     CLEARED: 'Cleared'
   },
   
+  // Tax Return Tracker Status Values
+  TRACKER_STATUS: {
+    EMAILED: 'Emailed',
+    FINALIZED: 'Finalized'
+  },
+
   // Review Request Status Values
   REVIEW_STATUS: {
     REQUESTED: 'Requested',
@@ -203,7 +210,7 @@ const ELIGIBILITY_CONFIG = {
   },
 
   // Appointment booking Google Form URL
-  BOOKING_FORM_URL: 'https://forms.gle/yeHteMXsHYVBhdSF6',
+  BOOKING_FORM_URL: SECRETS.BOOKING_FORM_URL,
 
   // Clinic dates (must match SCHEDULE_CONFIG.DEFAULT_DAY_LABELS)
   CLINIC_DATES: [
@@ -402,6 +409,14 @@ function getScheduleConfig() {
     daysCount: SCHEDULE_CONFIG.DAYS_COUNT,
     slotsPerDay: SCHEDULE_CONFIG.SLOTS_PER_DAY
   };
+}
+
+/**
+ * Returns the web app deployment URL for use by HtmlService-served pages.
+ * Called via google.script.run from pages that can't load webpage/config.js.
+ */
+function getWebAppUrl() {
+  return SECRETS.WEBAPP_URL;
 }
 
 /**

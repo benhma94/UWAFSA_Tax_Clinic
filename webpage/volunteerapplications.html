@@ -142,6 +142,7 @@
       .status-msg.error   { background: #fadbd8; color: #922b21; display: block; }
       .status-msg.loading { background: #d6eaf8; color: #21618c; display: block; }
     </style>
+    <script src="config.js"></script>
   </head>
   <body>
 
@@ -162,7 +163,7 @@
     // Toggle this to open or close all applications
     var APPLICATIONS_OPEN = false;
 
-    var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec';
+    var APPS_SCRIPT_URL = CATBUS_CONFIG.WEBAPP_URL;
 
     var root = document.getElementById('app-root');
 

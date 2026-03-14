@@ -1,2 +1,9 @@
 .claude
 
+# Secrets — instance-specific values, never commit
+catbus_scripts/Secrets.gs
+catbus_scripts/.clasp.json
+
+# Webpage runtime config — upload to server manually, never commit
+webpage/config.js
+

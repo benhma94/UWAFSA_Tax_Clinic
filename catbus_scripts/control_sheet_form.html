@@ -1820,7 +1820,7 @@
   <!-- Finalize reminder popup -->
   <div id="finalizeReminder" style="display:none;" onclick="dismissFinalizeReminder()">
     <span id="finalizeReminderClose" onclick="dismissFinalizeReminder()">&times;</span>
-    <div id="finalizeReminderText">REMEMBER TO FINALIZE YOUR RETURNS!</div>
+    <div id="finalizeReminderText">REMEMBER TO FINALIZE YOUR RETURNS AFTER EMAILING!</div>
     <span id="finalizeReminderArrowWrap"><span id="finalizeReminderArrow">&#8593;</span></span>
   </div>
 
@@ -1991,6 +1991,7 @@
     let allVolunteerNames = [];
     let rowCount = 1;
     let currentClientData = null; // Store current client intake data
+    let currentTrackerStatus = []; // Tracker rows for current client (from Tax Return Tracker sheet)
     let selectedFilesEmail = []; // Store files for email attachment
     let currentEmailRowId = null; // Store current row ID for email receipt
     let currentEmailRowCount = null; // Store current row count for email receipt
@@ -2342,10 +2343,20 @@
     document.getElementById('client').addEventListener('change', function () {
       checkFormReady(); // Update button state
       const clientID = this.value;
+      currentTrackerStatus = []; // Reset on client change
       if (!clientID) {
         document.getElementById('notesContainer').style.display = 'none';
         return;
       }
+
+      // Load tracker status in parallel so indicators can be restored after rows render
+      google.script.run
+        .withSuccessHandler(rows => {
+          currentTrackerStatus = rows || [];
+          applyTrackerStatusIndicators();
+        })
+        .withFailureHandler(() => { currentTrackerStatus = []; })
+        .getClientTrackerStatus(clientID);
 
       google.script.run
         .withSuccessHandler(data => {
@@ -2437,7 +2448,10 @@
         `;
         const currentRowCount = rowCount;
         rowCount++;
-        
+
+        // Restore indicators for the newly added row (in case tracker data is already loaded)
+        applyTrackerStatusIndicators();
+
         // Set up event listener for reviewer input and check initial state
         setTimeout(() => {
           const reviewerInput = row.querySelector('input[name="reviewer"]');
@@ -3164,7 +3178,43 @@
           applyDraftRowState(pendingDraftRows);
           pendingDraftRows = null;
         }
+        // Restore receipt indicators from sheet status (in case tracker status arrived first)
+        applyTrackerStatusIndicators();
       }).getMentorList();
+    }
+
+    /**
+     * Applies receipt-sent indicators to table rows based on currentTrackerStatus.
+     * Safe to call multiple times (idempotent — only adds classes, never removes).
+     */
+    function applyTrackerStatusIndicators() {
+      if (!currentTrackerStatus || currentTrackerStatus.length === 0) return;
+      const table = document.getElementById('taxYearTable');
+      if (!table) return;
+
+      for (let i = 1; i < table.rows.length; i++) {
+        const row = table.rows[i];
+        const rowId = row.getAttribute('data-row-id');
+        if (!rowId) continue;
+
+        const taxYearSelect = row.querySelector('select[name="taxYear"]');
+        const taxYear = taxYearSelect ? taxYearSelect.value : '';
+
+        const matchingRows = currentTrackerStatus.filter(r => r.taxYear === taxYear);
+        const isFinalized = matchingRows.some(r => r.status === 'Finalized');
+        const isEmailed   = matchingRows.some(r => r.status === 'Emailed');
+
+        if (isFinalized || isEmailed) {
+          const indicator = document.getElementById(`receiptSentIndicator${rowId}`);
+          if (indicator) {
+            indicator.classList.add('show');
+            const span = indicator.querySelector('span');
+            if (isFinalized && span) {
+              indicator.innerHTML = '<span>✓</span> Finalized';
+            }
+          }
+        }
+      }
     }
 
     // Email Receipt Functions
@@ -3516,6 +3566,7 @@
         totalAmount += otherNum;
       }
 
+      const _emailReceiptRow = document.querySelector(`[data-row-id="${currentEmailRowId}"]`);
       const emailData = {
         clientEmail: document.getElementById('clientEmailReceipt').value.trim(),
         refundBalance: refundBalance,
@@ -3526,7 +3577,12 @@
         notes: document.getElementById('notesReceipt').value.trim(),
         totalAmount: totalAmount,
         ufilePassword: document.getElementById('ufilePasswordReceipt').value.trim(),
-        efileConfirmation: filingStatus === 'efile' ? document.getElementById('efileConfirmationReceipt').value.trim() : ''
+        efileConfirmation: filingStatus === 'efile' ? document.getElementById('efileConfirmationReceipt').value.trim() : '',
+        clientID: document.getElementById('client').value.trim(),
+        volunteerName: document.getElementById('volunteer').value.trim(),
+        married: currentClientData?.situations?.includes("Married/Common-Law") || false,
+        reviewer: _emailReceiptRow?.querySelector('input[name="reviewer"]')?.value.trim() || '',
+        secondaryReviewer: _emailReceiptRow?.querySelector('input[name="secondaryReviewer"]')?.value.trim() || ''
       };
 
       // Validate file attachments: require at least a .u file and a .pdf

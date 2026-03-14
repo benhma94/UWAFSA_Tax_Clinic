@@ -257,6 +257,47 @@ function findAssignmentRow(assignSheet, volunteer, clientID) {
 }
 
 /**
+ * Finds an existing row in the Tax Return Tracker by clientID, taxYear, and status.
+ * Used to prevent duplicates and support status-aware updates (including couples handling).
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} trackerSheet
+ * @param {string} clientID
+ * @param {string} taxYear
+ * @param {string|null} preferredStatus
+ *   - 'Emailed': returns the first row with STATUS === 'Emailed' for this client+year
+ *   - null: returns the first row whose STATUS is NOT 'Finalized' (blank or 'Emailed')
+ * @returns {number} 1-indexed row number, or -1 if not qualifying row found
+ */
+function findTrackerRowByStatus(trackerSheet, clientID, taxYear, preferredStatus) {
+  const lastRow = trackerSheet.getLastRow();
+  if (lastRow <= 1) return -1;
+
+  const clientColIdx = CONFIG.COLUMNS.TAX_RETURN_TRACKER.CLIENT_ID;
+  const yearColIdx   = CONFIG.COLUMNS.TAX_RETURN_TRACKER.TAX_YEAR;
+  const statusColIdx = CONFIG.COLUMNS.TAX_RETURN_TRACKER.STATUS;
+  const numCols      = statusColIdx + 1; // read through STATUS column
+
+  const allData = trackerSheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+
+  for (let i = 0; i < allData.length; i++) {
+    const rowClient = allData[i][clientColIdx]?.toString().trim();
+    const rowYear   = allData[i][yearColIdx]?.toString().trim();
+    if (rowClient !== clientID || rowYear !== taxYear) continue;
+
+    const rowStatus = allData[i][statusColIdx]?.toString().trim();
+
+    if (preferredStatus === CONFIG.TRACKER_STATUS.EMAILED) {
+      // Only match rows explicitly marked 'Emailed'
+      if (rowStatus === CONFIG.TRACKER_STATUS.EMAILED) return i + 2;
+    } else {
+      // null: match any row that is not yet 'Finalized'
+      if (rowStatus !== CONFIG.TRACKER_STATUS.FINALIZED) return i + 2;
+    }
+  }
+  return -1;
+}
+
+/**
  * Finalizes returns and stores per-tax-year data to the tracker
  * @param {string} volunteer - Volunteer name
  * @param {string} client - Client ID
@@ -355,23 +396,33 @@ function finalizeReturnsAndStore(volunteer, client, rows) {
       r.married ? 'Yes' : 'No',
       r.efile ? 'Yes' : '',
       r.paper ? 'Yes' : '',
-      r.incomplete ? 'Yes' : ''
+      r.incomplete ? 'Yes' : '',
+      CONFIG.TRACKER_STATUS.FINALIZED
     ]);
     
     Logger.log(`Finalizing ${toAppend.length} returns for volunteer ${volunteer}, client ${clientID}`);
     Logger.log(`Data to append: ${JSON.stringify(toAppend)}`);
-    
+
     if (toAppend.length > 0) {
-      const lastRow = trackerSheet.getLastRow();
-      const startRow = lastRow + 1;
-      const numRows = toAppend.length;
       const numCols = toAppend[0].length;
-      
-      Logger.log(`Writing to Tax Return Tracker: row ${startRow}, ${numRows} rows, ${numCols} cols`);
-      
+
       try {
-        trackerSheet.getRange(startRow, 1, numRows, numCols).setValues(toAppend);
-        Logger.log(`Successfully wrote ${numRows} rows to Tax Return Tracker`);
+        for (const rowData of toAppend) {
+          const taxYear = rowData[CONFIG.COLUMNS.TAX_RETURN_TRACKER.TAX_YEAR];
+          // Look for an 'Emailed' row to upgrade; leaves already-Finalized rows alone (couples support)
+          const existingRowNum = findTrackerRowByStatus(trackerSheet, clientID, taxYear, CONFIG.TRACKER_STATUS.EMAILED);
+          if (existingRowNum > 0) {
+            // Upgrade the auto-tracked 'Emailed' row to 'Finalized' in-place
+            Logger.log(`Upgrading tracker row ${existingRowNum} from Emailed to Finalized for client ${clientID}, year ${taxYear}`);
+            trackerSheet.getRange(existingRowNum, 1, 1, numCols).setValues([rowData]);
+          } else {
+            // No 'Emailed' row found — email was skipped, or all same client+year rows are already Finalized (second spouse)
+            const newRow = trackerSheet.getLastRow() + 1;
+            Logger.log(`Appending new Finalized tracker row ${newRow} for client ${clientID}, year ${taxYear}`);
+            trackerSheet.getRange(newRow, 1, 1, numCols).setValues([rowData]);
+          }
+        }
+        Logger.log(`Successfully wrote ${toAppend.length} rows to Tax Return Tracker`);
       } catch (writeError) {
         Logger.log(`Error writing to Tax Return Tracker: ${writeError.message}`);
         throw new Error(`Failed to write to Tax Return Tracker: ${writeError.message}`);
@@ -495,4 +546,41 @@ function cancelClientAndStore(volunteer, client, rows) {
     
     return true;
   }, 'cancelClientAndStore');
+}
+
+/**
+ * Returns all Tax Return Tracker rows for a given client, with their status.
+ * Used by the control sheet frontend to restore receipt-sent indicators on reopen.
+ * @param {string} clientID - Client ID to look up
+ * @returns {Array<{taxYear: string, status: string}>} Array of tracker row summaries
+ */
+function getClientTrackerStatus(clientID) {
+  return safeExecute(() => {
+    if (!clientID || !clientID.trim()) return [];
+
+    const trackerSheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+    if (!trackerSheet) return [];
+
+    const lastRow = trackerSheet.getLastRow();
+    if (lastRow <= 1) return [];
+
+    const clientColIdx = CONFIG.COLUMNS.TAX_RETURN_TRACKER.CLIENT_ID;
+    const yearColIdx   = CONFIG.COLUMNS.TAX_RETURN_TRACKER.TAX_YEAR;
+    const statusColIdx = CONFIG.COLUMNS.TAX_RETURN_TRACKER.STATUS;
+    const numCols      = statusColIdx + 1;
+
+    const allData = trackerSheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+    const trimmedID = clientID.trim();
+
+    const result = [];
+    for (const row of allData) {
+      if (row[clientColIdx]?.toString().trim() === trimmedID) {
+        result.push({
+          taxYear: row[yearColIdx]?.toString().trim() || '',
+          status:  row[statusColIdx]?.toString().trim() || ''
+        });
+      }
+    }
+    return result;
+  }, 'getClientTrackerStatus');
 }
