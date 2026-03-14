@@ -101,9 +101,9 @@ const CONFIG = {
   },
   
   SIGN_IN_OUT: {
-    STATION_COUNT: 150,
-    EXCEPTION_STATIONS: ['Mentor', 'Senior Mentor', 'Frontline', 'Internal Services'],
-    NON_FILER_STATIONS: ['mentor', 'senior mentor', 'frontline', 'internal services']
+    STATION_COUNT: 50,
+    EXCEPTION_STATIONS: ['Mentor', 'Senior Mentor', 'Frontline', 'Internal Services', 'Quiz', 'Training'],
+    NON_FILER_STATIONS: ['mentor', 'senior mentor', 'frontline', 'internal services', 'quiz', 'training']
   },
   
   // Help Request Status Values
