@@ -12,5 +12,5 @@ function doGetProductCodeDistribution() {
     .evaluate()
     .setTitle('Product Code Distribution')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.SAMEORIGIN);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
