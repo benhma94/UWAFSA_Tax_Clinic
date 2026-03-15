@@ -197,9 +197,9 @@ const APPOINTMENT_CONFIG = {
 
 /**
  * Eligibility Configuration
- * Centralized values for the pre-screening questionnaire
- * NOTE: These values are mirrored in appointment_screening.html's CONFIG object.
- * When updating these values, also update the HTML file.
+ * Centralized values for the pre-screening questionnaire.
+ * Exposed to the public appointment_screening.html page via the
+ * ?action=getEligibilityConfig endpoint in Router.gs.
  */
 const ELIGIBILITY_CONFIG = {
   // Income thresholds for non-tuition filers

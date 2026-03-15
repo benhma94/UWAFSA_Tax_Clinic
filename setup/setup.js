@@ -206,6 +206,9 @@ const SECRETS = {
 
   // Web app deployment URL
   WEBAPP_URL: '${s.WEBAPP_URL}',
+
+  // Password required to access admin-only pages
+  ADMIN_PASSWORD: '${s.ADMIN_PASSWORD}',
 };
 `;
 }
@@ -348,6 +351,12 @@ async function collectSecrets() {
   hint('Leave blank to fill in later — walk-in intake still works without it.');
   const BOOKING_FORM_URL = await ask('Booking Form URL', '');
 
+  label('ADMIN_PASSWORD — Password to access admin-only pages');
+  hint('Required to open admin, alerts, messaging, productcodes, and signinout pages.');
+  hint('Choose a strong password and share it with clinic admins only.');
+  const ADMIN_PASSWORD = await ask('Admin Password');
+  if (!ADMIN_PASSWORD) { err('Admin password is required.'); process.exit(1); }
+
   return {
     SPREADSHEET_ID,
     CONSOLIDATED_VOLUNTEERS_SHEET_ID,
@@ -355,6 +364,7 @@ async function collectSecrets() {
     CLINIC_EMAIL,
     CLINIC_WEBSITE_URL,
     BOOKING_FORM_URL,
+    ADMIN_PASSWORD,
     WEBAPP_URL: '', // filled after first deploy
   };
 }

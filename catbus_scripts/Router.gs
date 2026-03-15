@@ -7,7 +7,7 @@
  * Main entry point for all web app deployments
  * Routes to the correct app based on the 'app' query parameter
  * Defaults to 'intake' if no parameter is provided
- * 
+ *
  * @param {Object} e - Event object with query parameters
  * @returns {HtmlOutput} The HTML output for the requested app
  */
@@ -44,44 +44,50 @@ function doGet(e) {
     }
   }
 
-  const app = e?.parameter?.app || 'intake'; // Default to intake if no parameter
+  if (action === 'getEligibilityConfig') {
+    return ContentService.createTextOutput(JSON.stringify(ELIGIBILITY_CONFIG))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 
-  switch(app) {
+  const ALLOW = HtmlService.XFrameOptionsMode.ALLOWALL;
+  const baseUrl = ScriptApp.getService().getUrl();
+  const app = e?.parameter?.app || 'intake';
+
+  switch (app) {
     case 'intake':
-      return doGetClientIntake();
+      return loadPage('catbus_intake_form', 'AFSA Tax Clinic Intake Form', { xframe: ALLOW });
     case 'queue':
-      return doGetQueueDashboard();
+      return loadPage('queue_dashboard', 'Tax Clinic Queue Master Dashboard', { xframe: ALLOW });
     case 'control':
-      return doGetControlSheet();
+      return loadPage('control_sheet_form', 'AFSA Tax Clinic Control Sheet', { xframe: ALLOW });
     case 'admin':
-      return doGetAdminDashboard();
+      return loadPage('admin_dashboard', 'Admin Dashboard', { vars: { baseUrl } });
     case 'alerts':
-      return doGetAlertDashboard();
-    case 'schedule':
-      return doGetVolunteerScheduleViewer();
-    case 'assignment':
-      return doGetScheduleDashboard();
-    case 'scheduleviewer':
-    case 'scheduleview':
-      return doGetVolunteerScheduleViewer(); // Keep for backwards compatibility
-    case 'availability':
-    case 'availabilityform':
-      return doGetAvailabilityForm();
+      return loadPage('alert_dashboard', 'Alert Dashboard', { vars: { baseUrl } });
     case 'signin':
     case 'signinout':
-      return doGetVolunteerSignInOut();
+      return loadPage('volunteer_signinout', 'Volunteer Sign-In / Sign-Out');
     case 'messaging':
-      return doGetMessaging();
-    case 'productcodes':
-      return doGetProductCodeDistribution();
+      return loadPage('messaging_admin', 'CATBUS Messaging', {
+        vars: { baseUrl, initialVolunteer: (e?.parameter?.volunteer || '').trim() }
+      });
     case 'reviewer':
-      return doGetReviewerPage();
+      return loadPage('reviewer_page', 'CATBUS Reviewer Dashboard', { xframe: ALLOW });
+    case 'schedule':
+    case 'scheduleviewer':
+      return loadPage('volunteer_schedule_dashboard', 'Volunteer Schedule Viewer', { xframe: ALLOW });
+    case 'assignment':
+      return loadPage('schedule_dashboard', 'Tax Clinic Schedule Generator', { xframe: ALLOW });
+    case 'availability':
+      return loadPage('availability_form', 'Volunteer Availability Form', { xframe: ALLOW, sandbox: true });
+    case 'productcodes':
+      return loadPage('product_code_dashboard', 'Product Code Distribution');
     case 'quiz':
-      return doGetQuizSubmission();
+      return loadPage('quiz_submission', 'Tax Clinic Training Quiz', { xframe: ALLOW });
     case 'quizreview':
-      return doGetQuizReview();
+      return loadPage('quiz_review', 'Quiz Review');
     default:
-      return doGetClientIntake(); // Default fallback to intake
+      return loadPage('catbus_intake_form', 'AFSA Tax Clinic Intake Form', { xframe: ALLOW });
   }
 }
 

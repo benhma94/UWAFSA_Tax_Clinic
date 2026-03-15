@@ -12,6 +12,28 @@ function include(filename) {
 }
 
 /**
+ * Loads an HTML template as a web app page.
+ * @param {string} htmlFile - Template filename (no .html extension)
+ * @param {string} title - Page title
+ * @param {Object} [options]
+ * @param {HtmlService.XFrameOptionsMode} [options.xframe] - Defaults to DEFAULT
+ * @param {Object} [options.vars] - Template variables to set on the template object
+ * @param {boolean} [options.sandbox] - If true, sets IFRAME sandbox mode
+ * @returns {HtmlOutput}
+ */
+function loadPage(htmlFile, title, options) {
+  const opts = options || {};
+  const t = HtmlService.createTemplateFromFile(htmlFile);
+  if (opts.vars) Object.assign(t, opts.vars);
+  let out = t.evaluate()
+    .setTitle(title)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+    .setXFrameOptionsMode(opts.xframe !== undefined ? opts.xframe : HtmlService.XFrameOptionsMode.DEFAULT);
+  if (opts.sandbox) out = out.setSandboxMode(HtmlService.SandboxMode.IFRAME);
+  return out;
+}
+
+/**
  * Wraps a function in error handling with retry logic for rate limits
  * @param {Function} operation - The function to execute
  * @param {string} context - Context description for logging

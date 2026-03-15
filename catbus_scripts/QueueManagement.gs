@@ -162,7 +162,8 @@ function assignClientToVolunteer(clientId, volunteerName) {
     // Invalidate cache since queue data changed
     invalidateMultiple([
       CACHE_CONFIG.KEYS.QUEUE,
-      CACHE_CONFIG.KEYS.VOLUNTEER_LIST
+      CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
+      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
     ]);
 
     return true;

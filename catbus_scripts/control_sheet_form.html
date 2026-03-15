@@ -2349,18 +2349,14 @@
         return;
       }
 
-      // Load tracker status in parallel so indicators can be restored after rows render
+      // Load intake info and tracker status in a single server call
       google.script.run
-        .withSuccessHandler(rows => {
-          currentTrackerStatus = rows || [];
+        .withSuccessHandler(result => {
+          const data = result.intakeInfo;
+          currentTrackerStatus = result.trackerStatus || [];
           applyTrackerStatusIndicators();
-        })
-        .withFailureHandler(() => { currentTrackerStatus = []; })
-        .getClientTrackerStatus(clientID);
 
-      google.script.run
-        .withSuccessHandler(data => {
-          currentClientData = data; // Store client data for addTaxYearRow
+          currentClientData = data;
           preloadTaxYearRows(data);
           if (data && data.notes) {
             document.getElementById('notesDisplay').textContent = data.notes;
@@ -2369,18 +2365,14 @@
             document.getElementById('notesDisplay').textContent = '';
             document.getElementById('notesContainer').style.display = 'none';
           }
-
-          // Refresh document checklist with intake data - ONLY shows selected documents
           renderDocumentChecklist();
-
-          // Show reminder dialogs based on client situations
           showReminderDialogs(data);
         })
         .withFailureHandler(error => {
           console.error('Error loading client info:', error);
           showError('Error loading client information: ' + (error.message || error));
         })
-        .getClientIntakeInfo(clientID);
+        .getClientData(clientID);
     });
 
 

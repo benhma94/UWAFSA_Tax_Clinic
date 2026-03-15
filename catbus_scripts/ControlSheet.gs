@@ -11,127 +11,84 @@
  */
 function getVolunteersAndClients() {
   return safeExecute(() => {
-    const sheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
-    const lastRow = sheet.getLastRow();
-    
-    // Optimization: Only read last N assignments (most are recent and active)
-    // This dramatically reduces API calls when 100 volunteers are accessing
-    // Since each volunteer has only one client, we use direct mapping internally
-    const volunteerToClient = {}; // Single client per volunteer
-    
-    if (lastRow > 1) {
-      const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, lastRow - 1);
-      const startRow = Math.max(2, lastRow - checkRows + 1);
-      
-      const data = sheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, 
-                                   checkRows, 4).getValues();
-      
-      for (let i = 0; i < data.length; i++) {
-        const client = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
-        const volunteer = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
-        const completed = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
-        
-        if (volunteer && client && completed !== 'complete') {
-          // Since each volunteer has only one client, we can use direct assignment
-          // If somehow there are duplicates, the last one found will be used
-          // (but the assignment function should prevent this)
-          volunteerToClient[volunteer] = client;
-        }
-      }
-      
-      // Check older rows if needed (unlikely but possible)
-      if (lastRow > CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK) {
-        const olderRows = lastRow - CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK;
-        const olderData = sheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, 
-                                          olderRows, 4).getValues();
-        for (let i = 0; i < olderData.length; i++) {
-          const client = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
-          const volunteer = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
-          const completed = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
-          
-          // Only add if not already found in recent rows
-          if (volunteer && client && completed !== 'complete' && !volunteerToClient[volunteer]) {
-            volunteerToClient[volunteer] = client;
+    return getCachedOrFetch(
+      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
+      () => {
+        const sheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+        const lastRow = sheet.getLastRow();
+        const volunteerToClient = {};
+
+        if (lastRow > 1) {
+          const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, lastRow - 1);
+          const startRow = Math.max(2, lastRow - checkRows + 1);
+          const data = sheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1,
+                                      checkRows, 4).getValues();
+          for (let i = 0; i < data.length; i++) {
+            const client    = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
+            const volunteer = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
+            const completed = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
+            if (volunteer && client && completed !== 'complete') {
+              volunteerToClient[volunteer] = client;
+            }
           }
         }
-      }
-    }
-    
-    // Convert to array format for backward compatibility with existing HTML/JS code
-    // HTML expects arrays, so we'll convert single client to array
-    const volunteerToClients = {};
-    for (const [volunteer, client] of Object.entries(volunteerToClient)) {
-      volunteerToClients[volunteer] = [client];
-    }
-    
-    return volunteerToClients;
+
+        // Convert to array format for backward compatibility with existing HTML/JS code
+        const volunteerToClients = {};
+        for (const [volunteer, client] of Object.entries(volunteerToClient)) {
+          volunteerToClients[volunteer] = [client];
+        }
+        return volunteerToClients;
+      },
+      CACHE_CONFIG.TTL.VOLUNTEERS_AND_CLIENTS
+    );
   }, 'getVolunteersAndClients');
 }
 
 /**
+ * Inner helper — reads client intake info without safeExecute wrapper.
+ * Called by getClientIntakeInfo and getClientData.
+ */
+function getClientIntakeInfoInner(clientID) {
+  if (!validateClientID(clientID)) return null;
+
+  const sheet = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return null;
+
+  const clientIdCol = CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID + 1;
+  const clientIdData = sheet.getRange(2, clientIdCol, lastRow - 1, 1).getValues();
+
+  for (let i = clientIdData.length - 1; i >= 0; i--) {
+    if (clientIdData[i][0]?.toString().trim() === clientID) {
+      const rowNum = i + 2;
+      const rowData = sheet.getRange(rowNum, CONFIG.COLUMNS.CLIENT_INTAKE.FILING_YEARS + 1, 1, 7).getValues()[0];
+      const needsSeniorReview = rowData[4] === true || rowData[4]?.toString().toLowerCase() === 'true';
+      let documents = [];
+      try {
+        documents = JSON.parse(rowData[6]?.toString().trim() || '[]');
+      } catch (e) {
+        Logger.log(`Error parsing documents JSON for client ${clientID}: ${e.message}`);
+      }
+      return {
+        filingYears: rowData[0]?.toString().split(',').map(y => y.trim()) || [],
+        situations:  rowData[1]?.toString().split(',').map(s => s.trim()) || [],
+        notes:       rowData[2]?.toString().trim() || '',
+        needsSeniorReview,
+        documents
+      };
+    }
+  }
+  return null;
+}
+
+/**
  * Gets client intake information by client ID
- * Optimized to search from bottom up (most recent clients first) and read only necessary columns
  * @param {string} clientID - Client ID
  * @returns {Object|null} Client intake info or null if not found
  */
 function getClientIntakeInfo(clientID) {
-  return safeExecute(() => {
-    if (!validateClientID(clientID)) {
-      return null;
-    }
-    
-    const sheet = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
-    const lastRow = sheet.getLastRow();
-    
-    if (lastRow <= 1) {
-      return null;
-    }
-    
-    // Optimization: Search from bottom up (most recent clients first)
-    // Read only necessary columns: Client ID (5), Filing Years (2), Situations (3), Notes (4), Needs Senior Review (6), Documents (8)
-    const clientIdCol = CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID + 1;
-    const numRows = lastRow - 1;
-
-    // Read Client ID column first to find the row
-    const clientIdData = sheet.getRange(2, clientIdCol, numRows, 1).getValues();
-
-    // Search from bottom up (most recent first)
-    for (let i = clientIdData.length - 1; i >= 0; i--) {
-      const id = clientIdData[i][0]?.toString().trim();
-
-      if (id === clientID) {
-        // Found it! Now read only the necessary columns for this row
-        const rowNum = i + 2; // +2 because we start from row 2
-        const rowData = sheet.getRange(rowNum, CONFIG.COLUMNS.CLIENT_INTAKE.FILING_YEARS + 1, 1, 7).getValues()[0];
-
-        const needsSeniorReview = rowData[4] === true ||
-                                  rowData[4]?.toString().toLowerCase() === 'true';
-        const filingYears = rowData[0]?.toString().split(',').map(y => y.trim()) || [];
-        const situations = rowData[1]?.toString().split(',').map(s => s.trim()) || [];
-        const notes = rowData[2]?.toString().trim() || '';
-
-        // Parse documents JSON (column index 6 = DOCUMENTS column relative to FILING_YEARS)
-        let documents = [];
-        try {
-          const documentsStr = rowData[6]?.toString().trim() || '[]';
-          documents = JSON.parse(documentsStr);
-        } catch (e) {
-          Logger.log(`Error parsing documents JSON for client ${clientID}: ${e.message}`);
-          documents = [];
-        }
-
-        return {
-          filingYears: filingYears,
-          situations: situations,
-          notes: notes,
-          needsSeniorReview: needsSeniorReview,
-          documents: documents
-        };
-      }
-    }
-    
-    return null;
-  }, 'getClientIntakeInfo');
+  return safeExecute(() => getClientIntakeInfoInner(clientID), 'getClientIntakeInfo');
 }
 
 /**
@@ -153,14 +110,19 @@ function getMentorList() {
 
         const data = volunteerSheet.getRange(2, 1, lastRow - 1, 4).getValues();
 
-        // Build set of signed-out session IDs (all time, not just today)
+        // Build set of signed-out session IDs (recent rows only — avoids full history scan)
         const signedOutIds = new Set();
         try {
           const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
-          const signOutData = signOutSheet.getDataRange().getValues();
-          for (let i = 1; i < signOutData.length; i++) {
-            const outId = signOutData[i][CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim();
-            if (outId) signedOutIds.add(outId);
+          const lastSignOut = signOutSheet.getLastRow();
+          if (lastSignOut > 1) {
+            const rowsToRead = Math.min(lastSignOut - 1, 500);
+            const startRow = Math.max(2, lastSignOut - rowsToRead + 1);
+            const recentData = signOutSheet.getRange(startRow, 1, rowsToRead, signOutSheet.getLastColumn()).getValues();
+            for (const row of recentData) {
+              const outId = row[CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim();
+              if (outId) signedOutIds.add(outId);
+            }
           }
         } catch (e) {
           Logger.log('Warning: Could not read sign-out data: ' + e.message);
@@ -549,38 +511,56 @@ function cancelClientAndStore(volunteer, client, rows) {
 }
 
 /**
+ * Inner helper — reads tracker status without safeExecute wrapper.
+ * Called by getClientTrackerStatus and getClientData.
+ */
+function getClientTrackerStatusInner(clientID) {
+  if (!clientID?.trim()) return [];
+
+  const trackerSheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+  if (!trackerSheet) return [];
+
+  const lastRow = trackerSheet.getLastRow();
+  if (lastRow <= 1) return [];
+
+  const clientColIdx = CONFIG.COLUMNS.TAX_RETURN_TRACKER.CLIENT_ID;
+  const yearColIdx   = CONFIG.COLUMNS.TAX_RETURN_TRACKER.TAX_YEAR;
+  const statusColIdx = CONFIG.COLUMNS.TAX_RETURN_TRACKER.STATUS;
+  const allData = trackerSheet.getRange(2, 1, lastRow - 1, statusColIdx + 1).getValues();
+  const trimmedID = clientID.trim();
+
+  const result = [];
+  for (const row of allData) {
+    if (row[clientColIdx]?.toString().trim() === trimmedID) {
+      result.push({
+        taxYear: row[yearColIdx]?.toString().trim() || '',
+        status:  row[statusColIdx]?.toString().trim() || ''
+      });
+    }
+  }
+  return result;
+}
+
+/**
  * Returns all Tax Return Tracker rows for a given client, with their status.
- * Used by the control sheet frontend to restore receipt-sent indicators on reopen.
  * @param {string} clientID - Client ID to look up
  * @returns {Array<{taxYear: string, status: string}>} Array of tracker row summaries
  */
 function getClientTrackerStatus(clientID) {
+  return safeExecute(() => getClientTrackerStatusInner(clientID), 'getClientTrackerStatus');
+}
+
+/**
+ * Returns both client intake info and tracker status in a single server call.
+ * Replaces two parallel google.script.run calls with one, halving round-trip latency.
+ * @param {string} clientID - Client ID to look up
+ * @returns {{intakeInfo: Object|null, trackerStatus: Array}}
+ */
+function getClientData(clientID) {
   return safeExecute(() => {
-    if (!clientID || !clientID.trim()) return [];
-
-    const trackerSheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
-    if (!trackerSheet) return [];
-
-    const lastRow = trackerSheet.getLastRow();
-    if (lastRow <= 1) return [];
-
-    const clientColIdx = CONFIG.COLUMNS.TAX_RETURN_TRACKER.CLIENT_ID;
-    const yearColIdx   = CONFIG.COLUMNS.TAX_RETURN_TRACKER.TAX_YEAR;
-    const statusColIdx = CONFIG.COLUMNS.TAX_RETURN_TRACKER.STATUS;
-    const numCols      = statusColIdx + 1;
-
-    const allData = trackerSheet.getRange(2, 1, lastRow - 1, numCols).getValues();
-    const trimmedID = clientID.trim();
-
-    const result = [];
-    for (const row of allData) {
-      if (row[clientColIdx]?.toString().trim() === trimmedID) {
-        result.push({
-          taxYear: row[yearColIdx]?.toString().trim() || '',
-          status:  row[statusColIdx]?.toString().trim() || ''
-        });
-      }
-    }
-    return result;
-  }, 'getClientTrackerStatus');
+    return {
+      intakeInfo:    getClientIntakeInfoInner(clientID),
+      trackerStatus: getClientTrackerStatusInner(clientID)
+    };
+  }, 'getClientData');
 }

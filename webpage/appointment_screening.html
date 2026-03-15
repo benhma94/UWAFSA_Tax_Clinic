@@ -682,44 +682,8 @@
     </footer>
 
     <script>
-        /**
-         * Configuration - MIRRORS Config.gs ELIGIBILITY_CONFIG
-         * When updating values here, also update catbus_scripts/Config.gs
-         * This duplication is necessary because HTML cannot directly access .gs files
-         */
-        const CONFIG = {
-            // Income thresholds for non-tuition filers
-            INCOME_LIMITS: {
-                INDIVIDUAL: 40000,
-                COUPLE: 55000,
-                PER_DEPENDANT: 5000
-            },
-
-            // Apps Script web app URL for form submission (defined in config.js)
-            APPS_SCRIPT_URL: CATBUS_CONFIG.WEBAPP_URL,
-
-            // Clinic dates
-            CLINIC_DATES: [
-                'Saturday, March 21, 2026',
-                'Sunday, March 22, 2026',
-                'Saturday, March 28, 2026',
-                'Sunday, March 29, 2026'
-            ],
-
-            // Clinic operating hours for walk-ins
-            CLINIC_HOURS: '10:00 AM - 7:30 PM',
-
-            // Per-date location mapping — MIRRORS Config.gs ELIGIBILITY_CONFIG.DATE_LOCATIONS
-            DATE_LOCATIONS: {
-                'Saturday, March 21, 2026': { room: 'STC 1012', mapsUrl: 'https://maps.app.goo.gl/BfzfkUicXcDb6QNS8' },
-                'Sunday, March 22, 2026':   { room: 'STC 1012', mapsUrl: 'https://maps.app.goo.gl/BfzfkUicXcDb6QNS8' },
-                'Saturday, March 28, 2026': { room: 'RCH 301',  mapsUrl: 'https://maps.app.goo.gl/Z6pM2eRKRk65TpsQ9' },
-                'Sunday, March 29, 2026':   { room: 'STC 1012', mapsUrl: 'https://maps.app.goo.gl/BfzfkUicXcDb6QNS8' }
-            },
-
-            // Complexity thresholds
-            MAX_SIMPLE_TAX_YEARS: 2
-        };
+        // CONFIG is loaded async from Apps Script — single source of truth in Config.gs
+        let CONFIG;
 
         // Initialize page with CONFIG values
         function initializeFromConfig() {
@@ -762,8 +726,18 @@
             });
         }
 
-        // Run initialization when DOM is ready
-        initializeFromConfig();
+        // Load config from Apps Script and initialize the page
+        fetch(CATBUS_CONFIG.WEBAPP_URL + '?action=getEligibilityConfig')
+          .then(r => r.json())
+          .then(eligConfig => {
+            CONFIG = eligConfig;
+            CONFIG.APPS_SCRIPT_URL = CATBUS_CONFIG.WEBAPP_URL;
+            initializeFromConfig();
+          })
+          .catch(() => {
+            document.querySelector('.container').innerHTML =
+              '<p style="text-align:center;padding:2rem;color:#c00">Unable to load eligibility configuration. Please refresh the page and try again.</p>';
+          });
 
         // Toggle income question based on tuition answer
         function toggleIncomeQuestion() {
