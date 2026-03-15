@@ -11,6 +11,7 @@
     <meta property="og:url" content="https://taxclinic.uwaterloo.ca"/>
     <meta property="og:type" content="website"/>
     <meta name="description" content="" />
+    <script>(function(){var t=localStorage.getItem('theme');if(t==='dark'||(t===null&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark-mode');})();</script>
     <link rel="stylesheet" href="shared.css?v=2">
     <script src="config.js"></script>
   </head>
@@ -24,29 +25,36 @@
   <h2 style="white-space:pre-wrap;"><strong>CATBUS Management Tools</strong></h2>
   <p><em>If the page does not open, try opening in incognito mode.</em></p>
 
-    <ul style="list-style-type: none; padding-left: 0;">
-        <li style="margin-bottom: 15px;">
-            <p><strong><a href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=signin">Volunteer Sign-In / Sign-Out</a></strong></p>
-        </li>
-        <li style="margin-bottom: 15px;">
-            <p><strong><a href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=admin">Admin Dashboard</a></strong> — stats, active returns, leaderboard</p>
-        </li>
-        <li style="margin-bottom: 15px;">
-            <p><strong><a href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=alerts">Alert Dashboard</a></strong> — help requests, review requests</p>
-        </li>
-        <li style="margin-bottom: 15px;">
-            <p><strong><a href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=assignment">Schedule Assignment Generator</a></strong></p>
-        </li>
-        <li style="margin-bottom: 15px;">
-            <p><strong><a href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=messaging">Messaging</a></strong></p>
-        </li>
-        <li style="margin-bottom: 15px;">
-            <p><strong><a href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=productcodes">Product Code Distribution</a></strong></p>
-        </li>
-        <li style="margin-bottom: 15px;">
-            <p><strong><a href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=quizreview">Quiz Review</a></strong> — grade submissions and notify volunteers</p>
-        </li>
-    </ul>
+    <div class="tool-grid">
+        <a class="tool-card" href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=signin">
+            <div class="tool-card-title">Volunteer Sign-In / Sign-Out</div>
+            <p class="tool-card-desc">Register volunteers as they arrive and track their attendance for the day.</p>
+        </a>
+        <a class="tool-card" href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=admin">
+            <div class="tool-card-title">Admin Dashboard</div>
+            <p class="tool-card-desc">View real-time stats, active client returns, and volunteer performance.</p>
+        </a>
+        <a class="tool-card" href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=alerts">
+            <div class="tool-card-title">Alert Dashboard</div>
+            <p class="tool-card-desc">Monitor and respond to volunteer help requests and pending review requests.</p>
+        </a>
+        <a class="tool-card" href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=assignment">
+            <div class="tool-card-title">Schedule Assignment Generator</div>
+            <p class="tool-card-desc">Build and assign volunteer shifts for upcoming clinic days.</p>
+        </a>
+        <a class="tool-card" href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=messaging">
+            <div class="tool-card-title">Messaging</div>
+            <p class="tool-card-desc">Send announcements and direct messages to volunteers.</p>
+        </a>
+        <a class="tool-card" href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=productcodes">
+            <div class="tool-card-title">Product Code Distribution</div>
+            <p class="tool-card-desc">Distribute UFILE product keys to registered volunteers.</p>
+        </a>
+        <a class="tool-card" href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=quizreview">
+            <div class="tool-card-title">Quiz Review</div>
+            <p class="tool-card-desc">Grade training quiz submissions and notify volunteers of their results.</p>
+        </a>
+    </div>
     </div>
   </div>
 

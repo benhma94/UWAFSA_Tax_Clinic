@@ -11,6 +11,7 @@
     <meta property="og:url" content="https://taxclinic.uwaterloo.ca/checklist.html"/>
     <meta property="og:type" content="website"/>
     <meta name="description" content="" />
+    <script>(function(){var t=localStorage.getItem('theme');if(t==='dark'||(t===null&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark-mode');})();</script>
     <link rel="stylesheet" href="shared.css?v=2">
     <style>
       .sqs-html-content table {
@@ -37,10 +38,95 @@
         border: 1px solid #e0e0e0;
         border-radius: 4px;
         padding: 0px 20px;
-        margin: 20px 0;
+        margin: 12px 0;
       }
       @media (max-width: 600px) {
         .sqs-html-content table { display: table; margin: 0 auto; }
+      }
+
+      /* ── Section header labels ────────────────────── */
+      .section-label {
+        font-weight: 700;
+        border-left: 3px solid #c0392b;
+        padding: 4px 0 4px 10px;
+        background: #fafafa;
+        margin: 10px 0 4px;
+        font-size: 0.95rem;
+      }
+      .section-label-major {
+        font-size: 1.05rem;
+        font-weight: 700;
+        border-left: 4px solid #c0392b;
+        padding: 5px 0 5px 12px;
+        background: #f5f5f5;
+        margin: 20px 0 10px;
+      }
+      .section-label strong,
+      .section-label-major strong {
+        font-weight: inherit;
+      }
+
+      /* ── PDF download button ─────────────────────── */
+      .btn-download {
+        display: inline-block;
+        background: #c0392b;
+        color: #fff !important;
+        padding: 8px 20px;
+        border-radius: 4px;
+        text-decoration: none !important;
+        font-weight: 600;
+        margin: 0 0 14px;
+        font-size: 0.95rem;
+      }
+      .btn-download:hover {
+        background: #922b21;
+      }
+
+      /* ── Checklist item markers ───────────────────── */
+      .checklist-bring,
+      .checklist-avoid {
+        list-style: none;
+        padding-left: 0;
+      }
+      .checklist-bring > li,
+      .checklist-avoid > li {
+        padding-left: 28px;
+        position: relative;
+      }
+      .checklist-bring > li::before {
+        content: '\2713'; /* ✓ */
+        position: absolute;
+        left: 4px;
+        color: #27ae60;
+        font-weight: 700;
+      }
+      .checklist-avoid > li::before {
+        content: '\2717'; /* ✗ */
+        position: absolute;
+        left: 4px;
+        color: #c0392b;
+        font-weight: 700;
+      }
+
+      /* ── What to Bring subgroup cards ────────────── */
+      .checklist-group {
+        border: 1px solid #e8e8e8;
+        border-radius: 6px;
+        padding: 4px 16px 10px;
+        margin-bottom: 10px;
+        background: #fdfcfc;
+      }
+      .checklist-group .section-label {
+        margin-top: 10px;
+      }
+
+      /* ── What Not to Bring warning callout ───────── */
+      .callout-avoid {
+        background: #fff5f5;
+        border-left: 4px solid #c0392b;
+        border-radius: 4px;
+        padding: 4px 20px;
+        margin: 12px 0;
       }
     </style>
   </head>
@@ -53,94 +139,129 @@
     <div class="sqs-html-content">
   <h2 style="white-space:pre-wrap;"><strong>Tax Return Checklist</strong></h2>
 
-  <p id="what-to-bring"><strong>What to Bring to Tax Clinic:</strong></p>
+  <p id="what-to-bring" class="section-label-major"><strong>What to Bring to Tax Clinic:</strong></p>
   <p class="sqs-block-content">
-    <a href="https://www.dropbox.com/scl/fi/pynfatxfkfu4qkl185zeq/2026-TAX-CLINIC-EXTERNAL-CHECKLIST.pdf?rlkey=j3itlif7890a1lvlgj1q844u6&st=tln8yit9&dl=0"><strong>Checklist</strong></a>
+    <a class="btn-download" href="https://www.dropbox.com/scl/fi/pynfatxfkfu4qkl185zeq/2026-TAX-CLINIC-EXTERNAL-CHECKLIST.pdf?rlkey=j3itlif7890a1lvlgj1q844u6&st=tln8yit9&dl=1">Download Checklist (PDF)</a>
   </p>
-  <p id="what-to-bring-all"><strong>All: </strong></p>
-  <ul data-rte-list="default">
-  <li>
-    <p ><strong>Government-issued photo ID (required)</strong></p></li>
-  <li><p ><strong>Social Insurance Number (SIN) or Individual Tax Number (ITN)</strong></p></li>
-  <li><p >USB drive (if available)</p></li>
-  <li><p >Information slips, (eg. T3, T4, T4A, T5, T5013, etc.)</p></li>
-  <li><p >2024 Notice of Assessment (if not filing for the first-time)</p></li>
-  <li><p >Any other information not listed below that may be applicable</p></li>
-  </ul>
 
-  <p id="what-to-bring-students"><strong>Students (see links below):</strong></p>
-  <ul data-rte-list="default">
-  <li><p >Tuition Slip (T2202)</p></li>
-  <li><p >T4; Employment slip </p></li>
-  <li><p >T4A; Scholarships/ RESP Withdrawals/ CESB/ CERB</p></li>
-  <li><p >Rent Receipts</p></li>
-  <li><p >T4E; Employment Insurance claims</p></li>
-  <li><p >Rent or property tax paid in Ontario</p></li>
-  </ul>
-  <p id="what-to-bring-less-common"><strong>Less Common Items:</strong></p>
-  <ul data-rte-list="default">
-  <li><p >Foreign Income</p></li>
-  <li><p >Medical Expenses</p></li>
-  <li><p >Moving Expenses</p></li>
-  <li><p >RRSP Contribution Slips</p></li>
-  <li><p >FHSA Contribution Slips</p></li>
-  <li><p >Student Loan Interest</p></li>
-  <li><p >Charitable Donations</p></li>
-  <li><p >T3/T5/T5007</p></li>
-  <li><p >Tips or Gratuities Earned</p></li>
-  <li><p >Carrying Charges (eg. investment fees)</p></li>
-  <li><p >Home Buyer's Amount - let us know if you purchased a new home in 2025</p></li>
-  </ul>
+  <div class="checklist-group">
+    <p id="what-to-bring-all" class="section-label"><strong>All: </strong></p>
+    <ul class="checklist-bring" data-rte-list="default">
+    <li>
+      <p><strong>Government-issued photo ID (required)</strong></p></li>
+    <li><p><strong>Social Insurance Number (SIN) or Individual Tax Number (ITN)</strong></p></li>
+    <li><p>USB drive (if available)</p></li>
+    <li><p>Information slips, (eg. T3, T4, T4A, T5, T5013, etc.)</p></li>
+    <li><p>2024 Notice of Assessment (if not filing for the first-time)</p></li>
+    <li><p>Any other information not listed below that may be applicable</p></li>
+    </ul>
+  </div>
+
+  <div class="checklist-group">
+    <p id="what-to-bring-students" class="section-label"><strong>Students (see links below):</strong></p>
+    <ul class="checklist-bring" data-rte-list="default">
+    <li><p><a href="#t2202">Tuition Slip (T2202)</a></p></li>
+    <li><p><a href="#t4-coop">T4; Employment slip</a></p></li>
+    <li><p><a href="#t4a-waterloo">T4A; Scholarships/ RESP Withdrawals</a></p></li>
+    <li><p><a href="#rent-receipts">Rent Receipts</a></p></li>
+    <li><p>T4E; Employment Insurance claims</p></li>
+    <li><p>Rent or property tax paid in Ontario</p></li>
+    </ul>
+  </div>
+
+  <div class="checklist-group">
+    <p id="what-to-bring-less-common" class="section-label"><strong>Less Common Items:</strong></p>
+    <ul class="checklist-bring" data-rte-list="default">
+    <li><p>Foreign Income</p></li>
+    <li><p>Medical Expenses</p></li>
+    <li><p>Moving Expenses</p></li>
+    <li><p>RRSP Contribution Slips</p></li>
+    <li><p>FHSA Contribution Slips</p></li>
+    <li><p>Student Loan Interest</p></li>
+    <li><p>Charitable Donations</p></li>
+    <li><p>T3/T5/T5007</p></li>
+    <li><p>Tips or Gratuities Earned</p></li>
+    <li><p>Carrying Charges (eg. investment fees)</p></li>
+    <li><p>Home Buyer's Amount - let us know if you purchased a new home in 2025</p></li>
+    </ul>
+  </div>
+
   <hr class="section-divider">
 
-  <p id="what-not-to-bring"><strong>What Not to Bring to Tax Clinic:</strong></p>
-  <ul data-rte-list="default">
-  <li><p >Home Office Expenses</p></li>
-  <li><p >Pay Stubs</p></li>
-  <li><p >GST/HST Notice of Assessments</p></li>
-  </ul>
-  <p ><strong>For checklists of prior years, please see this folder: </strong><a href="https://www.dropbox.com/scl/fo/7xml9n1gd6s3xf0n37fab/h?rlkey=uiyg6g7vwx6zksig0kblu89hx&st=0wrmmc76&dl=0"><strong>Tax Clinic Checklists</strong></a></p>
+  <div class="callout-avoid">
+    <p id="what-not-to-bring" class="section-label-major"><strong>What Not to Bring to Tax Clinic:</strong></p>
+    <ul class="checklist-avoid" data-rte-list="default">
+    <li><p>Home Office Expenses</p></li>
+    <li><p>Pay Stubs</p></li>
+    <li><p>GST/HST Notice of Assessments</p></li>
+    </ul>
+  </div>
+  <p><strong>For checklists of prior years, please see this folder: </strong><a href="https://www.dropbox.com/scl/fo/7xml9n1gd6s3xf0n37fab/h?rlkey=uiyg6g7vwx6zksig0kblu89hx&st=0wrmmc76&dl=0"><strong>Tax Clinic Checklists</strong></a></p>
   <hr class="section-divider">
-  <p ><strong>How to Access UW Student Documents:</strong></p>
-  <p ><strong>T4 from co-op work/summer job</strong> Your employer will mail this to the mailing address they have on file, so be sure that they have the most up-to-date mailing address, especially if you lived away from home during co-op. If you haven't received this by March 1, follow up with your employer.</p>
-  <p ><strong>T4/T4A from Waterloo (eg. Scholarships/Bursaries, TA, other University of Waterloo employment)</strong></p>
-  <p ><a href="https://uwaterloo.ca/workday/">Workday</a>→ Main Menu → Personal → Documents</p>
-  <p ><strong>T2202 Tuition Slip</strong></p>
-  <p ><a href="https://uwaterloo.ca/quest/">Quest</a> → Finances → Tax Receipts → PRINT (don't choose View). You may have taken courses at an online university or other universities to replace a Waterloo course; make sure you get a T2202 from them as well (eg. Athabasca University T2202).</p>
-  <p id="charitable-donations"><strong>Charitable Donations to Endowment Fund(s)</strong></p>
-  <p ><a href="https://uwaterloo.ca/quest/">Quest</a> → Finances → Tax Receipts → Scroll down all the way → PRINT.<br>All UW students contribute to endowment fund(s) as part of your student fees, unless they opt out at the start of the term. If you're unsure, then you didn't opt out!</p>
-  <p id="rent-receipts"><strong>Rent Receipts</strong></p>
-  <p >You should get a letter/receipt from your landlord (or sublettor) confirming the below in case the CRA reviews your claim in the future. The easiest way is to write the letter yourself, print it off and get them to sign it. Make sure the letter contains the below four items as well as your name!</p>
-  <ul data-rte-list="default">
-  <li><p >The address you lived at (including postal code)</p></li>
-  <li><p >The number of months that you live at that address (ideally explicitly identifying the months)</p></li>
-  <li><p >The total amount of rent paid in 2025</p></li>
-  <li><p >The name of the landlord/company that owned it, or the person you subletted from</p></li>
-  </ul>
-  <p ><strong>Lived in Residence in 2025?</strong> No evidence/receipt is needed. If you are a student and live in a designated Ontario university, college or private school residence, you may qualify for $25. Make sure your preparer knows!</p>
-  <p id="health-dental"><strong>Health/Dental Plan Premiums (medical expense)</strong></p>
-  <p >Either call the health/dental office or visit them in person and ask them for a receipt/letter stating the total amount of premiums you paid for the calendar year 2025. They will probably email it to you. Medical expenses may be transferable to parents depending on the situation. Find this <a href="https://www.studentcare.ca">here</a>.</p>
-  <p id="moving-expenses"><strong>Moving Expenses</strong> </p>
-  <p >If you moved and are now 40 km closer to your new workplace, you may be able to deduct moving expenses against the income you earned (eg. move from studying at Waterloo → your parents' house in Toronto for co-op). The information needed is:</p>
-  <ul data-rte-list="default">
-  <li><p >Use <a href="https://web.archive.org/web/20210331031954/https:/maps.google.ca/"></a><a href="https://maps.google.com">Google Maps</a> to determine the distance between:</p>
+
+  <p class="section-label-major"><strong>How to Access UW Student Documents:</strong></p>
+
+  <div class="callout-box">
+    <p id="t4-coop"><strong>T4 from co-op work/summer job</strong></p>
+    <p>Your employer will mail this to the mailing address they have on file, so be sure that they have the most up-to-date mailing address, especially if you lived away from home during co-op. If you haven't received this by March 1, follow up with your employer.</p>
+  </div>
+
+  <div class="callout-box">
+    <p id="t4a-waterloo"><strong>T4/T4A from Waterloo (eg. Scholarships/Bursaries, TA, other University of Waterloo employment)</strong></p>
+    <p><a href="https://uwaterloo.ca/workday/">Workday</a> → Main Menu → Personal → Documents</p>
+  </div>
+
+  <div class="callout-box">
+    <p id="t2202"><strong>T2202 Tuition Slip</strong></p>
+    <p><a href="https://uwaterloo.ca/quest/">Quest</a> → Finances → Tax Receipts → PRINT (don't choose View). You may have taken courses at an online university or other universities to replace a Waterloo course; make sure you get a T2202 from them as well (eg. Athabasca University T2202).</p>
+  </div>
+
+  <div class="callout-box">
+    <p id="charitable-donations"><strong>Charitable Donations to Endowment Fund(s)</strong></p>
+    <p><a href="https://uwaterloo.ca/quest/">Quest</a> → Finances → Tax Receipts → Scroll down all the way → PRINT.<br>All UW students contribute to endowment fund(s) as part of your student fees, unless they opt out at the start of the term. If you're unsure, then you didn't opt out!</p>
+  </div>
+
+  <div class="callout-box">
+    <p id="rent-receipts"><strong>Rent Receipts</strong></p>
+    <p>You should get a letter/receipt from your landlord (or sublettor) confirming the below in case the CRA reviews your claim in the future. The easiest way is to <a href="https://www.dropbox.com/scl/fi/r097dom45ijyia6b1aw89/Rent-Receipt-for-Income-Tax-Purposes.docx?rlkey=vl81ji2767pr3tjkrd0l0np5q&st=ltccldq0&dl=1">write the letter yourself</a>, print it off and get them to sign it. Make sure the letter contains the below four items as well as your name!</p>
     <ul data-rte-list="default">
-    <li><p >Your old residence and your new work</p></li>
-    <li><p >Your new residence and your new work</p></li>
+    <li><p>The address you lived at (including postal code)</p></li>
+    <li><p>The number of months that you live at that address (ideally explicitly identifying the months)</p></li>
+    <li><p>The total amount of rent paid in 2025</p></li>
+    <li><p>The name of the landlord/company that owned it, or the person you subletted from</p></li>
     </ul>
-  </li>
-  <li><p >Address of both new and old residences (including postal codes)</p></li>
-  <li><p >Date of move</p></li>
-  <li><p >Date you started the new job</p></li>
-  <li><p >Name and address of employer that you moved to work at</p></li>
-  <li><p >Amount of moving expenses, unless you took a train/plane, the best way is usually the 'simplified method'</p>
+    <p><strong>Lived in Residence in 2025?</strong> No evidence/receipt is needed. If you are a student and live in a designated Ontario university, college or private school residence, you may qualify for $25. Make sure your preparer knows!</p>
+  </div>
+
+  <div class="callout-box">
+    <p id="health-dental"><strong>Health/Dental Plan Premiums (medical expense)</strong></p>
+    <p>Either call the health/dental office or visit them in person and ask them for a receipt/letter stating the total amount of premiums you paid for the calendar year 2025. They will probably email it to you. Medical expenses may be transferable to parents depending on the situation. Find this <a href="https://www.studentcare.ca">here</a>.</p>
+  </div>
+
+  <div class="callout-box">
+    <p id="moving-expenses"><strong>Moving Expenses</strong> </p>
+    <p>If you moved and are now 40 km closer to your new workplace, you may be able to deduct moving expenses against the income you earned (eg. move from studying at Waterloo → your parents' house in Toronto for co-op). The information needed is:</p>
     <ul data-rte-list="default">
-    <li><p >Kilometres between new residence and old residence</p></li>
-    <li><p >Meals eaten during this move</p></li>
-    <li><p >Number of nights for the move</p></li>
+    <li><p>Use <a href="https://web.archive.org/web/20210331031954/https:/maps.google.ca/"></a><a href="https://maps.google.com">Google Maps</a> to determine the distance between:</p>
+      <ul data-rte-list="default">
+      <li><p>Your old residence and your new work</p></li>
+      <li><p>Your new residence and your new work</p></li>
+      </ul>
+    </li>
+    <li><p>Address of both new and old residences (including postal codes)</p></li>
+    <li><p>Date of move</p></li>
+    <li><p>Date you started the new job</p></li>
+    <li><p>Name and address of employer that you moved to work at</p></li>
+    <li><p>Amount of moving expenses, unless you took a train/plane, the best way is usually the 'simplified method'</p>
+      <ul data-rte-list="default">
+      <li><p>Kilometres between new residence and old residence</p></li>
+      <li><p>Meals eaten during this move</p></li>
+      <li><p>Number of nights for the move</p></li>
+      </ul>
+    </li>
     </ul>
-  </li>
-  </ul>
+  </div>
+
     </div>
   </div>
 

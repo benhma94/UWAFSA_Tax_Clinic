@@ -11,13 +11,120 @@
     <meta property="og:url" content="https://taxclinic.uwaterloo.ca"/>
     <meta property="og:type" content="website"/>
     <meta name="description" content="" />
+    <script>(function(){var t=localStorage.getItem('theme');if(t==='dark'||(t===null&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark-mode');})();</script>
     <link rel="stylesheet" href="shared.css?v=2">
     <style>
-      .sqs-html-content p > strong:only-child {
-        display: block;
-        border-left: 3px solid #333;
-        padding-left: 10px;
-        margin-top: 20px;
+      .faq-category {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        overflow: hidden;
+      }
+
+      .faq-category > summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 14px 16px;
+        background: #f9f9f9;
+        font-weight: 700;
+        font-size: 1.05rem;
+        color: #c0392b;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        user-select: none;
+      }
+
+      .faq-category > summary::-webkit-details-marker { display: none; }
+
+      .faq-category > summary::before {
+        content: '▶';
+        font-size: 0.7rem;
+        display: inline-block;
+        transition: transform 0.2s ease;
+        flex-shrink: 0;
+      }
+
+      .faq-category[open] > summary::before {
+        transform: rotate(90deg);
+      }
+
+      .faq-category > summary:hover {
+        background: #f3f3f3;
+      }
+
+      .faq-items {
+        padding: 8px 16px 12px;
+      }
+
+      .faq-item {
+        border-top: 1px solid #eee;
+      }
+
+      .faq-item:first-child {
+        border-top: none;
+      }
+
+      .faq-item > summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 12px 4px 12px 20px;
+        font-weight: 600;
+        color: #333;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        user-select: none;
+        position: relative;
+      }
+
+      .faq-item > summary::-webkit-details-marker { display: none; }
+
+      .faq-item > summary::before {
+        content: '+';
+        position: absolute;
+        left: 0;
+        color: #c0392b;
+        font-weight: 700;
+        font-size: 1.1rem;
+        line-height: 1.4;
+        transition: transform 0.2s ease;
+      }
+
+      .faq-item[open] > summary::before {
+        transform: rotate(45deg);
+      }
+
+      .faq-item > summary:hover {
+        color: #c0392b;
+      }
+
+      .faq-answer {
+        padding: 0 4px 14px 20px;
+        color: #444;
+      }
+
+      .faq-answer p {
+        margin: 6px 0;
+        text-align: justify;
+      }
+
+      .faq-answer a {
+        color: #c0392b;
+        text-decoration: underline;
+      }
+
+      .faq-answer a:hover {
+        color: #922b21;
+      }
+
+      .faq-answer ul {
+        margin: 6px 0;
+        padding-left: 20px;
+      }
+
+      .faq-answer li {
+        margin-bottom: 4px;
       }
     </style>
   </head>
@@ -28,56 +135,106 @@
 
   <div id="content">
     <div class="sqs-html-content">
-  <h2 style="white-space:pre-wrap;"><strong>Things to do after filing your tax return</strong></h2>
+      <h2 style="white-space:pre-wrap;"><strong>Things to do after filing your tax return</strong></h2>
 
-    <p><strong>I just finished filing my tax return with you guys, what do I do now?</strong></p>
-        <p>If you were informed that your tax return sucessfully E-Filed, then you're done! All you need to do now is wait for CRA to assess your return.</p>
-        <p>Usually if your return is relatively simple, the return should be assessed within 2-3 weeks, and any refunds will be paid at that time. If you were already registered for direct deposit, they will pay the funds directly into your bank account. Otherwise, it will be mailed to you via cheque.</p>
-        <p>Please note that we have seen processing times of up to 6 months.</p>
-        <p>If you were informed that your returns needs to be paper filed, you should mail the documents we provided you at the Tax Clinic to the CRA. You can find the applicable address <a href="https://www.canada.ca/en/revenue-agency/corporate/contact-information/where-mail-your-paper-t1-return.html">here</a>. We do recommend that you send by registered mail if possible to confirm receipt of delivery. Registered mail is only available in-person at Canada Post locations. We also recommend that you register for a CRA My Account (see below). </p>
+      <!-- ── Next Steps ─────────────────────────────────────────────── -->
+      <details class="faq-category" open>
+        <summary>Next Steps</summary>
+        <div class="faq-items">
 
-    <hr class="section-divider">
-    <p><strong>Register for a CRA My Account</strong></p>
-        <p>We strongly recommend making a CRA My Account after your tax return has been assessed by the CRA (You will not be able to create a CRA My Account until you have received a Notice of Assessment). You can update your address, see mail from the CRA, update direct deposit information, see prior year tax returns and current year tax slips, see tax return status, and more!</p>
-        <p>For instructions on how to create your CRA My Account, see this document <a href="https://www.dropbox.com/scl/fi/3jwnkf8n4v0i9iz8z43ib/My-CRA-Account-Registration.docx?rlkey=f1nqa97wf1w1ji41w72462k1t&st=fkqnpw4i&dl=0">My Account Instructions</a>. </p>
+          <details class="faq-item">
+            <summary>I just finished filing my tax return with you, what do I do now?</summary>
+            <div class="faq-answer">
+              <p>If you were informed that your tax return sucessfully E-Filed, then you're done! All you need to do now is wait for CRA to assess your return.</p>
+              <p>Usually if your return is relatively simple, the return should be assessed within 2–3 weeks, and any refunds will be paid at that time. If you were already registered for direct deposit, they will pay the funds directly into your bank account. Otherwise, it will be mailed to you via cheque.</p>
+              <p>Please note that we have seen processing times of up to 6 months.</p>
+              <p>If you were informed that your return needs to be paper filed, you should mail the documents we provided you at the Tax Clinic to the CRA. You can find the applicable address <a href="https://www.canada.ca/en/revenue-agency/corporate/contact-information/where-mail-your-paper-t1-return.html">here</a>. We do recommend that you send by registered mail if possible to confirm receipt of delivery. Registered mail is only available in-person at Canada Post locations. We also recommend that you register for a CRA My Account (see below).</p>
+            </div>
+          </details>
 
-    <hr class="section-divider">
-    <p><strong>Ontario Electricity Support Program</strong></p>
-        <p>Eligibility for the <a href="https://ontarioelectricitysupport.ca/">Ontario Electricity Support Program (OESP)</a> is based on your income from your tax return. If you and all adults that you live with have filed their tax return - you may be eligible for the OESP, which will give you a credit for your hydro bill, reducing your monthly expenses.</p>
+          <details class="faq-item">
+            <summary>Register for a CRA My Account</summary>
+            <div class="faq-answer">
+              <p>We strongly recommend making a CRA My Account after your tax return has been assessed by the CRA (You will not be able to create a CRA My Account until you have received a Notice of Assessment). You can update your address, see mail from the CRA, update direct deposit information, see prior year tax returns and current year tax slips, see tax return status, and more!</p>
+              <p>For instructions on how to create your CRA My Account, see this document: <a href="https://www.dropbox.com/scl/fi/3jwnkf8n4v0i9iz8z43ib/My-CRA-Account-Registration.docx?rlkey=f1nqa97wf1w1ji41w72462k1t&st=fkqnpw4i&dl=1">My Account Instructions</a>.</p>
+            </div>
+          </details>
 
-    <hr class="section-divider">
-    <p><strong>CRA sent me a letter asking for information! Did I do something wrong? Why are they asking for this? What do I do now? Should I panic?</strong></p>
-        <p>Canada's tax system is based on the honour system. You could report what ever you want on the tax return, but it is the CRA's right (and obligation to the taxpayers) to request for documentation that supports your claims.</p>
-        <p>Generally they ask for things that they cannot verify through their own systems automatically, like rent receipts, or income before coming to Canada.</p>
-        <p>It is perfectly normal and expected for CRA to ask for this information.</p>
-        <p>You should <u>not</u> panic and ignore the mail. Read the letter provided to you carefully, CRA is usually very clear on the information they want. Provide them the requested information by mailing the documentation to the address they provide you and all is well. </p>
-        <p>Please see sections below specific to World Income Verification and Rental Receipt Requests </p>
+        </div>
+      </details>
 
-    <hr class="section-divider">
-    <p><strong>Rent Receipt Requests</strong></p>
-        <p>We've provided a sample of what a rent receipt could look like. It includes the usual review letter from CRA when they decide to review this information and what is generally considered an acceptable receipt. Please note this is not an exhaustive example, as long as it includes all information, CRA will accept it.</p>
-                <a href="https://www.dropbox.com/scl/fi/za0kqnvzrfxbhdlqu1fzd/Rent-Receipt-Samples.docx?rlkey=npgbgdy0s8ba1vxia2ws1bnpj&st=hms18jdq&dl=0">Rent Receipt Sample</a>
-    <hr class="section-divider">
-    <p><strong>World Income Verification</strong></p>
-        <p> If you're a newcomer to Canada, CRA often asks for World Income verification to establish if you are a low income resident throughout the entire year. They will pause benefits until they've confirmed. To restore your benefits, do the following:</p>
-        <p> 1) Complete <a href="https://www.canada.ca/en/revenue-agency/services/forms-publications/forms/rc151.html">Form RC151</a> if you haven't already.This essentially details the taxpayer's world income for the period before entry into Canada. There's now a web version of this form, but make sure you keep a copy for your own records!</p>
-        <p> 2) Send a copy of the RC151 to the CRA with a cover letter asking to restore benefits and clarifying the amount of income you earned before coming to Canada. If you need a sample, you can find one <a href="https://docs.google.com/document/d/1JXhivjkwfl9uFt2jedGWUYTEgHJPZRAe/edit">here</a>. If you have access to CRA My Account, you can submit this online.</p>
-        <p> 3) Wait. CRA Benefits division will respond... eventually. We've sent in a document around November and got a response in February, but have also gotten responses within three weeks.</p>
+      <!-- ── Benefits & Refunds ──────────────────────────────────────── -->
+      <details class="faq-category" open>
+        <summary>Benefits &amp; Refunds</summary>
+        <div class="faq-items">
 
-    <hr class="section-divider">
-    <p><strong>CRA Direct Deposit</strong></p>
-        <p>Direct deposit allows your tax refund and government benefits such as the GST/HST Credit and Ontario Trillium Benefit to be deposited directly into your bank account. If you do not have direct deposit set up, the CRA will mail you a cheque to your mailing address.</p>
-        <p>As of March 24, 2025, the CRA will <b>no longer</b> accept direct deposit application through your tax return. Direct deposit should now be set up directly within online banking of your bank account. If you would like to set up direct deposit, refer to your own bank for guidance on how to set this up.</p>
-        <ul>
-          <li><a href="https://www.cibc.com/en/personal-banking/ways-to-bank/cra-direct-deposit.html">CIBC</a></li>
-          <li><a href="https://www.simplii.com/en/banking-simplii/cra-direct-deposit.html">Simplii</a></li>
-          <li><a href="https://www.nbc.ca/personal/accounts/services/online/features/direct-deposit.html">National Bank</a></li>
-          <li><a href="https://www.bmo.com/main/personal/ways-to-bank/cra-direct-deposit/">BMO</a></li>
-          <li><a href="https://www.scotiabank.com/ca/en/personal/bank-your-way/digital-banking-guide/banking-basics/enrol-for-cra-direct-deposit.html">Scotiabank</a></li>
-          <li><a href="https://www.td.com/ca/en/personal-banking/advice/day-to-day-banking/what-is-direct-deposit#:~:text=To%20start%20your%20enrollment%2C%20you,need%20to%20re-enroll%20again.">TD</a></li>
-          <li><a href="https://www.tangerine.ca/en/faq/canada-revenue-agency-cra-direct-deposit">Tangerine</a></li>
-          <li><a href="https://www.rbcroyalbank.com/ways-to-bank/tutorials/send-and-receive-money/set-up-direct-deposit-cra.html">RBC</a></li>
-        </ul>
+          <details class="faq-item">
+            <summary>CRA Direct Deposit</summary>
+            <div class="faq-answer">
+              <p>Direct deposit allows your tax refund and government benefits such as the GST/HST Credit and Ontario Trillium Benefit to be deposited directly into your bank account. If you do not have direct deposit set up, the CRA will mail you a cheque to your mailing address.</p>
+              <p>As of March 24, 2025, the CRA will <b>no longer</b> accept direct deposit application through your tax return. Direct deposit should now be set up directly within online banking of your bank account. If you would like to set up direct deposit, refer to your own bank for guidance on how to set this up.</p>
+              <ul>
+                <li><a href="https://www.cibc.com/en/personal-banking/ways-to-bank/cra-direct-deposit.html">CIBC</a></li>
+                <li><a href="https://www.simplii.com/en/banking-simplii/cra-direct-deposit.html">Simplii</a></li>
+                <li><a href="https://www.nbc.ca/personal/accounts/services/online/features/direct-deposit.html">National Bank</a></li>
+                <li><a href="https://www.bmo.com/main/personal/ways-to-bank/cra-direct-deposit/">BMO</a></li>
+                <li><a href="https://www.scotiabank.com/ca/en/personal/bank-your-way/digital-banking-guide/banking-basics/enrol-for-cra-direct-deposit.html">Scotiabank</a></li>
+                <li><a href="https://www.td.com/ca/en/personal-banking/advice/day-to-day-banking/what-is-direct-deposit#:~:text=To%20start%20your%20enrollment%2C%20you,need%20to%20re-enroll%20again.">TD</a></li>
+                <li><a href="https://www.tangerine.ca/en/faq/canada-revenue-agency-cra-direct-deposit">Tangerine</a></li>
+                <li><a href="https://www.rbcroyalbank.com/ways-to-bank/tutorials/send-and-receive-money/set-up-direct-deposit-cra.html">RBC</a></li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>Ontario Electricity Support Program</summary>
+            <div class="faq-answer">
+              <p>Eligibility for the <a href="https://ontarioelectricitysupport.ca/">Ontario Electricity Support Program (OESP)</a> is based on your income from your tax return. If you and all adults that you live with have filed their tax return — you may be eligible for the OESP, which will give you a credit for your hydro bill, reducing your monthly expenses.</p>
+            </div>
+          </details>
+
+        </div>
+      </details>
+
+      <!-- ── CRA Letters ─────────────────────────────────────────────── -->
+      <details class="faq-category" open>
+        <summary>CRA Letters</summary>
+        <div class="faq-items">
+
+          <details class="faq-item">
+            <summary>CRA sent me a letter asking for information! Did I do something wrong? Should I panic?</summary>
+            <div class="faq-answer">
+              <p>Canada's tax system is based on the honour system. You could report whatever you want on the tax return, but it is the CRA's right (and obligation to the taxpayers) to request for documentation that supports your claims.</p>
+              <p>Generally they ask for things that they cannot verify through their own systems automatically, like rent receipts, or income before coming to Canada.</p>
+              <p>It is perfectly normal and expected for CRA to ask for this information.</p>
+              <p>You should <u>not</u> panic and ignore the mail. Read the letter provided to you carefully — CRA is usually very clear on the information they want. Provide them the requested information by mailing the documentation to the address they provide you and all is well.</p>
+              <p>Please see sections below specific to World Income Verification and Rental Receipt Requests.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>Rent Receipt Requests</summary>
+            <div class="faq-answer">
+              <p>We've provided a sample of what a rent receipt could look like. It includes the usual review letter from CRA when they decide to review this information and what is generally considered an acceptable receipt. Please note this is not an exhaustive example, as long as it includes all information, CRA will accept it.</p>
+              <p><a href="https://www.dropbox.com/scl/fi/za0kqnvzrfxbhdlqu1fzd/Rent-Receipt-Samples.docx?rlkey=npgbgdy0s8ba1vxia2ws1bnpj&st=hms18jdq&dl=1">Rent Receipt Sample</a></p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>World Income Verification</summary>
+            <div class="faq-answer">
+              <p>If you're a newcomer to Canada, CRA often asks for World Income verification to establish if you are a low income resident throughout the entire year. They will pause benefits until they've confirmed. To restore your benefits, do the following:</p>
+              <ol>
+                <li>Complete <a href="https://www.canada.ca/en/revenue-agency/services/forms-publications/forms/rc151.html">Form RC151</a> if you haven't already. This essentially details the taxpayer's world income for the period before entry into Canada. There's now a web version of this form, but make sure you keep a copy for your own records!</li>
+                <li>Send a copy of the RC151 to the CRA with a cover letter asking to restore benefits and clarifying the amount of income you earned before coming to Canada. If you need a sample, you can find one <a href="https://docs.google.com/document/d/1JXhivjkwfl9uFt2jedGWUYTEgHJPZRAe/edit">here</a>. If you have access to CRA My Account, you can submit this online.</li>
+                <li>Wait. CRA Benefits division will respond... eventually. We've sent in a document around November and got a response in February, but have also gotten responses within three weeks.</li>
+              </ol>
+            </div>
+          </details>
+
+        </div>
+      </details>
+
     </div>
   </div>
 
