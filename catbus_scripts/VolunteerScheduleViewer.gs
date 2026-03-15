@@ -405,7 +405,7 @@ function simplifyDateFormat(dateString) {
 
   const dayOfWeek = parts[0]; // "Saturday"
   const month = parts[1];      // "March"
-  const day = parts[2];        // "21"
+  const day = parts[2].replace(/,+$/, ''); // "21" (strip trailing comma if present)
 
   // Abbreviate day of week (first 3 characters)
   const dayAbbr = dayOfWeek.substring(0, 3);
@@ -466,10 +466,11 @@ function getVolunteerScheduleByDay(day, filterRole = '') {
 
     // If not found, try matching simplified format (e.g., "Sat, Mar 21" matches "Saturday March 21 2026")
     if (dayColumn === -1) {
+      const simplifiedDay = simplifyDateFormat(day);
       for (let i = 1; i < headerRow.length; i++) {
         const headerValue = headerRow[i]?.toString().trim() || '';
         const simplifiedHeader = simplifyDateFormat(headerValue);
-        if (simplifiedHeader === day) {
+        if (simplifiedHeader === simplifiedDay) {
           dayColumn = i;
           break;
         }

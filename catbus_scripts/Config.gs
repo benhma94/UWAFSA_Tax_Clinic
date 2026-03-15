@@ -264,10 +264,10 @@ const SCHEDULE_CONFIG = {
 
   // Default day labels (can be overridden in schedule generation)
   DEFAULT_DAY_LABELS: [
-    'Saturday March 21, 2026',
-    'Sunday March 22, 2026',
-    'Saturday March 28, 2026',
-    'Sunday March 29, 2026'
+    'Saturday March 21 2026',
+    'Sunday March 22 2026',
+    'Saturday March 28 2026',
+    'Sunday March 29 2026'
   ],
 
   // Shift ID to metadata mapping
