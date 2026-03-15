@@ -13,5 +13,5 @@ function doGetAlertDashboard() {
   return template.evaluate()
     .setTitle('Alert Dashboard')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.SAMEORIGIN);
 }

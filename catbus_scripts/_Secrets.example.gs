@@ -22,5 +22,8 @@
  *
  *   // Web app deployment URL (Apps Script > Deploy > Manage Deployments)
  *   WEBAPP_URL: 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec',
+ *
+ *   // Password required to access admin-only pages
+ *   ADMIN_PASSWORD: 'choose-a-strong-password',
  * };
  */

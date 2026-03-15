@@ -209,8 +209,21 @@ function sanitizeInput(input, maxLength = 1000) {
   if (input === null || input === undefined) {
     return '';
   }
-  const str = String(input).trim();
-  return str.length > maxLength ? str.substring(0, maxLength) : str;
+  let str = String(input).trim();
+  if (str.length > maxLength) str = str.substring(0, maxLength);
+  // Prevent formula injection: prefix values that would execute as spreadsheet formulas
+  if (/^[=+\-@\t\r]/.test(str)) str = "'" + str;
+  return str;
+}
+
+/**
+ * Validates the admin password submitted from the frontend.
+ * Called via google.script.run from _PasswordGate.html on admin pages.
+ * @param {string} password - Password entered by the user
+ * @returns {boolean} True if the password matches SECRETS.ADMIN_PASSWORD
+ */
+function checkAdminPassword(password) {
+  return typeof password === 'string' && password === SECRETS.ADMIN_PASSWORD;
 }
 
 /**
