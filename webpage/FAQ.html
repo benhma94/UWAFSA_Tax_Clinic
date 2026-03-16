@@ -146,7 +146,7 @@
             <summary>Can I book an appointment with you?</summary>
             <div class="faq-answer">
               <p>No appointment necessary! We find that the best way to help as many people in our community as possible is to offer walk-in services, which offers the greatest flexibility, and allows people to grab missing information if they've left stuff at home, or come back another time if they don't have everything at the moment.</p>
-              <p>If you believe your situation is slightly complex and may take more time, please use our <a href="appointment_screening.html"><strong>screening tool</strong></a> to determine if you need to book an appointment.</p>
+              <p id="faq-screening-p">If you believe your situation is slightly complex and may take more time, please use our <a href="appointment_screening.html"><strong>screening tool</strong></a> to determine if you need to book an appointment.</p>
             </div>
           </details>
 
@@ -154,6 +154,13 @@
             <summary>Do you offer online services/drop-off services?</summary>
             <div class="faq-answer">
               <p>Due to resource contraints, this is not a service we can provide. We are constantly evaluating our service offering to see how we can better serve our community, and this may be available in the future depending on funding and resources.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>Do you have availability on weekdays, or can you offer your services online through Zoom?</summary>
+            <div class="faq-answer">
+              <p>We are highly dependent on our experienced supervisors/CPAs in order to run the Tax Clinic. Since these supervisors have their own jobs (especially during the very busy tax season), they are unable to assist outside of our indicated times. As such, we cannot provide services outside of our stated availability. We regularly consult our resource and funding constraints to evaluate the ability to expand services, and we may do so in the future.</p>
             </div>
           </details>
 
@@ -299,5 +306,14 @@
   <div id="site-footer"></div>
 
   <script src="shared.js?v=2"></script>
+  <script>
+    (function() {
+      var cutoff = new Date('2026-03-30');
+      if (new Date() >= cutoff) {
+        var el = document.getElementById('faq-screening-p');
+        if (el) el.style.display = 'none';
+      }
+    })();
+  </script>
   </body>
 </html>
