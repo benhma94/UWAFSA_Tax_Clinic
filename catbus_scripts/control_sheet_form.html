@@ -237,6 +237,51 @@
       animation: pulse-ready 1.4s ease-in-out infinite;
     }
 
+    /* On Break button */
+    #breakToggleBtn {
+      background-color: #e67e22;
+      color: white;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #breakToggleBtn:hover { background-color: #d35400; }
+    #breakToggleBtn.on-break {
+      background-color: #27ae60;
+    }
+    #breakToggleBtn.on-break:hover { background-color: #219a52; }
+
+    /* On Break banner */
+    #breakBanner {
+      display: none;
+      background-color: #fef9e7;
+      border: 2px solid #f39c12;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      font-weight: 600;
+      color: #7d6608;
+      text-align: center;
+    }
+    body.dark #breakBanner {
+      background-color: #3d3000;
+      border-color: #f39c12;
+      color: #f8d87e;
+    }
+
+    /* No-client idle message */
+    #noClientMsg {
+      display: none;
+      color: #888;
+      font-style: italic;
+      font-size: 0.9rem;
+      margin-top: 6px;
+    }
+
     /* Finalize reminder popup */
     #finalizeReminder {
       position: fixed;
@@ -1757,10 +1802,16 @@
 
   <header>
     <h3>AFSA Tax Clinic Control Sheet</h3>
-    <div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button id="breakToggleBtn" style="display:none;" onclick="toggleBreak()">☕ Go On Break</button>
       <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
   </header>
+
+  <!-- On Break banner -->
+  <div id="breakBanner" role="alert" aria-live="polite">
+    ☕ You are on break — you will not receive new client assignments until you end your break.
+  </div>
 
   <!-- Draft restore banner -->
   <div id="draftBanner" role="alert" aria-live="polite">
@@ -1782,6 +1833,7 @@
       <select id="client" onchange="checkFormReady();">
         <option value="">Select Client</option>
       </select>
+      <div id="noClientMsg">No client assigned — waiting for assignment</div>
     </div>
     <div style="align-self: end; margin-top: 20px;">
       <button id="helpBtn" onclick="toggleHelpRequest()">📞 Quick Question!</button>
@@ -1987,8 +2039,10 @@
 
   <?!= include('shared_scripts') ?>
   <script defer>
-    let volunteerMap = {};
-    let allVolunteerNames = [];
+    let volunteerMap = {};        // clientMap: { name: [clientIds] }
+    let allVolunteerNames = [];   // all signed-in filers
+    let breakStatusMap = {};      // { name: true/false }
+    let currentBreakState = false;
     let rowCount = 1;
     let currentClientData = null; // Store current client intake data
     let currentTrackerStatus = []; // Tracker rows for current client (from Tax Return Tracker sheet)
@@ -2266,8 +2320,9 @@
 
     function loadDropdowns() {
       google.script.run.withSuccessHandler(data => {
-        volunteerMap = data;
-        allVolunteerNames = Object.keys(volunteerMap).sort();
+        volunteerMap = data.clientMap || {};
+        allVolunteerNames = (data.allFilerNames || Object.keys(volunteerMap)).sort();
+        breakStatusMap = data.breakStatus || {};
         checkFormReady();
         checkAndShowDraftBanner(); // show restore banner if a draft exists
       }).getVolunteersAndClients();
@@ -2316,7 +2371,11 @@
     function updateClients() {
       const volunteer = document.getElementById('volunteer').value;
       const clientSelect = document.getElementById('client');
+      const noClientMsg = document.getElementById('noClientMsg');
+      const breakBtn = document.getElementById('breakToggleBtn');
       clientSelect.innerHTML = '<option value="">Select Client</option>';
+
+      const isKnownVolunteer = allVolunteerNames.includes(volunteer);
 
       if (volunteerMap[volunteer]) {
         volunteerMap[volunteer].forEach(client => {
@@ -2325,6 +2384,19 @@
           option.textContent = client;
           clientSelect.appendChild(option);
         });
+      }
+
+      // Show "no client" message and break button once a valid volunteer name is entered
+      const hasClient = !!(volunteerMap[volunteer] && volunteerMap[volunteer].length > 0);
+      noClientMsg.style.display = (isKnownVolunteer && !hasClient) ? 'block' : 'none';
+
+      if (isKnownVolunteer) {
+        currentBreakState = breakStatusMap[volunteer] === true;
+        updateBreakUI();
+        breakBtn.style.display = '';
+      } else {
+        breakBtn.style.display = 'none';
+        document.getElementById('breakBanner').style.display = 'none';
       }
 
       // Clear tax year table and client data
@@ -2338,6 +2410,42 @@
         clientSelect.value = volunteerMap[volunteer][0];
         clientSelect.dispatchEvent(new Event('change'));
       }
+    }
+
+    function updateBreakUI() {
+      const btn = document.getElementById('breakToggleBtn');
+      const banner = document.getElementById('breakBanner');
+      if (currentBreakState) {
+        btn.textContent = '✅ End Break';
+        btn.classList.add('on-break');
+        banner.style.display = 'block';
+      } else {
+        btn.textContent = '☕ Go On Break';
+        btn.classList.remove('on-break');
+        banner.style.display = 'none';
+      }
+    }
+
+    function toggleBreak() {
+      const volunteer = document.getElementById('volunteer').value.trim();
+      if (!volunteer) return;
+      const newState = !currentBreakState;
+      const btn = document.getElementById('breakToggleBtn');
+      btn.disabled = true;
+      google.script.run
+        .withSuccessHandler(result => {
+          btn.disabled = false;
+          if (result && result.success) {
+            currentBreakState = result.isOnBreak;
+            breakStatusMap[volunteer] = currentBreakState;
+            updateBreakUI();
+          }
+        })
+        .withFailureHandler(err => {
+          btn.disabled = false;
+          showError('Could not update break status: ' + (err.message || err));
+        })
+        .setVolunteerBreakStatus(volunteer, newState);
     }
 
     document.getElementById('client').addEventListener('change', function () {
@@ -3749,6 +3857,14 @@
           items: [
             'UHIP (University Health Insurance Plan) premiums',
             'Verify mailing address goes to a non-dormitory address, if a trusted individual is not available, advise them to fill out a request at <a href="https://uwaterloo.ca/international-experience/form/mailing-request" target="_blank">https://uwaterloo.ca/international-experience/form/mailing-request</a> and use that address instead. If they are not able to do this, advise them to contact the International Experience Office to request a change of address.'
+          ]
+        },
+        'First-Time Filer': {
+          title: 'First-Time Filer Reminder',
+          message: 'This client has never filed a tax return before.',
+          items: [
+            'Note appropriately in the CRA questions',
+            'If also an international student, note Immigrant form may be applicable'
           ]
         }
       };

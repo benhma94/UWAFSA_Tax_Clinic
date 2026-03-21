@@ -4,25 +4,28 @@
  */
 
 /**
- * Returns a mapping of volunteer names to their assigned (but not completed) client
- * Optimized to read only recent assignments (last N rows) for better performance with 100 volunteers
- * Note: Each volunteer can only have ONE active client at a time
- * @returns {Object} Object mapping volunteer names to arrays of client IDs (array for backward compatibility)
+ * Returns volunteer/client data for the control sheet.
+ * Includes all signed-in filer names (not just those with active clients),
+ * the client map, and current break status.
+ * @returns {{ clientMap: Object, allFilerNames: string[], breakStatus: Object }}
  */
 function getVolunteersAndClients() {
   return safeExecute(() => {
     return getCachedOrFetch(
       CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
       () => {
-        const sheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
-        const lastRow = sheet.getLastRow();
+        const today = new Date().toDateString();
+
+        // --- Build client map from CLIENT_ASSIGNMENT sheet ---
+        const assignSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+        const lastRow = assignSheet.getLastRow();
         const volunteerToClient = {};
 
         if (lastRow > 1) {
           const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, lastRow - 1);
           const startRow = Math.max(2, lastRow - checkRows + 1);
-          const data = sheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1,
-                                      checkRows, 4).getValues();
+          const data = assignSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1,
+                                            checkRows, 4).getValues();
           for (let i = 0; i < data.length; i++) {
             const client    = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
             const volunteer = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
@@ -33,12 +36,50 @@ function getVolunteersAndClients() {
           }
         }
 
-        // Convert to array format for backward compatibility with existing HTML/JS code
-        const volunteerToClients = {};
+        const clientMap = {};
         for (const [volunteer, client] of Object.entries(volunteerToClient)) {
-          volunteerToClients[volunteer] = [client];
+          clientMap[volunteer] = [client];
         }
-        return volunteerToClients;
+
+        // --- Build list of all signed-in filer volunteers + break status ---
+        const volunteerSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
+        const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
+        const volLastRow = volunteerSheet.getLastRow();
+        const signOutLastRow = signOutSheet.getLastRow();
+
+        const volData = volLastRow > 1
+          ? volunteerSheet.getRange(2, 1, volLastRow - 1, 5).getValues()
+          : [];
+
+        const signOutData = signOutLastRow > 1
+          ? signOutSheet.getRange(2, 1, signOutLastRow - 1, 3).getValues()
+          : [];
+
+        const signedOutSessions = new Set(signOutData.map(r => r[CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim()));
+        const nonFilerStations = CONFIG.SIGN_IN_OUT.NON_FILER_STATIONS;
+
+        const allFilerNames = [];
+        const breakStatus = {};
+
+        for (const row of volData) {
+          const signInDate = new Date(row[CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP]).toDateString();
+          if (signInDate !== today) continue;
+
+          const name      = row[CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
+          const station   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.STATION]?.toString().trim().toLowerCase();
+          const sessionId = row[CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
+          const onBreak   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.ON_BREAK]?.toString().trim().toLowerCase();
+
+          if (!name || !station || !sessionId) continue;
+          if (nonFilerStations.some(r => station === r)) continue;
+          if (signedOutSessions.has(sessionId)) continue;
+
+          if (!allFilerNames.includes(name)) allFilerNames.push(name);
+          // Last row for this volunteer wins for break status
+          breakStatus[name] = (onBreak === 'yes');
+        }
+
+        return { clientMap, allFilerNames, breakStatus };
       },
       CACHE_CONFIG.TTL.VOLUNTEERS_AND_CLIENTS
     );

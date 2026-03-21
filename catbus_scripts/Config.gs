@@ -91,7 +91,8 @@ const CONFIG = {
       TIMESTAMP: 0,
       NAME: 1,
       STATION: 2,
-      SESSION_ID: 3
+      SESSION_ID: 3,
+      ON_BREAK: 4
     },
     SIGNOUT: {
       TIMESTAMP: 0,
@@ -110,6 +111,7 @@ const CONFIG = {
   HELP_STATUS: {
     ACTIVE: 'Active',
     ESCALATED: 'Escalated',
+    IN_PROGRESS: 'In Progress', // helper claimed from alert dashboard
     CLEARED: 'Cleared'
   },
   
@@ -122,6 +124,7 @@ const CONFIG = {
   // Review Request Status Values
   REVIEW_STATUS: {
     REQUESTED: 'Requested',
+    IN_PROGRESS: 'In Progress', // reviewer claimed from alert dashboard
     APPROVED: 'Approved',    // reviewer approved remotely
     RETURNED: 'Returned',    // reviewer returned for corrections remotely
     COMPLETED: 'Completed',  // control sheet consumed the approval/return result
@@ -253,6 +256,7 @@ const SCHEDULE_CONFIG = {
   // Algorithm constraints
   FILER_HARD_CAP: 50,       // Max filers per shift
   FILER_MIN_SHIFTS: 3,      // Minimum shifts each filer gets
+  FRONTLINE_MIN_SHIFTS: 3,  // Minimum shifts each frontline volunteer gets
   ROLE_MIN_PER_SHIFT: 1,    // Minimum volunteers of each role per shift
 
   // Time slot definitions (for display only - backend only uses A/B/C)
