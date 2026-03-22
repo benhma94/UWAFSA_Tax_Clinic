@@ -50,34 +50,46 @@
 
     /* Volunteer performance lists */
     #topVolunteersAllTime ol,
-    #topVolunteersToday ol {
+    #topVolunteersToday ol,
+    #topReviewersAllTime ol,
+    #topReviewersToday ol {
       padding-left: 20px;
       margin: 10px 0;
     }
 
     #topVolunteersAllTime li,
-    #topVolunteersToday li {
+    #topVolunteersToday li,
+    #topReviewersAllTime li,
+    #topReviewersToday li {
       padding: 8px 0;
       line-height: 1.6;
     }
 
     body.light #topVolunteersAllTime li,
-    body.light #topVolunteersToday li {
+    body.light #topVolunteersToday li,
+    body.light #topReviewersAllTime li,
+    body.light #topReviewersToday li {
       color: var(--text-color-light);
     }
 
     body.dark #topVolunteersAllTime li,
-    body.dark #topVolunteersToday li {
+    body.dark #topVolunteersToday li,
+    body.dark #topReviewersAllTime li,
+    body.dark #topReviewersToday li {
       color: var(--text-color-dark);
     }
 
     #topVolunteersAllTime strong,
-    #topVolunteersToday strong {
+    #topVolunteersToday strong,
+    #topReviewersAllTime strong,
+    #topReviewersToday strong {
       color: var(--accent-color);
     }
 
     #topVolunteersAllTime p,
-    #topVolunteersToday p {
+    #topVolunteersToday p,
+    #topReviewersAllTime p,
+    #topReviewersToday p {
       font-style: italic;
       opacity: 0.7;
     }
@@ -250,14 +262,12 @@
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
     <h3 style="margin: 0;">📊 Admin Dashboard</h3>
     <div style="display: flex; align-items: center; gap: 12px;">
+      <a class="nav-link" id="homeLink" href="#">🏠 Home</a>
       <a class="nav-link" id="alertLink" href="#">🚨 Alert Dashboard</a>
       <button onclick="clearStaleSessions()" style="padding: 8px 16px; font-size: 0.9em; background-color: #888; color: white; border: none; border-radius: 5px; cursor: pointer;">🧹 Clear Stale</button>
       <button onclick="refresh()" style="padding: 8px 16px; font-size: 0.9em; background-color: var(--accent-color); color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 Refresh</button>
     </div>
   </div>
-
-  <h3>🔄 Active Returns</h3>
-  <div id="activeReturnsContainer">Loading active returns...</div>
 
   <div class="summary-box">
     <h3>📊 Return Completion Summary</h3>
@@ -278,6 +288,19 @@
     <div id="topVolunteersToday"></div>
   </div>
 
+  <div class="summary-box">
+    <h3>🔍 Reviewer Leaderboard</h3>
+
+    <h4 style="margin-top: 20px;">Top 10 All-Time</h4>
+    <div id="topReviewersAllTime"></div>
+
+    <h4 style="margin-top: 20px;">Top 10 Today</h4>
+    <div id="topReviewersToday"></div>
+  </div>
+
+  <h3>🔄 Active Returns</h3>
+  <div id="activeReturnsContainer">Loading active returns...</div>
+
   <div id="messageBox"></div>
   <div id="errorBox"></div>
 
@@ -285,10 +308,12 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   const BASE_URL = <?!= JSON.stringify(baseUrl) ?>;
+  const ADMIN_WEBSITE_URL = <?!= JSON.stringify(adminWebsiteUrl) ?>;
 
   let lastActiveReturnsSerialized = "";
   let lastSummarySerialized = "";
   let lastPerformanceSerialized = "";
+  let lastReviewerLeaderboardSerialized = "";
   let chartInstance = null;
 
   function formatDuration(minutes) {
@@ -298,11 +323,8 @@
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 
-  function getMessagingUrl(volunteerName) {
-    return BASE_URL + '?app=messaging&volunteer=' + encodeURIComponent(volunteerName);
-  }
-
-  // Build link to alert dashboard using server-injected deployment URL
+  // Build links using server-injected URLs
+  document.getElementById('homeLink').href = ADMIN_WEBSITE_URL;
   document.getElementById('alertLink').href = BASE_URL + '?app=alerts';
 
   function renderActiveReturns(returns) {
@@ -325,8 +347,6 @@
       const card = document.createElement("div");
       card.className = "active-return-card";
 
-      const msgUrl = getMessagingUrl(r.volunteer);
-
       const badges = [];
       if (r.isHighPriority) badges.push('<span class="badge priority">Priority</span>');
       if (r.needsSeniorReview) badges.push('<span class="badge senior-review">Senior Review</span>');
@@ -336,7 +356,7 @@
       if (r.minutesUntilShiftEnd !== null) timingParts.push(`🔔 ${formatDuration(r.minutesUntilShiftEnd)} until shift end`);
 
       card.innerHTML = `
-        <div class="card-volunteer"><a href="${escapeHtml(msgUrl)}" class="card-message-link">${escapeHtml(r.volunteer)} 💬</a></div>
+        <div class="card-volunteer">${escapeHtml(r.volunteer)}</div>
         <div class="card-client-id">Client ${escapeHtml(r.clientId)}</div>
         ${badges.length ? `<div class="card-badges">${badges.join('')}</div>` : ''}
         ${r.filingYears ? `<div class="card-detail">📅 ${escapeHtml(r.filingYears)}</div>` : ''}
@@ -430,6 +450,42 @@
     }
   }
 
+  function renderReviewerLeaderboard(data) {
+    const serialized = JSON.stringify(data);
+    if (serialized === lastReviewerLeaderboardSerialized) return;
+    lastReviewerLeaderboardSerialized = serialized;
+
+    const allTimeContainer = document.getElementById("topReviewersAllTime");
+    allTimeContainer.innerHTML = "";
+    if (data.topReviewers.length === 0) {
+      allTimeContainer.innerHTML = "<p>No data available</p>";
+    } else {
+      const allTimeList = document.createElement("ol");
+      allTimeList.style.paddingLeft = "20px";
+      data.topReviewers.forEach(r => {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${escapeHtml(r.name)}</strong>: ${r.count} review${r.count !== 1 ? 's' : ''}`;
+        allTimeList.appendChild(li);
+      });
+      allTimeContainer.appendChild(allTimeList);
+    }
+
+    const todayContainer = document.getElementById("topReviewersToday");
+    todayContainer.innerHTML = "";
+    if (data.todayReviewers.length === 0) {
+      todayContainer.innerHTML = "<p>No reviews completed today yet</p>";
+    } else {
+      const todayList = document.createElement("ol");
+      todayList.style.paddingLeft = "20px";
+      data.todayReviewers.forEach(r => {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${escapeHtml(r.name)}</strong>: ${r.count} review${r.count !== 1 ? 's' : ''}`;
+        todayList.appendChild(li);
+      });
+      todayContainer.appendChild(todayList);
+    }
+  }
+
   function showAdminToast(message, type = 'info', duration = 4000) {
     const toast = document.getElementById('adminToast');
     const icons = { success: '✅', error: '❌', info: 'ℹ️' };
@@ -460,6 +516,7 @@
       renderActiveReturns(data.activeReturns);
       renderSummary(data.returnSummary);
       renderPerformanceMetrics(data.performanceMetrics);
+      renderReviewerLeaderboard(data.reviewerLeaderboard);
     }).getAdminDashboardData();
   }
 

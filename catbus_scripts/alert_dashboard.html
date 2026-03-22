@@ -4,10 +4,15 @@
   <base target="_top">
   <?!= include('shared_styles') ?>
   <style>
+    #container, #reviewContainer {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
     .request {
       padding: 16px 20px;
       border-radius: 12px;
-      margin-bottom: 12px;
       color: white;
       font-weight: 600;
       box-shadow: var(--shadow-light);
@@ -15,7 +20,7 @@
     }
 
     .request:hover {
-      transform: translateX(4px);
+      transform: translateY(-3px);
       box-shadow: var(--shadow-hover);
     }
 
@@ -30,6 +35,30 @@
 
     .request.review {
       background-color: #4285f4;
+    }
+
+    .request.review-senior {
+      background-color: #7b1fa2;
+    }
+
+    .request.review-inprogress {
+      background-color: #00897b;
+    }
+
+    .cancel-btn {
+      margin-top: 8px;
+      padding: 4px 12px;
+      font-size: 0.8em;
+      font-weight: 700;
+      background: rgba(255,255,255,0.25);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .cancel-btn:hover {
+      background: rgba(255,255,255,0.4);
     }
 
     h3 {
@@ -76,6 +105,7 @@
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
     <h3 style="margin: 0;">🚨 Alert Dashboard</h3>
     <div style="display: flex; align-items: center; gap: 12px;">
+      <a class="nav-link" id="homeLink" href="#">🏠 Home</a>
       <a class="nav-link" id="adminLink" href="#">📊 Admin Dashboard</a>
       <button onclick="refresh()" style="padding: 8px 16px; font-size: 0.9em; background-color: var(--accent-color); color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 Refresh</button>
     </div>
@@ -93,6 +123,7 @@
 <?!= include('shared_scripts') ?>
 <script>
   const BASE_URL = <?!= JSON.stringify(baseUrl) ?>;
+  const ADMIN_WEBSITE_URL = <?!= JSON.stringify(adminWebsiteUrl) ?>;
 
   let lastRequestsSerialized = "";
   let lastReviewRequestsSerialized = "";
@@ -105,6 +136,7 @@
   }
 
   // Build link to admin dashboard using server-injected deployment URL
+  document.getElementById('homeLink').href = ADMIN_WEBSITE_URL;
   document.getElementById('adminLink').href = BASE_URL + '?app=admin';
 
   function render(requests) {
@@ -120,13 +152,21 @@
       return;
     }
 
+    requests.sort((a, b) => (b.minutesAgo ?? 0) - (a.minutesAgo ?? 0));
+
     for (const req of requests) {
+      const isInProgress = req.status === 'in progress';
       const div = document.createElement("div");
-      div.className = `request ${req.status}`;
+      div.className = isInProgress ? 'request review-inprogress' : `request ${req.status}`;
       div.innerHTML = `
-        <div><strong>${escapeHtml(req.volunteer)}</strong></div>
+        <div><strong>${req.station ? `Station ${escapeHtml(req.station)} – ` : ''}${escapeHtml(req.volunteer)}</strong></div>
         <div>⏱️ ${formatDuration(req.minutesAgo)} ago</div>
         <div>🕒 ${escapeHtml(req.timestamp)}</div>
+        ${isInProgress
+          ? `<div style="margin-top:8px; font-size:0.85em; opacity:0.9;">🔄 In Progress</div>
+           <button class="cancel-btn" data-volunteer="${escapeHtml(req.volunteer)}" onclick="cancelHelp(this.dataset.volunteer)">Cancel</button>`
+          : `<button class="cancel-btn" data-volunteer="${escapeHtml(req.volunteer)}" onclick="cancelHelp(this.dataset.volunteer)">Cancel</button>`
+        }
       `;
       container.appendChild(div);
     }
@@ -145,31 +185,57 @@
       return;
     }
 
-    for (const req of requests) {
+    const visible = requests.filter(r => r.status !== 'in progress');
+
+    if (visible.length === 0) {
+      container.innerHTML = "<p>No active review requests.</p>";
+      return;
+    }
+
+    visible.sort((a, b) => (b.minutesAgo ?? 0) - (a.minutesAgo ?? 0));
+
+    for (const req of visible) {
       const div = document.createElement("div");
-      div.className = `request review`;
+      div.className = `request ${req.needsSeniorReview ? 'review-senior' : 'review'}`;
       div.innerHTML = `
-        <div><strong>${escapeHtml(req.volunteer)}</strong></div>
+        ${req.needsSeniorReview ? '<div style="font-size:0.8em; opacity:0.85;">★ Senior Review Required</div>' : ''}
+        <div><strong>${req.station ? `Station ${escapeHtml(req.station)} – ` : ''}${escapeHtml(req.volunteer)}</strong></div>
         <div>⏱️ ${formatDuration(req.minutesAgo)} ago</div>
         <div>🕒 ${escapeHtml(req.timestamp)}</div>
+        <button class="cancel-btn" data-volunteer="${escapeHtml(req.volunteer)}" onclick="cancelReview(this.dataset.volunteer)">Cancel</button>
       `;
       container.appendChild(div);
     }
   }
 
+  function cancelHelp(volunteer) {
+    google.script.run
+      .withFailureHandler(function() {})
+      .clearHelpRequest(volunteer);
+  }
+
+  function cancelReview(volunteer) {
+    google.script.run
+      .withFailureHandler(function() {})
+      .cancelReviewRequest(volunteer);
+  }
+
   function refresh() {
-    google.script.run.withSuccessHandler(function(data) {
-      render(data.helpRequests);
-      renderReviewRequests(data.reviewRequests);
-    }).getAlertDashboardData();
+    google.script.run
+      .withSuccessHandler(function(data) {
+        render(data.helpRequests);
+        renderReviewRequests(data.reviewRequests);
+        setTimeout(refresh, 3000);
+      })
+      .withFailureHandler(function() {
+        setTimeout(refresh, 3000);
+      })
+      .getAlertDashboardData();
   }
 
   window.addEventListener('load', function() {
     refresh();
   });
-
-  // Auto-refresh every 15 seconds (alerts are time-sensitive)
-  setInterval(refresh, 15000);
 </script>
 <div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
 </body>

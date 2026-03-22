@@ -8,9 +8,20 @@
  * @returns {Object} Alert datasets
  */
 function getAlertDashboardData() {
+  const stationMap = getVolunteerStationMap_();
+  const reviewRequests = getLiveReviewRequestsCached().map(req => {
+    const intake = req.clientId ? getClientIntakeInfo(req.clientId) : null;
+    return Object.assign({}, req, {
+      needsSeniorReview: intake?.needsSeniorReview || false,
+      station: stationMap[req.volunteer] || ''
+    });
+  });
+  const helpRequests = getLiveHelpRequestsCached().map(req =>
+    Object.assign({}, req, { station: stationMap[req.volunteer] || '' })
+  );
   return {
-    helpRequests: getLiveHelpRequestsCached(),
-    reviewRequests: getLiveReviewRequestsCached()
+    helpRequests,
+    reviewRequests
   };
 }
 
@@ -219,7 +230,8 @@ function getAdminDashboardData() {
   return {
     activeReturns: getActiveReturns(),
     returnSummary: getReturnSummaryCached(),
-    performanceMetrics: getVolunteerPerformanceMetrics()
+    performanceMetrics: getVolunteerPerformanceMetrics(),
+    reviewerLeaderboard: getReviewerLeaderboard()
   };
 }
 
@@ -372,4 +384,65 @@ function getVolunteerPerformanceMetrics() {
       avgReturnsPerVolunteer
     };
   }, 'getVolunteerPerformanceMetrics');
+}
+
+/**
+ * Gets reviewer leaderboard from Tax Return Tracker sheet.
+ * Counts each reviewer once per return even if they appear in both REVIEWER and SECONDARY_REVIEWER.
+ * @returns {Object} topReviewers and todayReviewers arrays
+ */
+function getReviewerLeaderboard() {
+  return safeExecute(() => {
+    const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+    const lastRow = sheet.getLastRow();
+
+    if (lastRow <= 1) {
+      return { topReviewers: [], todayReviewers: [] };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const cols = CONFIG.COLUMNS.TAX_RETURN_TRACKER;
+    const numRows = lastRow - 1;
+    const data = sheet.getRange(2, 1, numRows, cols.PAPER + 1).getValues();
+
+    const allTimeCounts = {};
+    const todayCounts = {};
+
+    for (let i = 0; i < data.length; i++) {
+      const reviewer = data[i][cols.REVIEWER]?.toString().trim();
+      const secondary = data[i][cols.SECONDARY_REVIEWER]?.toString().trim();
+      const timestamp = data[i][cols.TIMESTAMP];
+
+      if (!reviewer && !secondary) continue;
+
+      const isToday = timestamp instanceof Date &&
+        timestamp.getFullYear() === today.getFullYear() &&
+        timestamp.getMonth() === today.getMonth() &&
+        timestamp.getDate() === today.getDate();
+
+      // Collect unique reviewers for this row
+      const reviewersThisRow = new Set();
+      if (reviewer) reviewersThisRow.add(reviewer);
+      if (secondary && secondary.toLowerCase() !== reviewer?.toLowerCase()) reviewersThisRow.add(secondary);
+
+      reviewersThisRow.forEach(name => {
+        allTimeCounts[name] = (allTimeCounts[name] || 0) + 1;
+        if (isToday) todayCounts[name] = (todayCounts[name] || 0) + 1;
+      });
+    }
+
+    const topReviewers = Object.entries(allTimeCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    const todayReviewers = Object.entries(todayCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    return { topReviewers, todayReviewers };
+  }, 'getReviewerLeaderboard');
 }

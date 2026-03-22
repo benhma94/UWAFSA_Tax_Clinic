@@ -21,7 +21,7 @@ function clearHelpRequest(volunteer) {
   return updateRequestStatus(
     volunteer,
     'HELP',
-    [CONFIG.HELP_STATUS.ACTIVE, CONFIG.HELP_STATUS.ESCALATED],
+    [CONFIG.HELP_STATUS.ACTIVE, CONFIG.HELP_STATUS.ESCALATED, CONFIG.HELP_STATUS.IN_PROGRESS],
     CONFIG.HELP_STATUS.CLEARED
   );
 }
@@ -35,8 +35,22 @@ function escalateHelpRequest(volunteer) {
   return updateRequestStatus(
     volunteer,
     'HELP',
-    CONFIG.HELP_STATUS.ACTIVE,
+    [CONFIG.HELP_STATUS.ACTIVE, CONFIG.HELP_STATUS.IN_PROGRESS],
     CONFIG.HELP_STATUS.ESCALATED
+  );
+}
+
+/**
+ * Marks a help request as In Progress (claimed by a helper from the alert dashboard)
+ * @param {string} volunteer - Volunteer name
+ * @returns {boolean} True if successful
+ */
+function markHelpInProgress(volunteer) {
+  return updateRequestStatus(
+    volunteer,
+    'HELP',
+    CONFIG.HELP_STATUS.ACTIVE,
+    CONFIG.HELP_STATUS.IN_PROGRESS
   );
 }
 

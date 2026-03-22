@@ -333,10 +333,10 @@
   </style>
 </head>
 <body class="light">
-  <?!= include('_PasswordGate') ?>
   <header>
     <h1>👤 Volunteer Sign-In / Sign-Out</h1>
-    <div>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <a id="homeLink" href="#" style="font-size:0.85em; color:var(--accent-color); text-decoration:none; font-weight:600; opacity:0.8;">🏠 Home</a>
       <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
   </header>
@@ -413,6 +413,8 @@
 
 <?!= include('shared_scripts') ?>
 <script>
+  const WEBSITE_URL = <?!= JSON.stringify(websiteUrl) ?>;
+  document.getElementById('homeLink').href = WEBSITE_URL;
   let refreshInterval = null;
   let allSessions = []; // Store all sessions for autocomplete
   let allVolunteers = []; // Store volunteer data: [{name: string, role: string}]

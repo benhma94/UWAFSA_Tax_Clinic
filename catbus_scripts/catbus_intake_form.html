@@ -346,54 +346,62 @@
   <?!= include('shared_scripts') ?>
   <script>
     // Document Categories for checklist
+    // Items with hidden: true are excluded from the UI but kept for backward-compat ID resolution
     const DOCUMENT_CATEGORIES = [
       {
         id: 'essential',
         title: 'Essential Documents (All Clients)',
         items: [
-          'Government-issued photo ID',
-          'Notice of Assessment (NOA) from previous year',
-          'Social Insurance Number (SIN)'
+          { label: 'Government-issued photo ID' },
+          { label: 'Notice of Assessment (NOA) from previous year' },
+          { label: 'Social Insurance Number (SIN)' }
         ]
       },
       {
         id: 'employment',
         title: 'Employment Income',
         items: [
-          'T4 - Employment Income',
-          'T4A - Pension, Retirement, Scholarships/RESP Withdrawals',
-          'T4E - Employment Insurance/Unemployment Benefits',
-          'T5007 - Statement of Benefits (EI, Social Assistance)'
+          { label: 'T4 - Employment Income' },
+          { label: 'T4A - Pension, Retirement, Scholarships/RESP Withdrawals' },
+          { label: 'T4E - Employment Insurance/Unemployment Benefits', hidden: true },
+          { label: 'T5007 - Statement of Benefits (EI, Social Assistance)', hidden: true }
         ]
       },
       {
         id: 'investment',
         title: 'Investment Income',
         items: [
-          'T5 - Investment Income (interest, dividends)',
-          'T3 - Trust Income/ETFs/Mutual Funds',
+          { label: 'T5 - Investment Income (interest, dividends)' },
+          { label: 'T3 - Trust Income/ETFs/Mutual Funds' },
         ]
       },
       {
         id: 'student',
         title: 'Student Documents',
         items: [
-          'T2202 - Tuition and Enrolment Certificate',
-          'Rent receipts (if claiming)',
-          'UHIP receipts (international students)',
-          'Student loan interest statements'
+          { label: 'T2202 - Tuition and Enrolment Certificate' },
+          { label: 'Rent receipts (if claiming)' },
+          { label: 'UHIP receipts (international students)' },
+          { label: 'Student loan interest statements', hidden: true }
         ]
       },
       {
         id: 'deductions',
         title: 'Deductions & Credits',
         items: [
-          'RRSP contribution receipts',
-          'FHSA contribution receipts',
-          'Medical expense receipts',
-          'Charitable donation receipts',
-          'Child care expense receipts',
-          'Moving expense receipts'
+          { label: 'RRSP contribution receipts' },
+          { label: 'FHSA contribution receipts' },
+          { label: 'Medical expense receipts' },
+          { label: 'Charitable donation receipts' },
+          { label: 'Child care expense receipts' },
+          { label: 'Moving expense receipts' }
+        ]
+      },
+      {
+        id: 'other',
+        title: 'Other',
+        items: [
+          { label: 'Foreign income' }
         ]
       },
     ];
@@ -421,9 +429,15 @@
       }
     }
 
+    let customOtherItems = []; // User-added custom items in the "Other" category
+
     // Render the document checklist in the modal
     function renderIntakeDocumentChecklist() {
       const modalBody = document.getElementById('intakeDocumentModalBody');
+      const previouslyChecked = new Set(
+        Array.from(document.querySelectorAll('input[name="intakeDocuments"]:checked'))
+          .map(cb => cb.value)
+      );
       modalBody.innerHTML = '';
 
       DOCUMENT_CATEGORIES.forEach(category => {
@@ -436,6 +450,8 @@
         categoryDiv.appendChild(categoryHeader);
 
         category.items.forEach((item, index) => {
+          if (item.hidden) return;
+
           const itemDiv = document.createElement('div');
           itemDiv.className = 'checklist-item';
 
@@ -444,19 +460,76 @@
           checkbox.id = `intake_doc_${category.id}_${index}`;
           checkbox.value = `${category.id}_${index}`;
           checkbox.name = 'intakeDocuments';
+          checkbox.checked = previouslyChecked.has(checkbox.value);
           checkbox.addEventListener('change', updateIntakeDocumentBadge);
 
           const label = document.createElement('label');
           label.htmlFor = checkbox.id;
-          label.textContent = item;
+          label.textContent = item.label;
 
           itemDiv.appendChild(checkbox);
           itemDiv.appendChild(label);
           categoryDiv.appendChild(itemDiv);
         });
 
+        // For the "Other" category, append custom items and an add-item UI
+        if (category.id === 'other') {
+          customOtherItems.forEach((text, i) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'checklist-item';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `intake_doc_other_custom_${i}`;
+            checkbox.value = text;
+            checkbox.name = 'intakeDocuments';
+            checkbox.checked = previouslyChecked.has(text);
+            checkbox.addEventListener('change', updateIntakeDocumentBadge);
+
+            const label = document.createElement('label');
+            label.htmlFor = checkbox.id;
+            label.textContent = text;
+
+            itemDiv.appendChild(checkbox);
+            itemDiv.appendChild(label);
+            categoryDiv.appendChild(itemDiv);
+          });
+
+          const addRow = document.createElement('div');
+          addRow.style.cssText = 'display:flex;gap:6px;margin-top:8px;';
+
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.id = 'customDocInput';
+          input.placeholder = 'Add custom item…';
+          input.style.cssText = 'flex:1;padding:5px 8px;border:1px solid #ccc;border-radius:4px;font-size:0.9em;';
+          input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addCustomOtherItem(); } });
+
+          const addBtn = document.createElement('button');
+          addBtn.type = 'button';
+          addBtn.textContent = 'Add';
+          addBtn.style.cssText = 'padding:5px 12px;background:#3498db;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.9em;white-space:nowrap;';
+          addBtn.addEventListener('click', addCustomOtherItem);
+
+          addRow.appendChild(input);
+          addRow.appendChild(addBtn);
+          categoryDiv.appendChild(addRow);
+        }
+
         modalBody.appendChild(categoryDiv);
       });
+    }
+
+    function addCustomOtherItem() {
+      const input = document.getElementById('customDocInput');
+      if (!input) return;
+      const text = input.value.trim();
+      if (!text || customOtherItems.includes(text)) { input.focus(); return; }
+      customOtherItems.push(text);
+      renderIntakeDocumentChecklist();
+      // Re-focus the input after re-render
+      const newInput = document.getElementById('customDocInput');
+      if (newInput) newInput.focus();
     }
 
     // Update the badge count on the button
@@ -516,6 +589,12 @@
       document.getElementById('internationalStudentLabel').style.display = 'none';
     }
 
+    function toggleNewcomerDate() {
+      const checked = document.querySelector('input[name="situations"][value="Newcomer"]').checked;
+      document.getElementById('newcomerDateContainer').style.display = checked ? 'block' : 'none';
+      if (!checked) document.getElementById('newcomerEntryDate').value = '';
+    }
+
     function toggleInternationalStudent() {
       const studentCheckbox = document.getElementById('studentCheckbox');
       const internationalStudentLabel = document.getElementById('internationalStudentLabel');
@@ -549,7 +628,7 @@
         householdsize: document.getElementById('householdsize').value,
         filingYears: [...filingYearCheckboxes].map(cb => cb.value),
         situations: [...document.querySelectorAll('input[name="situations"]:checked')].map(cb => cb.value),
-        notes: document.getElementById('notes').value + (hasAppointment ? ' [Pre-booked appointment]' : ''),
+        notes: (document.getElementById('newcomerEntryDate').value ? `Date of entry: ${document.getElementById('newcomerEntryDate').value}\n` : '') + document.getElementById('notes').value + (hasAppointment ? ' [Pre-booked appointment]' : ''),
         needsSeniorReview: document.getElementById('needsSeniorReview').checked,
         isHighPriority: document.getElementById('isHighPriority').checked || hasAppointment,
         appointmentId: hasAppointment ? appointmentId : null,
@@ -577,9 +656,10 @@
       document.getElementById('eligibilityForm').reset();
       document.getElementById('mainForm').reset();
 
-      // Reset document checklist selections
+      // Reset document checklist selections and custom items
       const docCheckboxes = document.querySelectorAll('input[name="intakeDocuments"]');
       docCheckboxes.forEach(cb => cb.checked = false);
+      customOtherItems = [];
       updateIntakeDocumentBadge();
 
       // Reset UI state
@@ -638,7 +718,8 @@
 <body class="light">
   <header>
     <h3>AFSA Tax Clinic Client Intake Form</h3>
-    <div>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <a href="<?= websiteUrl ?>" style="font-size:0.85em; color:var(--accent-color); text-decoration:none; font-weight:600; opacity:0.8;">🏠 Home</a>
       <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
   </header>
@@ -758,8 +839,15 @@
             </span>
             <label><input type="checkbox" name="situations" value="Employed"> Employed</label>
             <label><input type="checkbox" name="situations" value="Married/Common-Law"> Married/Common-Law</label>
-            <label><input type="checkbox" name="situations" value="Newcomer"> Newcomer</label>
+            <label><input type="checkbox" name="situations" value="Newcomer" onchange="toggleNewcomerDate()"> Newcomer</label>
+            <div id="newcomerDateContainer" style="display:none; margin-top: 6px; margin-left: 20px;">
+              <label style="font-weight: normal; font-size: 0.9em;">
+                Date of entry to Canada:
+                <input type="date" id="newcomerEntryDate" name="newcomerEntryDate">
+              </label>
+            </div>
             <label><input type="checkbox" name="situations" value="Children"> Children</label>
+            <label><input type="checkbox" name="situations" value="First-Time Filer"> First-Time Filer</label>
           </div>
         </div>
         <br>

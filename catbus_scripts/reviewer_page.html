@@ -104,6 +104,26 @@
       border-left: 4px solid var(--accent-color);
     }
 
+    body.light .request-card.senior-review {
+      border-left-color: #7b1fa2;
+    }
+
+    body.dark .request-card.senior-review {
+      border-left-color: #ce93d8;
+    }
+
+    .senior-review-badge {
+      font-size: 0.78em;
+      font-weight: 700;
+      color: #7b1fa2;
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    body.dark .senior-review-badge {
+      color: #ce93d8;
+    }
+
     .request-card:hover {
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     }
@@ -113,6 +133,17 @@
       font-weight: 700;
       margin-bottom: 8px;
       color: var(--accent-color);
+    }
+
+    .station-badge {
+      font-size: 0.82em;
+      font-weight: 600;
+      color: #666;
+      margin-right: 2px;
+    }
+
+    body.dark .station-badge {
+      color: #aaa;
     }
 
     .card-meta {
@@ -487,7 +518,8 @@
       { id: 'employment', items: ['T4 - Employment Income', 'T4A - Pension, Retirement, Scholarships/RESP Withdrawals', 'T4E - Employment Insurance/Unemployment Benefits', 'T5007 - Statement of Benefits (EI, Social Assistance)'] },
       { id: 'investment', items: ['T5 - Investment Income (interest, dividends)', 'T3 - Trust Income/ETFs/Mutual Funds'] },
       { id: 'student', items: ['T2202 - Tuition and Enrolment Certificate', 'Rent receipts (if claiming)', 'UHIP receipts (international students)', 'Student loan interest statements'] },
-      { id: 'deductions', items: ['RRSP contribution receipts', 'FHSA contribution receipts', 'Medical expense receipts', 'Charitable donation receipts', 'Child care expense receipts', 'Moving expense receipts'] }
+      { id: 'deductions', items: ['RRSP contribution receipts', 'FHSA contribution receipts', 'Medical expense receipts', 'Charitable donation receipts', 'Child care expense receipts', 'Moving expense receipts'] },
+      { id: 'other', items: ['Foreign income'] }
     ];
 
     function init() {
@@ -576,7 +608,7 @@
       container.innerHTML = '';
       requests.forEach(req => {
         const card = document.createElement('div');
-        card.className = 'request-card';
+        card.className = 'request-card' + (req.needsSeniorReview ? ' senior-review' : '');
         card.id = `card_${CSS.escape(req.volunteer)}`;
         card.dataset.volunteer = req.volunteer;
 
@@ -589,9 +621,11 @@
             <button class="info-btn" onclick="toggleClientInfo('${escapeHtml(req.volunteer)}', '${escapeHtml(req.clientId)}', this)">&#x1F4CB; Client Info</button>
           </div>
           <div class="client-info-section" id="info_${escapeHtml(req.volunteer)}" style="display:none;"></div>` : '';
+        const seniorBadge = req.needsSeniorReview ? '<div class="senior-review-badge">★ Senior Review Required</div>' : '';
 
         card.innerHTML = `
-          <div class="card-volunteer">${escapeHtml(req.volunteer)}</div>
+          ${seniorBadge}
+          <div class="card-volunteer">${req.station ? `<span class="station-badge">Stn ${escapeHtml(req.station)}</span> ` : ''}${escapeHtml(req.volunteer)}</div>
           ${clientLine}
           ${taxYearLine}
           <div class="card-wait">⏱ Waiting ${waitText}</div>

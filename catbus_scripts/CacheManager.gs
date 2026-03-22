@@ -19,8 +19,8 @@ const CACHE_CONFIG = {
   TTL: {
     VOLUNTEER_LIST: 30,            // 30 seconds - changes frequently during sign-in/out
     QUEUE: 20,                     // 20 seconds - high priority, changes often
-    HELP_REQUESTS: 15,             // 15 seconds - real-time updates needed
-    REVIEW_REQUESTS: 15,           // 15 seconds - real-time updates needed
+    HELP_REQUESTS: 3,              // 3 seconds - real-time updates needed
+    REVIEW_REQUESTS: 3,            // 3 seconds - real-time updates needed
     AVAILABILITY_DATA: 300,        // 5 minutes - rarely changes during operation
     RETURN_SUMMARY: 60,            // 1 minute - summary data changes less frequently
     MENTOR_LIST: 45,               // 45 seconds - matches existing cache TTL

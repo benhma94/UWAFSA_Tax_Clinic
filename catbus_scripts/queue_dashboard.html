@@ -55,6 +55,19 @@
       font-size: 0.9em;
     }
 
+    .nav-link {
+      font-size: 0.85em;
+      color: var(--accent-color);
+      text-decoration: none;
+      font-weight: 600;
+      opacity: 0.8;
+    }
+
+    .nav-link:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+
     table {
       width: 100%;
       border-collapse: separate;
@@ -325,9 +338,12 @@
   </style>
   <?!= include('shared_scripts') ?>
   <script>
+  const WEBSITE_URL = <?!= JSON.stringify(websiteUrl) ?>;
   let clientQueue = [];
   let volunteers = [];
+  let activeAssignments = [];
   let lastSerializedData = "";  // used to detect changes
+  let clientToReassign = null;
   let refreshInterval = null;
   let isPageVisible = true;
   let lastUpdateTime = null;
@@ -353,7 +369,9 @@
         lastSerializedData = serialized;
         clientQueue = data.clients;
         volunteers = data.volunteers;
+        activeAssignments = data.activeAssignments || [];
         renderQueue();
+        renderActiveAssignments();
         populateVolunteerDropdown();
         updateLastUpdatedTime();
       } else {
@@ -484,11 +502,11 @@
     const volunteerSelect = document.getElementById('volunteerSelect');
     const clientSelect = document.getElementById('clientSelect');
 
-    // Volunteers are pre-sorted by idle time (longest first) from the backend
+    // Volunteers are pre-sorted by returns completed (fewest first) from the backend
     let volunteerOptions = '';
     volunteers.forEach(v => {
-      const idleText = ` (idle ${formatIdle(v.idleMinutes)})`;
-      volunteerOptions += `<option value="${escapeHtml(v.displayText)}">${escapeHtml(v.displayText)}${escapeHtml(idleText)}</option>`;
+      const returnsText = ` (${v.returnsCompleted} return${v.returnsCompleted === 1 ? '' : 's'})`;
+      volunteerOptions += `<option value="${escapeHtml(v.displayText)}">${escapeHtml(v.displayText)}${escapeHtml(returnsText)}</option>`;
     });
     volunteerSelect.innerHTML = volunteerOptions;
 
@@ -541,6 +559,7 @@
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function() {
       renderQueue();
+      renderActiveAssignments();
     }, 250);
   });
 
@@ -571,6 +590,9 @@
     if (e.key === 'Escape') {
       if (document.getElementById('removeClientModal').style.display === 'flex') {
         closeRemoveClientModal();
+      }
+      if (document.getElementById('reassignModal').style.display === 'flex') {
+        closeReassignModal();
       }
       if (document.getElementById('confirmationModal').style.display === 'flex') {
         refreshAfterModal();
@@ -638,7 +660,115 @@
     alert('Error removing client: ' + error.message);
   }
 
+  function renderActiveAssignments() {
+    const tbody = document.getElementById('activeAssignmentsBody');
+    const mobileContainer = document.getElementById('mobileActiveAssignmentsBody');
+    const countEl = document.getElementById('activeCount');
+
+    tbody.innerHTML = '';
+    mobileContainer.innerHTML = '';
+
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+      activeAssignments.forEach(a => {
+        const card = document.createElement('div');
+        card.className = 'mobile-card';
+        const priorityBadge = a.isHighPriority
+          ? '<span style="background-color:#c0392b;color:white;padding:4px 10px;border-radius:4px;font-size:0.9em;font-weight:bold;display:inline-block;margin-bottom:8px;">HIGH PRIORITY</span><br>'
+          : '';
+        card.innerHTML = `
+          ${priorityBadge}
+          <div class="mobile-card-title">${escapeHtml(a.clientId)}</div>
+          <div class="mobile-card-info">👤 ${escapeHtml(a.volunteerName)}</div>
+          <div class="mobile-card-info">⏱️ Assigned: ${escapeHtml(a.assignedAt)} ago</div>
+          <div style="margin-top:10px;">
+            <button onclick="openReassignModal('${escapeHtml(a.clientId)}')"
+                    style="background-color:var(--accent-color);color:white;border:none;padding:12px 16px;border-radius:8px;cursor:pointer;font-weight:600;width:100%;min-height:44px;font-size:1em;">
+              🔄 Reassign
+            </button>
+          </div>`;
+        mobileContainer.appendChild(card);
+      });
+    } else {
+      activeAssignments.forEach(a => {
+        const row = document.createElement('tr');
+        const priorityBadge = a.isHighPriority
+          ? '<span style="background-color:#c0392b;color:white;padding:2px 8px;border-radius:3px;font-size:0.85em;font-weight:bold;margin-right:8px;">HIGH PRIORITY</span>'
+          : '';
+        row.innerHTML = `
+          <td>${priorityBadge}${escapeHtml(a.clientId)}</td>
+          <td>${escapeHtml(a.volunteerName)}</td>
+          <td>${escapeHtml(a.assignedAt)} ago</td>
+          <td style="text-align:center;">
+            <button onclick="openReassignModal('${escapeHtml(a.clientId)}')"
+                    style="background-color:var(--accent-color);color:white;border:none;padding:6px 12px;border-radius:5px;cursor:pointer;font-weight:600;font-size:0.85em;">
+              🔄 Reassign
+            </button>
+          </td>`;
+        tbody.appendChild(row);
+      });
+    }
+
+    countEl.textContent = `Active assignments: ${activeAssignments.length}`;
+  }
+
+  function openReassignModal(clientId) {
+    clientToReassign = clientId;
+    const assignment = activeAssignments.find(a => a.clientId === clientId);
+    const info = assignment
+      ? `Reassigning client <strong>${escapeHtml(clientId)}</strong> currently with <strong>${escapeHtml(assignment.volunteerName)}</strong>.`
+      : `Reassigning client <strong>${escapeHtml(clientId)}</strong>.`;
+    document.getElementById('reassignModalInfo').innerHTML = info;
+
+    // Populate dropdown with available volunteers
+    const sel = document.getElementById('reassignVolunteerSelect');
+    if (volunteers.length === 0) {
+      sel.innerHTML = '<option value="">No available volunteers</option>';
+    } else {
+      sel.innerHTML = volunteers.map(v => {
+        const returnsText = ` (${v.returnsCompleted} return${v.returnsCompleted === 1 ? '' : 's'})`;
+        return `<option value="${escapeHtml(v.displayText)}">${escapeHtml(v.displayText)}${escapeHtml(returnsText)}</option>`;
+      }).join('');
+    }
+
+    const modal = document.getElementById('reassignModal');
+    modal.style.display = 'flex';
+    sel.focus();
+  }
+
+  function closeReassignModal() {
+    document.getElementById('reassignModal').style.display = 'none';
+    clientToReassign = null;
+  }
+
+  function confirmReassign() {
+    const newVolunteer = document.getElementById('reassignVolunteerSelect').value;
+    if (!newVolunteer) return alert('Please select a volunteer to reassign to.');
+    const clientId = clientToReassign;
+    closeReassignModal();
+
+    google.script.run
+      .withSuccessHandler(result => {
+        if (result && result.success) {
+          document.getElementById('modalMessage').textContent = result.message;
+          const modal = document.getElementById('confirmationModal');
+          modal.style.display = 'flex';
+          modal.querySelector('button').focus();
+        } else {
+          alert('Reassignment failed: ' + (result ? result.message : 'Unknown error'));
+          loadQueue();
+        }
+      })
+      .withFailureHandler(err => {
+        alert('Error: ' + err.message);
+        loadQueue();
+      })
+      .reassignClientToVolunteer(clientId, newVolunteer);
+  }
+
   window.onload = function() {
+    document.getElementById('homeLink').href = WEBSITE_URL;
     loadQueue();
     updateLastUpdatedTime();
   };
@@ -647,7 +777,10 @@
 <body class="light">
   <header>
     <h3>AFSA Tax Clinic Queue Dashboard</h3>
-    <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <a class="nav-link" id="homeLink" href="#">🏠 Home</a>
+      <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
+    </div>
   </header>
 
   <div class="form-wrapper">
@@ -679,6 +812,23 @@
       <select id="volunteerSelect"></select>
       <button onclick="assignClient()">Assign</button>
     </div>
+
+    <h4 style="margin-top: 30px;">Active Assignments</h4>
+    <p id="activeCount" style="margin-bottom: 10px; font-weight: bold;"></p>
+    <table id="activeAssignmentsTable">
+      <thead>
+        <tr>
+          <th>Client ID</th>
+          <th>Assigned To</th>
+          <th>Time Assigned</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="activeAssignmentsBody">
+        <!-- Filled by JS -->
+      </tbody>
+    </table>
+    <div id="mobileActiveAssignmentsBody" class="mobile-cards"></div>
   </div>
   <div id="confirmationModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalMessage">
     <div class="modal-content">
@@ -719,6 +869,20 @@
     <div class="modal-btn-group">
       <button class="modal-btn modal-btn-danger" onclick="confirmRemoveClient()">Confirm Removal</button>
       <button class="modal-btn modal-btn-cancel" onclick="closeRemoveClientModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reassign Client Modal -->
+<div id="reassignModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reassignModalTitle">
+  <div class="modal-content">
+    <h3 id="reassignModalTitle" style="color: var(--accent-color);">Reassign Client</h3>
+    <p id="reassignModalInfo" style="margin-bottom: 15px;"></p>
+    <label for="reassignVolunteerSelect" style="display:block; font-weight:600; margin-bottom:6px;">Select new volunteer:</label>
+    <select id="reassignVolunteerSelect" style="width:100%; margin-bottom:5px;"></select>
+    <div class="modal-btn-group">
+      <button class="modal-btn modal-btn-accent" onclick="confirmReassign()">Confirm Reassign</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeReassignModal()">Cancel</button>
     </div>
   </div>
 </div>

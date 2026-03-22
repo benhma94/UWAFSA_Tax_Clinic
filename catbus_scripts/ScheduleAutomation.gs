@@ -396,6 +396,47 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
       }
     }
 
+    // PHASE 3.5: Ensure every frontline volunteer has a minimum of 3 shift assignments
+    const FRONTLINE_MIN_SHIFTS = SCHEDULE_CONFIG.FRONTLINE_MIN_SHIFTS;
+    Logger.log('Ensuring frontline minimum of ' + FRONTLINE_MIN_SHIFTS + ' shifts...');
+    {
+      const underAssignedFrontline = sortedVolunteers
+        .filter(v => v.roleCategory === 'frontline' &&
+                     volunteerAssignments[v.fullName].length < FRONTLINE_MIN_SHIFTS &&
+                     v.maxShifts >= FRONTLINE_MIN_SHIFTS)
+        .sort((a, b) => volunteerAssignments[a.fullName].length - volunteerAssignments[b.fullName].length);
+
+      for (const vol of underAssignedFrontline) {
+        while (volunteerAssignments[vol.fullName].length < FRONTLINE_MIN_SHIFTS &&
+               volunteerAssignments[vol.fullName].length < vol.maxShifts) {
+          const availableShifts = vol.availability.filter(shiftId =>
+            !schedule[shiftId].includes(vol.fullName)
+          );
+
+          if (availableShifts.length === 0) break;
+
+          availableShifts.sort((a, b) => schedule[a].length - schedule[b].length);
+          const bestShift = availableShifts[0];
+
+          schedule[bestShift].push(vol.fullName);
+          volunteerAssignments[vol.fullName].push(bestShift);
+          shiftRoleCounts[bestShift].frontline++;
+        }
+      }
+
+      const stillUnder = sortedVolunteers.filter(v =>
+        v.roleCategory === 'frontline' &&
+        v.maxShifts >= FRONTLINE_MIN_SHIFTS &&
+        volunteerAssignments[v.fullName].length < FRONTLINE_MIN_SHIFTS
+      );
+      if (stillUnder.length > 0) {
+        Logger.log(`Warning: ${stillUnder.length} frontline volunteers could not reach ${FRONTLINE_MIN_SHIFTS} shifts (limited availability)`);
+        stillUnder.forEach(v => Logger.log(`  ${v.fullName}: ${volunteerAssignments[v.fullName].length}/${FRONTLINE_MIN_SHIFTS} shifts`));
+      } else {
+        Logger.log('All eligible frontline volunteers have at least ' + FRONTLINE_MIN_SHIFTS + ' shifts');
+      }
+    }
+
     // PHASE 4: Fill remaining shifts, balancing role distribution across shifts
     // OPTIMIZED: Build availability index once instead of filtering repeatedly
     const shiftToVolunteers = {};

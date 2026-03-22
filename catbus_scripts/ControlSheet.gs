@@ -28,7 +28,8 @@ function getVolunteersAndClients() {
                                             checkRows, 4).getValues();
           for (let i = 0; i < data.length; i++) {
             const client    = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
-            const volunteer = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
+            const label     = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim() || '';
+            const volunteer = label.includes('–') ? label.split('–')[1].trim() : label;
             const completed = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
             if (volunteer && client && completed !== 'complete') {
               volunteerToClient[volunteer] = client;
@@ -237,7 +238,8 @@ function findAssignmentRow(assignSheet, volunteer, clientID) {
 
   for (let i = 0; i < assignData.length; i++) {
     const c = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
-    const v = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
+    const vRaw = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim() || '';
+    const v = vRaw.includes('–') ? vRaw.split('–')[1].trim() : vRaw;
     if (v === volunteer && c === clientID) {
       return startRow + i;
     }
@@ -249,7 +251,8 @@ function findAssignmentRow(assignSheet, volunteer, clientID) {
                                             olderRows, 4).getValues();
     for (let i = 0; i < olderData.length; i++) {
       const c = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
-      const v = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
+      const vRaw = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim() || '';
+      const v = vRaw.includes('–') ? vRaw.split('–')[1].trim() : vRaw;
       if (v === volunteer && c === clientID) {
         return i + 2;
       }

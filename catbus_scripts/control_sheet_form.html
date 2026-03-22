@@ -578,9 +578,24 @@
       background-color: #27ae60;
       color: white;
     }
-    
+
     .approve-btn:hover {
       background-color: #229954;
+    }
+
+    .in-progress-btn {
+      background-color: #8e44ad;
+      color: white;
+      margin-right: 5px;
+    }
+
+    .in-progress-btn:hover {
+      background-color: #7d3c98;
+    }
+
+    .in-progress-btn:disabled {
+      background-color: #95a5a6;
+      cursor: default;
     }
     
     .review-actions {
@@ -1002,161 +1017,20 @@
       border: 1px solid #f5c6cb;
     }
 
-    /* Reminder Dialog Styles */
-    #reminderModal {
-      display: none;
-      position: fixed;
-      z-index: 2000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.6);
-      overflow: auto;
-      align-items: center;
-      justify-content: center;
+    /* Situation Notes */
+    .situation-chip {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: 600;
+      background-color: var(--accent-color);
+      color: white;
     }
 
-    #reminderModal.show {
-      display: flex;
-    }
-
-    #reminderModal .modal-content {
-      background-color: white;
-      padding: 30px;
-      border-radius: 10px;
-      max-width: 550px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-      animation: slideIn 0.3s ease-out;
-      position: relative;
-    }
-
-    body.dark #reminderModal .modal-content {
-      background-color: var(--input-bg-dark);
-      color: var(--text-color-dark);
-    }
-
-    .reminder-modal-header {
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid var(--accent-color);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .reminder-modal-header h3 {
-      margin: 0;
-      color: var(--accent-color);
-    }
-
-    .reminder-close-btn {
-      background: none;
-      border: none;
-      font-size: 28px;
-      font-weight: bold;
-      color: #999;
-      cursor: pointer;
-      padding: 0;
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-    }
-
-    .reminder-close-btn:hover {
-      color: var(--accent-color);
-    }
-
-    .reminder-modal-body {
-      margin-bottom: 20px;
-    }
-
-    .reminder-message {
-      background-color: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 15px;
-      border-radius: 5px;
-      margin-bottom: 15px;
-      text-align: left;
-    }
-
-    body.dark .reminder-message {
-      background-color: #3d3419;
-      border-left-color: #ffc107;
-    }
-
-    .reminder-message h4 {
-      margin: 0 0 10px 0;
-      color: #856404;
-      font-size: 1.1em;
-    }
-
-    body.dark .reminder-message h4 {
-      color: #ffc107;
-    }
-
-    .reminder-message p {
-      margin: 5px 0;
-      line-height: 1.6;
-      color: #856404;
-    }
-
-    body.dark .reminder-message p {
-      color: #e0d3a8;
-    }
-
-    .reminder-message ul {
-      margin: 10px 0 0 20px;
-      padding: 0;
-      color: #856404;
-    }
-
-    body.dark .reminder-message ul {
-      color: #e0d3a8;
-    }
-
-    .reminder-message li {
-      margin: 5px 0;
+    #situationReminderList li {
+      margin: 4px 0;
       line-height: 1.5;
-    }
-
-    .reminder-message a {
-      color: #856404;
-      text-decoration: underline;
-      font-weight: 500;
-    }
-
-    .reminder-message a:hover {
-      color: #5a4202;
-      text-decoration: underline;
-    }
-
-    body.dark .reminder-message a {
-      color: #ffc107;
-      text-decoration: underline;
-    }
-
-    body.dark .reminder-message a:hover {
-      color: #ffd54f;
-      text-decoration: underline;
-    }
-
-    .reminder-modal-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      padding-top: 15px;
-      border-top: 1px solid var(--border-light);
-    }
-
-    body.dark .reminder-modal-footer {
-      border-top-color: var(--border-dark);
     }
 
     /* Document Checklist Side Panel */
@@ -1449,352 +1323,9 @@
       }
     }
 
-    /* Notification Toast for Internal Messaging */
-    .notification-toast {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: var(--input-bg-light);
-      border-left: 4px solid var(--accent-color);
-      padding: 15px 20px;
-      padding-right: 35px;
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-      z-index: 2500;
-      max-width: 350px;
-      display: none;
-      animation: notificationSlideIn 0.3s ease;
-    }
-
-    @keyframes notificationSlideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-
-    .notification-toast.show {
-      display: block;
-    }
-
-    body.dark .notification-toast {
-      background: var(--input-bg-dark);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-
-    .notification-toast .notif-close-btn {
-      position: absolute;
-      top: 8px;
-      right: 10px;
-      background: none;
-      border: none;
-      font-size: 18px;
-      cursor: pointer;
-      color: #666;
-      padding: 0;
-      line-height: 1;
-    }
-
-    body.dark .notification-toast .notif-close-btn {
-      color: #aaa;
-    }
-
-    .notification-toast .notif-close-btn:hover {
-      color: var(--accent-color);
-    }
-
-    .notification-toast .notif-from {
-      font-weight: bold;
-      color: var(--accent-color);
-      margin-bottom: 5px;
-      font-size: 0.95em;
-    }
-
-    .notification-toast .notif-message {
-      margin-bottom: 10px;
-      line-height: 1.4;
-    }
-
-    body.dark .notification-toast .notif-message {
-      color: var(--text-color-dark);
-    }
-
-    .notification-toast .notif-reply-section {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .notification-toast .notif-reply-section input {
-      flex: 1;
-      padding: 8px 12px;
-      border: 1px solid var(--border-light);
-      border-radius: 4px;
-      font-size: 13px;
-      background: var(--input-bg-light);
-      color: var(--text-color-light);
-    }
-
-    body.dark .notification-toast .notif-reply-section input {
-      background: var(--input-bg-dark);
-      color: var(--text-color-dark);
-      border-color: var(--border-dark);
-    }
-
-    .notification-toast .notif-reply-section input:focus {
-      outline: 2px solid var(--accent-color); outline-offset: 2px;
-      border-color: var(--accent-color);
-    }
-
-    .notification-toast .notif-reply-btn {
-      padding: 8px 14px;
-      font-size: 13px;
-      border-radius: 4px;
-    }
-
-    .notification-toast .notif-dismiss-btn {
-      margin-top: 10px;
-      width: 100%;
-      padding: 8px;
-      font-size: 13px;
-      background: #888;
-    }
-
-    .notification-toast .notif-dismiss-btn:hover {
-      background: #666;
-    }
-
-    /* Message History Toggle Button */
-    .msg-history-toggle-btn {
-      position: fixed;
-      top: 20px;
-      right: 390px;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background-color: var(--accent-color);
-      color: white;
-      border: none;
-      box-shadow: 0 4px 12px rgba(142, 0, 0, 0.3);
-      cursor: pointer;
-      z-index: 2400;
-      font-size: 1.3em;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .msg-history-toggle-btn:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(142, 0, 0, 0.4);
-    }
-
-    .msg-unread-dot {
-      position: absolute;
-      top: -2px;
-      right: -2px;
-      width: 12px;
-      height: 12px;
-      background: #e74c3c;
-      border-radius: 50%;
-      border: 2px solid white;
-      display: none;
-    }
-
-    .msg-unread-dot.show {
-      display: block;
-    }
-
-    body.dark .msg-unread-dot {
-      border-color: var(--input-bg-dark);
-    }
-
-    /* Message History Panel */
-    .msg-history-panel {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      width: 350px;
-      max-height: 60vh;
-      background: var(--input-bg-light);
-      border-left: 4px solid var(--accent-color);
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-      z-index: 2600;
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .msg-history-panel.show {
-      display: flex;
-    }
-
-    body.dark .msg-history-panel {
-      background: var(--input-bg-dark);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-
-    .msg-history-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border-light);
-      font-weight: bold;
-      color: var(--accent-color);
-    }
-
-    body.dark .msg-history-header {
-      border-bottom-color: var(--border-dark);
-    }
-
-    .msg-history-header .msg-close-btn {
-      background: none;
-      border: none;
-      font-size: 18px;
-      cursor: pointer;
-      color: #666;
-      padding: 0;
-      line-height: 1;
-    }
-
-    body.dark .msg-history-header .msg-close-btn {
-      color: #aaa;
-    }
-
-    .msg-history-header .msg-close-btn:hover {
-      color: var(--accent-color);
-    }
-
-    .msg-history-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .msg-bubble {
-      padding: 10px 14px;
-      border-radius: 18px;
-      max-width: 80%;
-      word-wrap: break-word;
-      font-size: 0.9em;
-      line-height: 1.4;
-    }
-
-    .msg-bubble.sent {
-      background: var(--accent-color);
-      color: white;
-      align-self: flex-end;
-      border-bottom-right-radius: 4px;
-    }
-
-    .msg-bubble.received {
-      background: #e9ecef;
-      color: #333;
-      align-self: flex-start;
-      border-bottom-left-radius: 4px;
-    }
-
-    body.dark .msg-bubble.received {
-      background: #3a3a3a;
-      color: #f0f0f0;
-    }
-
-    .msg-history-empty {
-      text-align: center;
-      color: #999;
-      padding: 30px 16px;
-      font-size: 0.9em;
-    }
-
-    body.dark .msg-history-empty {
-      color: #777;
-    }
-
-    .msg-history-input {
-      display: flex;
-      gap: 8px;
-      padding: 10px 16px;
-      border-top: 1px solid var(--border-light);
-    }
-
-    body.dark .msg-history-input {
-      border-top-color: var(--border-dark);
-    }
-
-    .msg-history-input input {
-      flex: 1;
-      padding: 8px 12px;
-      border: 1px solid var(--border-light);
-      border-radius: 20px;
-      font-size: 0.85em;
-      outline: 2px solid var(--accent-color); outline-offset: 2px;
-      background: var(--input-bg-light);
-      color: inherit;
-    }
-
-    body.dark .msg-history-input input {
-      background: var(--input-bg-dark);
-      border-color: var(--border-dark);
-      color: var(--text-color-dark);
-    }
-
-    .msg-history-input input:focus {
-      border-color: var(--accent-color);
-    }
-
-    .msg-history-input button {
-      padding: 8px 14px;
-      background: var(--accent-color);
-      color: white;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-      font-size: 0.85em;
-    }
-
-    .msg-history-input button:hover {
-      opacity: 0.9;
-    }
   </style>
 </head>
 <body class="light" onload="loadDropdowns()">
-  <!-- Message Notification Toast -->
-  <div class="notification-toast" id="messageNotification">
-    <button class="notif-close-btn" onclick="dismissNotification()">&times;</button>
-    <div class="notif-from" id="notificationFrom"></div>
-    <div class="notif-message" id="notificationMessage"></div>
-    <div class="notif-reply-section" id="notifReplySection" style="display: none;">
-      <input type="text" id="quickReplyInput" placeholder="Type a reply..." onkeypress="if(event.key==='Enter')sendQuickReply()">
-      <button class="notif-reply-btn" onclick="sendQuickReply()">Reply</button>
-    </div>
-    <button class="notif-dismiss-btn" onclick="dismissNotification()">Dismiss</button>
-  </div>
-
-  <!-- Message History Toggle Button -->
-  <button class="msg-history-toggle-btn" onclick="toggleMessageHistory()" aria-label="Toggle message history">
-    💬
-    <span class="msg-unread-dot" id="msgUnreadDot"></span>
-  </button>
-
-  <!-- Message History Panel -->
-  <div class="msg-history-panel" id="msgHistoryPanel">
-    <div class="msg-history-header">
-      <span>Messages</span>
-      <button class="msg-close-btn" onclick="closeMessageHistory()">&times;</button>
-    </div>
-    <div class="msg-history-messages" id="msgHistoryMessages">
-      <div class="msg-history-empty">No messages yet.</div>
-    </div>
-    <div class="msg-history-input">
-      <input type="text" id="msgHistoryInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendMessageFromHistory()">
-      <button onclick="sendMessageFromHistory()">Send</button>
-    </div>
-  </div>
-
   <button class="checklist-toggle-btn" onclick="toggleDocumentPanel()" aria-label="Toggle document checklist">
     📋
     <span class="checklist-badge">0/25</span>
@@ -1803,6 +1334,7 @@
   <header>
     <h3>AFSA Tax Clinic Control Sheet</h3>
     <div style="display:flex; gap:10px; align-items:center;">
+      <a class="nav-link" id="homeLink" href="#" style="font-size:0.85em; color:var(--accent-color); text-decoration:none; font-weight:600; opacity:0.8;">🏠 Home</a>
       <button id="breakToggleBtn" style="display:none;" onclick="toggleBreak()">☕ Go On Break</button>
       <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
@@ -1845,6 +1377,11 @@
   <div id="notesContainer" style="display: none; margin-bottom: 20px;">
     <h3 style="margin-bottom: 10px;">Front Desk Notes:</h3>
     <div id="notesDisplay" style="padding: 12px; border-radius: 5px; font-style: italic; min-height: 40px;"></div>
+  </div>
+
+  <div id="situationNotes" style="display: none; margin-bottom: 20px;">
+    <div id="situationChips" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;"></div>
+    <ul id="situationReminderList" style="margin: 0; padding-left: 20px; font-size: 0.9em;"></ul>
   </div>
 
   <h3>Tax Year Details</h3>
@@ -1998,24 +1535,6 @@
     </div>
   </div>
 
-  <!-- Reminder Modal -->
-  <div id="reminderModal" role="dialog" aria-modal="true" aria-labelledby="reminderModalTitle">
-    <div class="modal-content">
-      <div class="reminder-modal-header">
-        <h3 id="reminderModalTitle">📋 Filing Reminders</h3>
-        <button class="reminder-close-btn" onclick="closeReminderDialog()" aria-label="Close">&times;</button>
-      </div>
-      
-      <div class="reminder-modal-body" id="reminderModalBody">
-        <!-- Reminder messages will be inserted here -->
-      </div>
-      
-      <div class="reminder-modal-footer">
-        <button type="button" class="btn btn-primary" onclick="closeReminderDialog()">Got it</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Document Checklist Side Panel -->
   <div id="documentChecklist" aria-hidden="true" role="complementary">
     <div class="panel-header">
@@ -2039,6 +1558,7 @@
 
   <?!= include('shared_scripts') ?>
   <script defer>
+    const WEBSITE_URL = <?!= JSON.stringify(websiteUrl) ?>;
     let volunteerMap = {};        // clientMap: { name: [clientIds] }
     let allVolunteerNames = [];   // all signed-in filers
     let breakStatusMap = {};      // { name: true/false }
@@ -2319,6 +1839,7 @@
     }
 
     function loadDropdowns() {
+      document.getElementById('homeLink').href = WEBSITE_URL;
       google.script.run.withSuccessHandler(data => {
         volunteerMap = data.clientMap || {};
         allVolunteerNames = (data.allFilerNames || Object.keys(volunteerMap)).sort();
@@ -2328,7 +1849,6 @@
       }).getVolunteersAndClients();
       setupVolunteerAutocomplete();
       setInterval(pollHelpStatus, 10000);
-      setInterval(pollMessages, 10000);
       setInterval(pollReviewApproval, 10000);
       // Wire up auto-save on any meaningful form change
       document.addEventListener('change', function(e) {
@@ -2454,6 +1974,7 @@
       currentTrackerStatus = []; // Reset on client change
       if (!clientID) {
         document.getElementById('notesContainer').style.display = 'none';
+        document.getElementById('situationNotes').style.display = 'none';
         return;
       }
 
@@ -2474,7 +1995,11 @@
             document.getElementById('notesContainer').style.display = 'none';
           }
           renderDocumentChecklist();
-          showReminderDialogs(data);
+          if (!document.body.classList.contains('panel-open')) {
+            document.body.classList.add('panel-open');
+            document.getElementById('documentChecklist').setAttribute('aria-hidden', 'false');
+          }
+          showSituationNotes(data);
         })
         .withFailureHandler(error => {
           console.error('Error loading client info:', error);
@@ -2525,6 +2050,7 @@
             </div>
             <div id="reviewActions${rowId}" style="display: none;">
               <div class="review-actions">
+                <button type="button" class="in-progress-btn" id="inProgressBtn${rowId}" onclick="markInProgress('${rowId}')">⏳ In Progress</button>
                 <button type="button" class="return-corrections-btn" onclick="returnForCorrections('${rowId}')">↩ Return for Corrections</button>
                 <button type="button" class="approve-btn" onclick="approveReturn('${rowId}')">✓ Approve</button>
               </div>
@@ -2690,6 +2216,38 @@
         .sendReviewRequest(volunteerNameOnly, clientId, taxYear);
     }
     
+    function markInProgress(rowId) {
+      const volunteer = document.getElementById('volunteer').value.trim();
+
+      if (!volunteer) {
+        showError('Please select a volunteer first.');
+        return;
+      }
+
+      const volunteerNameOnly = volunteer.includes('–')
+        ? volunteer.split('–')[1].trim()
+        : volunteer.trim();
+
+      const btn = document.getElementById(`inProgressBtn${rowId}`);
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Reviewer Here';
+      }
+
+      google.script.run
+        .withSuccessHandler(() => {
+          showMessage('Reviewer is now helping. Request hidden from alert dashboard.');
+        })
+        .withFailureHandler(error => {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = '⏳ In Progress';
+          }
+          showError('Error updating review status: ' + (error.message || error));
+        })
+        .markReviewInProgress(volunteerNameOnly);
+    }
+
     function returnForCorrections(rowId) {
       const volunteer = document.getElementById('volunteer').value.trim();
       
@@ -2744,8 +2302,13 @@
       const filingStatusRadios = row.querySelectorAll('input[type="radio"][name^="filingStatus"]');
       
       // Enable/disable filing status buttons based on whether reviewer is filled
+      // Incomplete never requires a reviewer; EFILE/Paper do
       filingStatusRadios.forEach(radio => {
-        radio.disabled = !reviewerValue;
+        if (radio.value === 'incomplete') {
+          radio.disabled = false;
+        } else {
+          radio.disabled = !reviewerValue;
+        }
       });
     }
 
@@ -2806,11 +2369,16 @@
           return;
         }
 
-        const allItems = document.querySelectorAll('#documentChecklist .checklist-item input[type="checkbox"]');
-        const checkedItems = document.querySelectorAll('#documentChecklist .checklist-item input[type="checkbox"]:checked');
-        if (allItems.length > 0 && checkedItems.length === 0) {
-          showError('Are you sure client has all information? Checklist should not be blank.');
-          return;
+        const allStatusRadios = document.querySelectorAll('#taxYearTable input[type="radio"]:checked');
+        const allIncomplete = allStatusRadios.length > 0 && Array.from(allStatusRadios).every(r => r.value === 'incomplete');
+
+        if (!allIncomplete) {
+          const allItems = document.querySelectorAll('#documentChecklist .checklist-item input[type="checkbox"]');
+          const checkedItems = document.querySelectorAll('#documentChecklist .checklist-item input[type="checkbox"]:checked');
+          if (allItems.length > 0 && checkedItems.length === 0) {
+            showError('Are you sure client has all information? Checklist should not be blank.');
+            return;
+          }
         }
 
         const modal = document.getElementById('confirmModal');
@@ -3249,6 +2817,7 @@
               </div>
               <div id="reviewActions${rowId}" style="display: none;">
                 <div class="review-actions">
+                  <button type="button" class="in-progress-btn" id="inProgressBtn${rowId}" onclick="markInProgress('${rowId}')">⏳ In Progress</button>
                   <button type="button" class="return-corrections-btn" onclick="returnForCorrections('${rowId}')">↩ Return for Corrections</button>
                   <button type="button" class="approve-btn" onclick="approveReturn('${rowId}')">✓ Approve</button>
                 </div>
@@ -3335,9 +2904,9 @@
                           (paperRadio && paperRadio.checked ? paperRadio : 
                           (incompleteRadio && incompleteRadio.checked ? incompleteRadio : null));
       
-      // If a filing status is selected but no reviewer, revert it
-      if (checkedRadio && !reviewerValue) {
-        // Uncheck the selected radio button
+      // If EFILE or Paper is selected but no reviewer, revert it
+      // Incomplete does not require a reviewer
+      if (checkedRadio && checkedRadio.value !== 'incomplete' && !reviewerValue) {
         checkedRadio.checked = false;
         showError('Return must be reviewed before filing');
         return;
@@ -3808,116 +3377,40 @@
       }
     });
 
-    // Reminder Dialog Functions
-    function showReminderDialogs(clientData) {
-      if (!clientData || !clientData.situations || clientData.situations.length === 0) {
-        return; // No reminders if no situations
-      }
+    // Situation Notes (inline chips + bullet list)
+    function showSituationNotes(clientData) {
+      const container = document.getElementById('situationNotes');
+      const chipsEl = document.getElementById('situationChips');
+      const listEl = document.getElementById('situationReminderList');
+      chipsEl.innerHTML = '';
+      listEl.innerHTML = '';
 
-      const reminders = [];
-      const situations = clientData.situations || [];
+      const situations = (clientData?.situations || []).filter(s => s);
+      if (situations.length === 0) { container.style.display = 'none'; return; }
 
-      // Define reminder messages for each situation
-      const reminderMessages = {
-        'Student': {
-          title: 'Student Reminder',
-          message: 'This client is a student. Please ensure you input:',
-          items: [
-            'T2202/T2202A (Tuition and Education Amounts Certificate) DO NOT FORGET MONTHS',
-            'Insurance premiums (including UHIP)'
-          ]
-        },
-        'Employed': {
-          title: 'Employed Reminder',
-          message: 'This client has employment income. Please ensure you input:',
-          items: [
-            'T4 slips'
-          ]
-        },
-        'Children': {
-          title: 'Children Reminder',
-          message: 'This client has children. This return requires senior review. Please ensure you input:',
-          items: [
-            'Dependent information (names, SINs, dates of birth)',
-            'Child care expense receipts',
-          ]
-        },
-        'Newcomer': {
-          title: 'Newcomer Reminder',
-          message: 'This client is a newcomer to Canada.Please ensure you input:',
-          items: [
-            'Date of entry to Canada on the immigrant form',
-            'World income information (if required)',
-            'Assist in filling out RC151'
-          ]
-        },
-        'International Student': {
-          title: 'International Student Reminder',
-          message: 'This client is an international student. Please ensure you input:',
-          items: [
-            'UHIP (University Health Insurance Plan) premiums',
-            'Verify mailing address goes to a non-dormitory address, if a trusted individual is not available, advise them to fill out a request at <a href="https://uwaterloo.ca/international-experience/form/mailing-request" target="_blank">https://uwaterloo.ca/international-experience/form/mailing-request</a> and use that address instead. If they are not able to do this, advise them to contact the International Experience Office to request a change of address.'
-          ]
-        },
-        'First-Time Filer': {
-          title: 'First-Time Filer Reminder',
-          message: 'This client has never filed a tax return before.',
-          items: [
-            'Note appropriately in the CRA questions',
-            'If also an international student, note Immigrant form may be applicable'
-          ]
-        }
+      const reminderItems = {
+        'Student':              ['T2202/T2202A – don\'t forget months', 'Insurance premiums (incl. UHIP)'],
+        'Employed':             ['T4 slips'],
+        'Children':             ['Dependent info (names, SINs, DOBs)', 'Child care expense receipts', 'Requires senior review'],
+        'Newcomer':             ['Date of entry on immigrant form', 'World income (if required)', 'Assist with RC151'],
+        'International Student':['UHIP premiums', 'Verify non-dormitory mailing address'],
+        'First-Time Filer':     ['Note appropriately in CRA questions', 'Immigrant form may apply if also international student'],
       };
 
-      // Collect reminders for applicable situations
-      situations.forEach(situation => {
-        if (reminderMessages[situation]) {
-          reminders.push(reminderMessages[situation]);
-        }
-      });
+      situations.forEach(s => {
+        const chip = document.createElement('span');
+        chip.className = 'situation-chip';
+        chip.textContent = s;
+        chipsEl.appendChild(chip);
 
-      // Show reminder dialog if there are any reminders
-      if (reminders.length > 0) {
-        displayReminderDialog(reminders);
-      }
-    }
-
-    function displayReminderDialog(reminders) {
-      const modalBody = document.getElementById('reminderModalBody');
-      modalBody.innerHTML = ''; // Clear any existing content
-
-      // Create reminder messages for each situation
-      reminders.forEach((reminder, index) => {
-        const reminderDiv = document.createElement('div');
-        reminderDiv.className = 'reminder-message';
-        
-        const title = document.createElement('h4');
-        title.textContent = reminder.title;
-        
-        const message = document.createElement('p');
-        message.textContent = reminder.message;
-        
-        const list = document.createElement('ul');
-        reminder.items.forEach(item => {
-          const listItem = document.createElement('li');
-          listItem.innerHTML = item; // Use innerHTML to allow HTML links
-          list.appendChild(listItem);
+        (reminderItems[s] || []).forEach(note => {
+          const li = document.createElement('li');
+          li.textContent = note;
+          listEl.appendChild(li);
         });
-        
-        reminderDiv.appendChild(title);
-        reminderDiv.appendChild(message);
-        reminderDiv.appendChild(list);
-        modalBody.appendChild(reminderDiv);
       });
 
-      // Show the modal
-      const modal = document.getElementById('reminderModal');
-      modal.classList.add('show');
-    }
-
-    function closeReminderDialog() {
-      const modal = document.getElementById('reminderModal');
-      modal.classList.remove('show');
+      container.style.display = 'block';
     }
 
     // Close modals on Escape key
@@ -3926,7 +3419,6 @@
         if (document.getElementById('confirmModal').style.display === 'flex') closeModal();
         if (document.getElementById('cancelClientModal').style.display === 'flex') closeCancelModal();
         if (document.getElementById('emailReceiptModal').style.display === 'flex') closeEmailReceiptDialog();
-        if (document.getElementById('reminderModal').classList.contains('show')) closeReminderDialog();
       }
     });
 
@@ -3981,6 +3473,13 @@
           'Charitable donation receipts',
           'Child care expense receipts',
           'Moving expense receipts'
+        ]
+      },
+      {
+        id: 'other',
+        title: 'Other',
+        items: [
+          'Foreign income'
         ]
       },
     ];
@@ -4200,170 +3699,6 @@
       renderDocumentChecklist();
     });
 
-    // ===== INTERNAL MESSAGING SYSTEM =====
-    let currentNotification = null;
-
-    /**
-     * Toggles the message history panel visibility
-     */
-    function toggleMessageHistory() {
-      const panel = document.getElementById('msgHistoryPanel');
-      if (panel.classList.contains('show')) {
-        closeMessageHistory();
-      } else {
-        panel.classList.add('show');
-        loadMessageHistory();
-      }
-    }
-
-    /**
-     * Closes the message history panel
-     */
-    function closeMessageHistory() {
-      document.getElementById('msgHistoryPanel').classList.remove('show');
-    }
-
-    /**
-     * Sends a new message from the volunteer to the manager
-     */
-    function sendMessageFromHistory() {
-      var input = document.getElementById('msgHistoryInput');
-      var text = input.value.trim();
-      var volunteer = document.getElementById('volunteer').value;
-
-      if (!text || !volunteer) return;
-
-      input.disabled = true;
-
-      google.script.run
-        .withSuccessHandler(function() {
-          input.value = '';
-          input.disabled = false;
-          loadMessageHistory();
-        })
-        .withFailureHandler(function() {
-          input.disabled = false;
-          alert('Failed to send message.');
-        })
-        .replyToMessage(volunteer, text, null);
-    }
-
-    /**
-     * Loads message history from the backend and renders chat bubbles
-     */
-    function loadMessageHistory() {
-      const volunteer = document.getElementById('volunteer').value;
-      if (!volunteer) {
-        document.getElementById('msgHistoryMessages').innerHTML =
-          '<div class="msg-history-empty">Select a volunteer to view messages.</div>';
-        return;
-      }
-
-      document.getElementById('msgHistoryMessages').innerHTML =
-        '<div class="msg-history-empty">Loading...</div>';
-
-      google.script.run
-        .withSuccessHandler(function(messages) {
-          const container = document.getElementById('msgHistoryMessages');
-          if (!messages || messages.length === 0) {
-            container.innerHTML = '<div class="msg-history-empty">No messages yet.</div>';
-            return;
-          }
-
-          let html = '';
-          messages.forEach(function(msg) {
-            const bubbleClass = msg.fromRole === 'Volunteer' ? 'sent' : 'received';
-            html += '<div class="msg-bubble ' + bubbleClass + '">' + escapeHtml(msg.message) + '</div>';
-          });
-
-          container.innerHTML = html;
-          container.scrollTop = container.scrollHeight;
-        })
-        .withFailureHandler(function() {
-          document.getElementById('msgHistoryMessages').innerHTML =
-            '<div class="msg-history-empty">Failed to load messages.</div>';
-        })
-        .getConversationWithVolunteer(volunteer);
-    }
-
-    /**
-     * Polls for new messages - only when volunteer has a client selected
-     */
-    function pollMessages() {
-      const volunteer = document.getElementById('volunteer').value;
-      const client = document.getElementById('client').value;
-
-      // Only poll if volunteer has an active client
-      if (!volunteer || !client) return;
-
-      google.script.run
-        .withSuccessHandler(handleNewMessages)
-        .withFailureHandler(function(err) { console.log('Message poll error:', err); })
-        .getUnreadMessages(volunteer);
-    }
-
-    function handleNewMessages(messages) {
-      if (!messages || messages.length === 0) {
-        document.getElementById('msgUnreadDot').classList.remove('show');
-        return;
-      }
-
-      // Show unread indicator on toggle button
-      document.getElementById('msgUnreadDot').classList.add('show');
-
-      // Show the most recent unread message
-      var latestMessage = messages[messages.length - 1];
-      showMessageNotification(latestMessage);
-    }
-
-    function showMessageNotification(message) {
-      currentNotification = message;
-
-      document.getElementById('notificationFrom').textContent = 'Message from ' + message.fromName;
-      document.getElementById('notificationMessage').textContent = message.message;
-
-      // Show reply option for chat messages only
-      var replySection = document.getElementById('notifReplySection');
-      replySection.style.display = message.messageType === 'chat' ? 'flex' : 'none';
-
-      document.getElementById('messageNotification').classList.add('show');
-    }
-
-    function dismissNotification() {
-      if (currentNotification) {
-        // Mark as read in backend
-        google.script.run.markMessageAsRead(currentNotification.rowIndex);
-      }
-
-      document.getElementById('messageNotification').classList.remove('show');
-      currentNotification = null;
-
-      // Check for more messages after a short delay
-      setTimeout(pollMessages, 500);
-    }
-
-    function sendQuickReply() {
-      var input = document.getElementById('quickReplyInput');
-      var reply = input.value.trim();
-      var volunteer = document.getElementById('volunteer').value;
-
-      if (!reply || !currentNotification || !volunteer) return;
-
-      input.disabled = true;
-
-      google.script.run
-        .withSuccessHandler(function() {
-          input.value = '';
-          input.disabled = false;
-          dismissNotification();
-        })
-        .withFailureHandler(function(err) {
-          input.disabled = false;
-          console.error('Reply error:', err);
-          alert('Failed to send reply');
-        })
-        .replyToMessage(volunteer, reply, currentNotification.conversationId);
-    }
   </script>
 <div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
 </body>

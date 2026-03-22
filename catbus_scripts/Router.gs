@@ -55,18 +55,18 @@ function doGet(e) {
 
   switch (app) {
     case 'intake':
-      return loadPage('catbus_intake_form', 'AFSA Tax Clinic Intake Form', { xframe: ALLOW });
+      return loadPage('catbus_intake_form', 'AFSA Tax Clinic Intake Form', { xframe: ALLOW, vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL } });
     case 'queue':
-      return loadPage('queue_dashboard', 'Tax Clinic Queue Master Dashboard', { xframe: ALLOW });
+      return loadPage('queue_dashboard', 'Tax Clinic Queue Master Dashboard', { xframe: ALLOW, vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL } });
     case 'control':
-      return loadPage('control_sheet_form', 'AFSA Tax Clinic Control Sheet', { xframe: ALLOW });
+      return loadPage('control_sheet_form', 'AFSA Tax Clinic Control Sheet', { xframe: ALLOW, vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL } });
     case 'admin':
-      return loadPage('admin_dashboard', 'Admin Dashboard', { vars: { baseUrl } });
+      return loadPage('admin_dashboard', 'Admin Dashboard', { vars: { baseUrl, adminWebsiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/admin' } });
     case 'alerts':
-      return loadPage('alert_dashboard', 'Alert Dashboard', { vars: { baseUrl } });
+      return loadPage('alert_dashboard', 'Alert Dashboard', { vars: { baseUrl, adminWebsiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/admin' } });
     case 'signin':
     case 'signinout':
-      return loadPage('volunteer_signinout', 'Volunteer Sign-In / Sign-Out');
+      return loadPage('volunteer_signinout', 'Volunteer Sign-In / Sign-Out', { vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL } });
     case 'messaging':
       return loadPage('messaging_admin', 'CATBUS Messaging', {
         vars: { baseUrl, initialVolunteer: (e?.parameter?.volunteer || '').trim() }

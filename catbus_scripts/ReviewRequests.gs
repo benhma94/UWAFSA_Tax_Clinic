@@ -24,8 +24,22 @@ function cancelReviewRequest(volunteer) {
   return updateRequestStatus(
     volunteer,
     'REVIEW',
-    CONFIG.REVIEW_STATUS.REQUESTED,
+    [CONFIG.REVIEW_STATUS.REQUESTED, CONFIG.REVIEW_STATUS.IN_PROGRESS],
     CONFIG.REVIEW_STATUS.CANCELLED
+  );
+}
+
+/**
+ * Marks a review request as In Progress (claimed by a reviewer from the alert dashboard)
+ * @param {string} volunteer - Volunteer name
+ * @returns {boolean} True if successful
+ */
+function markReviewInProgress(volunteer) {
+  return updateRequestStatus(
+    volunteer,
+    'REVIEW',
+    CONFIG.REVIEW_STATUS.REQUESTED,
+    CONFIG.REVIEW_STATUS.IN_PROGRESS
   );
 }
 
@@ -97,7 +111,7 @@ function approveReviewRemotely(volunteer, reviewerName) {
     for (let i = data.length - 1; i >= 0; i--) {
       const v = data[i][cols.VOLUNTEER]?.toString().trim();
       const status = data[i][cols.STATUS]?.toString().trim();
-      if (v === volunteer && status === CONFIG.REVIEW_STATUS.REQUESTED) {
+      if (v === volunteer && (status === CONFIG.REVIEW_STATUS.REQUESTED || status === CONFIG.REVIEW_STATUS.IN_PROGRESS)) {
         const rowNum = startRow + i;
         sheet.getRange(rowNum, cols.STATUS + 1).setValue(CONFIG.REVIEW_STATUS.APPROVED);
         sheet.getRange(rowNum, cols.REVIEWER_OR_REASON + 1).setValue(reviewerName);
@@ -134,7 +148,7 @@ function returnReviewRemotely(volunteer, reason) {
     for (let i = data.length - 1; i >= 0; i--) {
       const v = data[i][cols.VOLUNTEER]?.toString().trim();
       const status = data[i][cols.STATUS]?.toString().trim();
-      if (v === volunteer && status === CONFIG.REVIEW_STATUS.REQUESTED) {
+      if (v === volunteer && (status === CONFIG.REVIEW_STATUS.REQUESTED || status === CONFIG.REVIEW_STATUS.IN_PROGRESS)) {
         const rowNum = startRow + i;
         sheet.getRange(rowNum, cols.STATUS + 1).setValue(CONFIG.REVIEW_STATUS.RETURNED);
         sheet.getRange(rowNum, cols.REVIEWER_OR_REASON + 1).setValue(reason);
@@ -211,10 +225,37 @@ function completeReviewApproval(volunteer) {
 }
 
 /**
+ * Builds a map of volunteer name → station string from the Volunteer List sheet.
+ * @returns {Object} { volunteerName: stationString }
+ */
+function getVolunteerStationMap_() {
+  const map = {};
+  try {
+    const sheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return map;
+    const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+    for (const row of data) {
+      const name = row[CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
+      const station = row[CONFIG.COLUMNS.VOLUNTEER_LIST.STATION]?.toString().trim();
+      if (name && station) map[name] = station;
+    }
+  } catch (e) {}
+  return map;
+}
+
+/**
  * Gets enriched live review requests for the reviewer dashboard page
- * Returns only 'Requested' status with full context (clientId, taxYear)
+ * Returns only 'Requested' status with full context (clientId, taxYear, station)
  * @returns {Array<Object>} Array of enriched review request objects
  */
 function getReviewDashboardData() {
-  return getLiveReviewRequests(); // already returns clientId + taxYear via updated getLiveRequests
+  const stationMap = getVolunteerStationMap_();
+  return getLiveReviewRequests().map(req => {
+    const intake = req.clientId ? getClientIntakeInfo(req.clientId) : null;
+    return Object.assign({}, req, {
+      needsSeniorReview: intake?.needsSeniorReview || false,
+      station: stationMap[req.volunteer] || ''
+    });
+  });
 }
