@@ -95,7 +95,6 @@
   </style>
 </head>
 <body class="light">
-  <?!= include('_PasswordGate') ?>
   <header>
     <div>
       <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
@@ -220,23 +219,41 @@
       .cancelReviewRequest(volunteer);
   }
 
+  var isPageVisible = true;
+  var refreshTimer = null;
+
   function refresh() {
     google.script.run
       .withSuccessHandler(function(data) {
         render(data.helpRequests);
         renderReviewRequests(data.reviewRequests);
-        setTimeout(refresh, 3000);
       })
-      .withFailureHandler(function() {
-        setTimeout(refresh, 3000);
-      })
+      .withFailureHandler(function() {})
       .getAlertDashboardData();
   }
 
+  function startAutoRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    var jitter = Math.floor(Math.random() * 2000);
+    refreshTimer = setInterval(refresh, 3000 + jitter);
+  }
+
+  // Pause refresh when page is not visible
+  document.addEventListener('visibilitychange', function() {
+    isPageVisible = !document.hidden;
+    if (isPageVisible) {
+      startAutoRefresh();
+      refresh(); // Refresh immediately when page becomes visible
+    } else {
+      if (refreshTimer) clearInterval(refreshTimer);
+    }
+  });
+
   window.addEventListener('load', function() {
     refresh();
+    startAutoRefresh();
   });
 </script>
-<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2026 All rights reserved.</span></div>
 </body>
 </html>

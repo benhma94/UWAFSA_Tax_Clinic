@@ -387,6 +387,61 @@ function getSeniorTeamMembers(seniorName) {
 }
 
 /**
+ * Gets personal tax return stats for a volunteer
+ * @param {string} volunteerName - Exact volunteer name (case-insensitive match)
+ * @param {string} filterDateStr - Optional clinic day label string (e.g. "Saturday March 21 2026")
+ *   to filter stats to a specific day. If omitted, only all-time count is returned.
+ * @returns {Object} { returnsAllTime, returnsFiltered } — returnsFiltered is null if no filterDateStr
+ */
+function getVolunteerPersonalStats(volunteerName, filterDateStr) {
+  try {
+    const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return { returnsAllTime: 0, returnsFiltered: null };
+
+    const cols = CONFIG.COLUMNS.TAX_RETURN_TRACKER;
+    const numCols = cols.INCOMPLETE + 1;
+    const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+
+    const nameLower = volunteerName.toLowerCase();
+    let filterDate = null;
+    if (filterDateStr) {
+      filterDate = new Date(filterDateStr);
+    }
+
+    let returnsAllTime = 0;
+    let returnsFiltered = filterDate ? 0 : null;
+
+    for (const row of data) {
+      const rowVolunteer = (row[cols.VOLUNTEER] || '').toString().trim().toLowerCase();
+      if (rowVolunteer !== nameLower) continue;
+
+      const efile = (row[cols.EFILE] || '').toString().toLowerCase() === 'yes';
+      const paper = (row[cols.PAPER] || '').toString().toLowerCase() === 'yes';
+      const incomplete = (row[cols.INCOMPLETE] || '').toString().toLowerCase() === 'yes';
+      if ((!efile && !paper) || incomplete) continue;
+
+      const married = (row[cols.MARRIED] || '').toString().toLowerCase() === 'yes';
+      const increment = married ? 2 : 1;
+
+      returnsAllTime += increment;
+
+      if (filterDate) {
+        const timestamp = row[cols.TIMESTAMP];
+        if (timestamp && new Date(timestamp).toDateString() === filterDate.toDateString()) {
+          returnsFiltered += increment;
+        }
+      }
+    }
+
+    return { returnsAllTime, returnsFiltered };
+  } catch (e) {
+    Logger.log('Error in getVolunteerPersonalStats: ' + e.message);
+    return { returnsAllTime: 0, returnsFiltered: null };
+  }
+}
+
+/**
  * Simplifies date format from "Saturday March 21" to "Sat, Mar 21"
  * @param {string} dateString - Full date string
  * @returns {string} Simplified date string

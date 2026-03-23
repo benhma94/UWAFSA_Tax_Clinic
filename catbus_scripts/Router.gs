@@ -55,27 +55,23 @@ function doGet(e) {
 
   switch (app) {
     case 'intake':
-      return loadPage('catbus_intake_form', 'AFSA Tax Clinic Intake Form', { xframe: ALLOW, vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL } });
+      return loadPage('catbus_intake_form', 'AFSA Tax Clinic Intake Form', { xframe: ALLOW, vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/catbus' } });
     case 'queue':
-      return loadPage('queue_dashboard', 'Tax Clinic Queue Master Dashboard', { xframe: ALLOW, vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL } });
+      return loadPage('queue_dashboard', 'Tax Clinic Queue Master Dashboard', { xframe: ALLOW, vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/catbus' } });
     case 'control':
-      return loadPage('control_sheet_form', 'AFSA Tax Clinic Control Sheet', { xframe: ALLOW, vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL } });
+      return loadPage('control_sheet_form', 'AFSA Tax Clinic Control Sheet', { xframe: ALLOW, vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/catbus' } });
     case 'admin':
       return loadPage('admin_dashboard', 'Admin Dashboard', { vars: { baseUrl, adminWebsiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/admin' } });
     case 'alerts':
       return loadPage('alert_dashboard', 'Alert Dashboard', { vars: { baseUrl, adminWebsiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/admin' } });
     case 'signin':
     case 'signinout':
-      return loadPage('volunteer_signinout', 'Volunteer Sign-In / Sign-Out', { vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL } });
-    case 'messaging':
-      return loadPage('messaging_admin', 'CATBUS Messaging', {
-        vars: { baseUrl, initialVolunteer: (e?.parameter?.volunteer || '').trim() }
-      });
-    case 'reviewer':
-      return loadPage('reviewer_page', 'CATBUS Reviewer Dashboard', { xframe: ALLOW });
+      return loadPage('volunteer_signinout', 'Volunteer Sign-In / Sign-Out', { vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/catbus' } });
+    case 'volunteer':
+      return loadPage('volunteer_dashboard', 'Volunteer Dashboard', { xframe: ALLOW });
     case 'schedule':
     case 'scheduleviewer':
-      return loadPage('volunteer_schedule_dashboard', 'Volunteer Schedule Viewer', { xframe: ALLOW });
+      return loadPage('volunteer_schedule_dashboard', 'Schedule by Day', { xframe: ALLOW });
     case 'assignment':
       return loadPage('schedule_dashboard', 'Tax Clinic Schedule Generator', { xframe: ALLOW });
     case 'availability':

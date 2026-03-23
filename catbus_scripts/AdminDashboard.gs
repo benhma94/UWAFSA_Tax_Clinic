@@ -125,6 +125,7 @@ function getActiveReturns() {
     const todayDayNum = getTodayClinicDayIndex_() + 1; // 1–4, or 0 if not a clinic day
     const currentSlotKey = getCurrentSlotKey_();        // 'A'|'B'|'C'|null
     const scheduleMap = buildVolunteerScheduleMap_();   // name → Set<shiftId>
+    const stationMap = getVolunteerStationMap_();       // name → station string
     const slotOrder = ['A', 'B', 'C'];
 
     // Read CLIENT_ASSIGNMENT sheet for active (non-complete) assignments
@@ -145,7 +146,7 @@ function getActiveReturns() {
       const clientId = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
       const volunteer = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
       const completed = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
-      if (volunteer && clientId && completed !== 'complete') {
+      if (volunteer && clientId && !completed) {
         activeMap[volunteer] = { clientId, assignedTimestamp: timestamp };
       }
     }
@@ -160,9 +161,21 @@ function getActiveReturns() {
         const clientId = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
         const volunteer = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
         const completed = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
-        if (volunteer && clientId && completed !== 'complete' && !activeMap[volunteer]) {
+        if (volunteer && clientId && !completed && !activeMap[volunteer]) {
           activeMap[volunteer] = { clientId, assignedTimestamp: timestamp };
         }
+      }
+    }
+
+    // Remove quiz-station volunteers (practice returns, not real)
+    // Check both the stored "Station Quiz – Name" prefix AND the current station map
+    for (const volunteer of Object.keys(activeMap)) {
+      const baseName = volunteer.includes('–') ? volunteer.split('–')[1].trim() : volunteer.trim();
+      const stationFromPrefix = volunteer.includes('–')
+        ? volunteer.split('–')[0].replace(/station/i, '').trim().toLowerCase()
+        : '';
+      if (stationFromPrefix === 'quiz' || (stationMap[baseName] || '').toLowerCase() === 'quiz') {
+        delete activeMap[volunteer];
       }
     }
 
@@ -224,25 +237,52 @@ function getActiveReturns() {
 
 /**
  * Gets admin dashboard data (stats + active returns, no alerts)
+ * @param {string} [selectedDateStr] - Optional clinic date string to filter "today" data (e.g. "Saturday, March 21, 2026"). Omit for actual today.
  * @returns {Object} Dashboard datasets
  */
-function getAdminDashboardData() {
+function getAdminDashboardData(selectedDateStr) {
+  // Parse optional date filter
+  let filterDate = null;
+  if (selectedDateStr) {
+    filterDate = new Date(selectedDateStr);
+    filterDate.setHours(0, 0, 0, 0);
+  }
+
+  // Read tracker data once and pass to all three functions that need it
+  const trackerData = readTrackerData_();
   return {
     activeReturns: getActiveReturns(),
-    returnSummary: getReturnSummaryCached(),
-    performanceMetrics: getVolunteerPerformanceMetrics(),
-    reviewerLeaderboard: getReviewerLeaderboard()
+    returnSummary: filterDate
+      ? getReturnSummary(trackerData, filterDate)
+      : getReturnSummaryCached(trackerData),
+    performanceMetrics: getVolunteerPerformanceMetrics(trackerData, filterDate),
+    reviewerLeaderboard: getReviewerLeaderboard(trackerData, filterDate),
+    clinicDays: ELIGIBILITY_CONFIG.CLINIC_DATES
   };
+}
+
+/**
+ * Reads the Tax Return Tracker sheet data once for shared use.
+ * @returns {{ data: Array[], lastRow: number }}
+ */
+function readTrackerData_() {
+  const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return { data: [], lastRow: lastRow };
+  const numRows = lastRow - 1;
+  const numCols = CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1;
+  const data = sheet.getRange(2, 1, numRows, numCols).getValues();
+  return { data: data, lastRow: lastRow };
 }
 
 /**
  * Gets return completion summary with caching
  * @returns {Object} Summary with totalCompleted, completedToday, and hourlyCounts
  */
-function getReturnSummaryCached() {
+function getReturnSummaryCached(trackerData) {
   return getCachedOrFetch(
     CACHE_CONFIG.KEYS.RETURN_SUMMARY,
-    () => getReturnSummary(),
+    () => getReturnSummary(trackerData, null),
     CACHE_CONFIG.TTL.RETURN_SUMMARY
   );
 }
@@ -250,14 +290,24 @@ function getReturnSummaryCached() {
 /**
  * Gets return completion summary
  * Optimized to read only necessary columns and rows
+ * @param {Object} trackerData - Pre-read tracker data
+ * @param {Date|null} filterDate - Optional date to filter "today" data; null = actual today
  * @returns {Object} Summary with totalCompleted, completedToday, and hourlyCounts
  */
-function getReturnSummary() {
+function getReturnSummary(trackerData, filterDate) {
   return safeExecute(() => {
-    const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
-    const lastRow = sheet.getLastRow();
+    // Use pre-read data if available, otherwise read from sheet
+    var data;
+    if (trackerData && trackerData.data) {
+      data = trackerData.data;
+    } else {
+      const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+      const lastRow = sheet.getLastRow();
+      if (lastRow <= 1) return { totalCompleted: 0, completedToday: 0, hourlyCounts: {} };
+      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1).getValues();
+    }
 
-    if (lastRow <= 1) {
+    if (!data.length) {
       return {
         totalCompleted: 0,
         completedToday: 0,
@@ -265,13 +315,8 @@ function getReturnSummary() {
       };
     }
 
-    const today = new Date();
+    const today = filterDate ? new Date(filterDate) : new Date();
     today.setHours(0, 0, 0, 0);
-
-    // Read all columns so we can use config-based indices
-    const numRows = lastRow - 1;
-    const numCols = CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1; // Read up to PAPER column
-    const data = sheet.getRange(2, 1, numRows, numCols).getValues();
 
     let totalCompleted = 0;
     let completedToday = 0;
@@ -281,9 +326,11 @@ function getReturnSummary() {
       const timestamp = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.TIMESTAMP];
       const efile = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.EFILE]?.toString().toLowerCase() === 'yes';
       const paper = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER]?.toString().toLowerCase() === 'yes';
+      const married = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.MARRIED]?.toString().toLowerCase() === 'yes';
+      const increment = married ? 2 : 1;
 
       if (efile || paper) {
-        totalCompleted++;
+        totalCompleted += increment;
 
         if (timestamp instanceof Date) {
           const ts = new Date(timestamp);
@@ -292,10 +339,10 @@ function getReturnSummary() {
                          ts.getDate() === today.getDate();
 
           if (sameDay) {
-            completedToday++;
+            completedToday += increment;
 
             const hour = ts.getHours();
-            hourlyCounts[hour] = (hourlyCounts[hour] || 0) + 1;
+            hourlyCounts[hour] = (hourlyCounts[hour] || 0) + increment;
           }
         }
       }
@@ -311,15 +358,25 @@ function getReturnSummary() {
 
 /**
  * Gets volunteer performance metrics
- * Shows returns completed per volunteer with all-time and today stats
+ * Shows returns completed per volunteer with all-time and selected-day stats
+ * @param {Object} trackerData - Pre-read tracker data
+ * @param {Date|null} filterDate - Optional date to filter "today" data; null = actual today
  * @returns {Object} Performance data with topVolunteers and todayVolunteers arrays
  */
-function getVolunteerPerformanceMetrics() {
+function getVolunteerPerformanceMetrics(trackerData, filterDate) {
   return safeExecute(() => {
-    const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
-    const lastRow = sheet.getLastRow();
+    // Use pre-read data if available, otherwise read from sheet
+    var data;
+    if (trackerData && trackerData.data) {
+      data = trackerData.data;
+    } else {
+      const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+      const lastRow = sheet.getLastRow();
+      if (lastRow <= 1) return { topVolunteers: [], todayVolunteers: [], totalVolunteers: 0, avgReturnsPerVolunteer: 0 };
+      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1).getValues();
+    }
 
-    if (lastRow <= 1) {
+    if (!data.length) {
       return {
         topVolunteers: [],
         todayVolunteers: [],
@@ -328,12 +385,8 @@ function getVolunteerPerformanceMetrics() {
       };
     }
 
-    const today = new Date();
+    const today = filterDate ? new Date(filterDate) : new Date();
     today.setHours(0, 0, 0, 0);
-
-    // Read necessary columns: Timestamp, Volunteer, EFILE, PAPER
-    const numRows = lastRow - 1;
-    const data = sheet.getRange(2, 1, numRows, 9).getValues();
 
     const volunteerCounts = {}; // All-time counts
     const volunteerCountsToday = {}; // Today's counts
@@ -343,11 +396,13 @@ function getVolunteerPerformanceMetrics() {
       const volunteer = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.VOLUNTEER]?.toString().trim();
       const efile = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.EFILE]?.toString().toLowerCase() === 'yes';
       const paper = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER]?.toString().toLowerCase() === 'yes';
+      const married = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.MARRIED]?.toString().toLowerCase() === 'yes';
+      const increment = married ? 2 : 1;
 
       if (!volunteer || (!efile && !paper)) continue;
 
       // All-time counting
-      volunteerCounts[volunteer] = (volunteerCounts[volunteer] || 0) + 1;
+      volunteerCounts[volunteer] = (volunteerCounts[volunteer] || 0) + increment;
 
       // Today counting
       if (timestamp instanceof Date) {
@@ -357,7 +412,7 @@ function getVolunteerPerformanceMetrics() {
                        ts.getDate() === today.getDate();
 
         if (sameDay) {
-          volunteerCountsToday[volunteer] = (volunteerCountsToday[volunteer] || 0) + 1;
+          volunteerCountsToday[volunteer] = (volunteerCountsToday[volunteer] || 0) + increment;
         }
       }
     }
@@ -391,21 +446,119 @@ function getVolunteerPerformanceMetrics() {
  * Counts each reviewer once per return even if they appear in both REVIEWER and SECONDARY_REVIEWER.
  * @returns {Object} topReviewers and todayReviewers arrays
  */
-function getReviewerLeaderboard() {
-  return safeExecute(() => {
-    const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
-    const lastRow = sheet.getLastRow();
+/**
+ * Scans Tax Return Tracker for duplicate rows (same CLIENT_ID + TAX_YEAR).
+ * Read-only preview — does not delete anything.
+ * @returns {Object} { total: number, duplicates: Array<{clientId, taxYear, count}> }
+ */
+function findDuplicateReturns() {
+  const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return { total: 0, duplicates: [] };
 
-    if (lastRow <= 1) {
+  const cols = CONFIG.COLUMNS.TAX_RETURN_TRACKER;
+  const data = sheet.getRange(2, 1, lastRow - 1, cols.PAPER + 1).getValues();
+
+  const groups = {};
+  for (let i = 0; i < data.length; i++) {
+    const clientId = data[i][cols.CLIENT_ID]?.toString().trim();
+    const taxYear = data[i][cols.TAX_YEAR]?.toString().trim();
+    if (!clientId || !taxYear) continue;
+    const key = clientId + '|' + taxYear;
+    groups[key] = (groups[key] || 0) + 1;
+  }
+
+  const duplicates = [];
+  let total = 0;
+  for (const [key, count] of Object.entries(groups)) {
+    if (count <= 1) continue;
+    const [clientId, taxYear] = key.split('|');
+    const extras = count - 1;
+    duplicates.push({ clientId, taxYear, count: extras });
+    total += extras;
+  }
+
+  return { total, duplicates };
+}
+
+/**
+ * Finds and removes duplicate rows in Tax Return Tracker.
+ * Duplicates = same CLIENT_ID + TAX_YEAR. Keeps the most recent (latest timestamp).
+ * Deletes rows bottom-up to preserve indices.
+ * @returns {Object} { removed: number, duplicates: Array<{clientId, taxYear, kept}> }
+ */
+function removeDuplicateReturns() {
+  const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return { removed: 0, duplicates: [] };
+
+  const cols = CONFIG.COLUMNS.TAX_RETURN_TRACKER;
+  const numCols = cols.PAPER + 1;
+  const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+
+  // Group rows by CLIENT_ID + TAX_YEAR key
+  const groups = {};
+  for (let i = 0; i < data.length; i++) {
+    const clientId = data[i][cols.CLIENT_ID]?.toString().trim();
+    const taxYear = data[i][cols.TAX_YEAR]?.toString().trim();
+    if (!clientId || !taxYear) continue;
+
+    const key = clientId + '|' + taxYear;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push({ rowIndex: i + 2, timestamp: data[i][cols.TIMESTAMP] }); // +2 for 1-indexed + header
+  }
+
+  // Find rows to delete (keep most recent per group)
+  const rowsToDelete = [];
+  const duplicateInfo = [];
+  for (const [key, rows] of Object.entries(groups)) {
+    if (rows.length <= 1) continue;
+
+    // Sort by timestamp descending — keep the first (most recent)
+    rows.sort((a, b) => {
+      const ta = a.timestamp instanceof Date ? a.timestamp.getTime() : 0;
+      const tb = b.timestamp instanceof Date ? b.timestamp.getTime() : 0;
+      return tb - ta;
+    });
+
+    const [clientId, taxYear] = key.split('|');
+    duplicateInfo.push({ clientId, taxYear, kept: rows.length - 1 });
+
+    for (let i = 1; i < rows.length; i++) {
+      rowsToDelete.push(rows[i].rowIndex);
+    }
+  }
+
+  // Delete from bottom up to preserve row indices
+  rowsToDelete.sort((a, b) => b - a);
+  for (const row of rowsToDelete) {
+    sheet.deleteRow(row);
+  }
+
+  return { removed: rowsToDelete.length, duplicates: duplicateInfo };
+}
+
+function getReviewerLeaderboard(trackerData, filterDate) {
+  return safeExecute(() => {
+    // Use pre-read data if available, otherwise read from sheet
+    var data;
+    if (trackerData && trackerData.data) {
+      data = trackerData.data;
+    } else {
+      const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+      const lastRow = sheet.getLastRow();
+      if (lastRow <= 1) return { topReviewers: [], todayReviewers: [] };
+      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1).getValues();
+    }
+
+    if (!data.length) {
       return { topReviewers: [], todayReviewers: [] };
     }
 
-    const today = new Date();
+    const today = filterDate ? new Date(filterDate) : new Date();
     today.setHours(0, 0, 0, 0);
 
     const cols = CONFIG.COLUMNS.TAX_RETURN_TRACKER;
-    const numRows = lastRow - 1;
-    const data = sheet.getRange(2, 1, numRows, cols.PAPER + 1).getValues();
 
     const allTimeCounts = {};
     const todayCounts = {};
@@ -414,6 +567,8 @@ function getReviewerLeaderboard() {
       const reviewer = data[i][cols.REVIEWER]?.toString().trim();
       const secondary = data[i][cols.SECONDARY_REVIEWER]?.toString().trim();
       const timestamp = data[i][cols.TIMESTAMP];
+      const married = data[i][cols.MARRIED]?.toString().toLowerCase() === 'yes';
+      const increment = married ? 2 : 1;
 
       if (!reviewer && !secondary) continue;
 
@@ -428,8 +583,8 @@ function getReviewerLeaderboard() {
       if (secondary && secondary.toLowerCase() !== reviewer?.toLowerCase()) reviewersThisRow.add(secondary);
 
       reviewersThisRow.forEach(name => {
-        allTimeCounts[name] = (allTimeCounts[name] || 0) + 1;
-        if (isToday) todayCounts[name] = (todayCounts[name] || 0) + 1;
+        allTimeCounts[name] = (allTimeCounts[name] || 0) + increment;
+        if (isToday) todayCounts[name] = (todayCounts[name] || 0) + increment;
       });
     }
 

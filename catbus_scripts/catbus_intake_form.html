@@ -558,7 +558,8 @@
       const present = document.querySelector('input[name="allPresent"]:checked')?.value;
       const selfEmp = document.querySelector('input[name="selfEmployment"]:checked')?.value;
       const bankrupt = document.querySelector('input[name="bankruptcyOrDeceased"]:checked')?.value;
-      const rental = document.querySelector('input[name="rentalOrGains"]:checked')?.value;
+      const rental = document.querySelector('input[name="rentalIncome"]:checked')?.value;
+      const capitalGains = document.querySelector('input[name="capitalGains"]:checked')?.value;
       const foreign = document.querySelector('input[name="foreignProperty"]:checked')?.value;
 
       const showCond = tuition === 'Yes' || (tuition === 'No' && income === 'No');
@@ -571,10 +572,11 @@
         selfEmp === 'Yes' ||
         bankrupt === 'Yes' ||
         rental === 'Yes' ||
+        capitalGains === 'Yes' ||
         foreign === 'Yes'
       );
 
-      document.getElementById('mainFormSection').style.display = !isIneligible && docs && present && selfEmp && bankrupt && rental && foreign ? 'block' : 'none';
+      document.getElementById('mainFormSection').style.display = !isIneligible && docs && present && selfEmp && bankrupt && rental && capitalGains && foreign ? 'block' : 'none';
       document.getElementById('ineligibleMsg').style.display = isIneligible ? 'block' : 'none';
     }
 
@@ -780,10 +782,17 @@
           </div>
         </div>
         <div class="form-group">
-          <label> Do you have rental income or capital gains<span class="tooltip" data-tooltip="Rental income does not include subletting - subletting for a profit is illegal in Ontario.">?</span></label>
+          <label>Do you have rental income<span class="tooltip" data-tooltip="Rental income does not include subletting - subletting for a profit is illegal in Ontario.">?</span></label>
           <div class="radio-horizontal">
-            <label><input type="radio" name="rentalOrGains" value="Yes"> Yes</label>
-            <label><input type="radio" name="rentalOrGains" value="No"> No</label>
+            <label><input type="radio" name="rentalIncome" value="Yes"> Yes</label>
+            <label><input type="radio" name="rentalIncome" value="No"> No</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Do you buy/sell stocks<span class="tooltip" data-tooltip="Capital gains from selling stocks, real estate, or other investments.">?</span></label>
+          <div class="radio-horizontal">
+            <label><input type="radio" name="capitalGains" value="Yes"> Yes</label>
+            <label><input type="radio" name="capitalGains" value="No"> No</label>
           </div>
         </div>
         <div class="form-group">
@@ -909,6 +918,6 @@
       <button onclick="closeModal()" style="padding:12px 24px; background-color:#8e0000; color:white; border:none; border-radius:8px; cursor:pointer; font-weight: 600;">Reset Form</button>
     </div>
   </div>
-<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2026 All rights reserved.</span></div>
 </body>
 </html>

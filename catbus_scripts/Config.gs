@@ -155,8 +155,12 @@ const CONFIG = {
  * Get the main spreadsheet
  * @returns {Spreadsheet} The spreadsheet object
  */
+var _cachedSpreadsheet = null;
 function getSpreadsheet() {
-  return SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  if (!_cachedSpreadsheet) {
+    _cachedSpreadsheet = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  }
+  return _cachedSpreadsheet;
 }
 
 /**
@@ -367,38 +371,6 @@ const PRODUCT_CODE_CONFIG = {
 
   // Email settings
   EMAIL_SUBJECT: 'Your Tax Clinic Product Code'
-};
-
-/**
- * Internal Messaging Configuration
- * Settings for manager-volunteer messaging system
- */
-const MESSAGING_CONFIG = {
-  // Sheet name for messages
-  SHEET_NAME: 'Messages',
-
-  // Column mappings (0-indexed)
-  COLUMNS: {
-    TIMESTAMP: 0,
-    FROM_NAME: 1,
-    FROM_ROLE: 2,
-    TO_NAME: 3,
-    TO_SESSION_ID: 4,
-    MESSAGE: 5,
-    MESSAGE_TYPE: 6,
-    CONVERSATION_ID: 7,
-    STATUS: 8,
-    READ_AT: 9
-  },
-
-  // Polling interval for checking new messages (milliseconds)
-  POLL_INTERVAL_MS: 10000, // 10 seconds
-
-  // Maximum messages to return in queries
-  MAX_MESSAGES_TO_SHOW: 50,
-
-  // Auto-archive messages older than this many days
-  MESSAGE_RETENTION_DAYS: 7
 };
 
 /**

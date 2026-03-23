@@ -94,16 +94,6 @@
       border-bottom: none;
     }
 
-    .shift-badge {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      margin: 2px;
-      background-color: rgba(142, 0, 0, 0.1);
-      color: var(--accent-color);
-    }
-
     .no-results {
       padding: 20px;
       text-align: center;
@@ -264,85 +254,6 @@
       box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
     }
 
-    /* Autocomplete dropdown styles */
-    .autocomplete-container {
-      position: relative;
-      width: 100%;
-    }
-
-    .autocomplete-dropdown {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      max-height: 300px;
-      overflow-y: auto;
-      border: 2px solid var(--border-light);
-      border-top: none;
-      border-radius: 0 0 4px 4px;
-      background-color: #ffffff;
-      z-index: 1000;
-      display: none;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    body.dark .autocomplete-dropdown {
-      background-color: #333;
-      border-color: var(--border-dark);
-    }
-
-    .autocomplete-item {
-      padding: 12px;
-      cursor: pointer;
-      transition: background 0.2s;
-      border-bottom: 1px solid var(--border-light);
-    }
-
-    body.dark .autocomplete-item {
-      border-bottom-color: var(--border-dark);
-    }
-
-    .autocomplete-item:hover {
-      background-color: rgba(142, 0, 0, 0.1);
-    }
-
-    body.dark .autocomplete-item:hover {
-      background-color: rgba(142, 0, 0, 0.2);
-    }
-
-    .autocomplete-item:last-child {
-      border-bottom: none;
-    }
-
-    .autocomplete-item.highlighted {
-      background-color: rgba(142, 0, 0, 0.15);
-    }
-
-    body.dark .autocomplete-item.highlighted {
-      background-color: rgba(142, 0, 0, 0.3);
-    }
-
-    .search-buttons {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    .search-buttons button {
-      width: auto;
-      min-width: 120px;
-    }
-
-    .no-matches {
-      padding: 12px;
-      color: #666;
-      font-style: italic;
-    }
-
-    body.dark .no-matches {
-      color: #aaa;
-    }
-
     .help-text {
       font-size: 0.9em;
       color: #666;
@@ -352,19 +263,6 @@
 
     body.dark .help-text {
       color: #999;
-    }
-
-    .total-shifts {
-      margin-top: 20px;
-      padding: 12px 16px;
-      background-color: rgba(142, 0, 0, 0.05);
-      border-left: 4px solid var(--accent-color);
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    body.dark .total-shifts {
-      background-color: rgba(142, 0, 0, 0.15);
     }
 
     /* Mobile */
@@ -403,16 +301,6 @@
         box-sizing: border-box;
       }
 
-      .search-buttons {
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .search-buttons button {
-        width: 100%;
-        min-width: unset;
-      }
-
       .schedule-table th,
       .schedule-table td {
         padding: 10px 8px;
@@ -439,38 +327,17 @@
 
       .footer-copyright {
         font-size: 9px;
-        max-width: 250px;
       }
     }
   </style>
 </head>
 <body class="light">
   <header>
-    <h1>📅 Volunteer Schedule Viewer</h1>
+    <h1>📅 Schedule by Day</h1>
     <div>
       <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
   </header>
-
-  <div class="form-section">
-    <h2>Search by Name</h2>
-    <div class="form-group">
-      <label for="searchName">Search for your name:</label>
-      <div class="autocomplete-container">
-        <input type="text" id="searchName" placeholder="Start typing to search for a volunteer..." autocomplete="off" style="flex: 1;" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="autocompleteDropdown">
-        <div id="autocompleteDropdown" class="autocomplete-dropdown" role="listbox"></div>
-      </div>
-      <div class="search-buttons">
-        <button type="button" onclick="searchByName()">🔍 Search</button>
-        <button type="button" onclick="clearSearch()" style="background-color: #666;">✖️ Clear</button>
-      </div>
-    </div>
-    
-    <div id="nameResults" class="results-section" style="display: none;">
-      <h3 id="nameResultsHeader">Your Assigned Shifts</h3>
-      <div id="nameResultsContent"></div>
-    </div>
-  </div>
 
   <div class="form-section">
     <h2>View Schedule by Day</h2>
@@ -510,12 +377,8 @@
     TIME_SLOTS: {}
   };
 
-  let allVolunteerNames = [];
-
   window.addEventListener('load', () => {
-    loadVolunteerNames();
     loadScheduleConfig();
-    setupAutocomplete();
   });
 
   function loadScheduleConfig() {
@@ -538,175 +401,6 @@
         console.error('Error loading schedule config:', error);
       })
       .getScheduleConfig();
-  }
-
-  function loadVolunteerNames() {
-    google.script.run
-      .withSuccessHandler(names => {
-        allVolunteerNames = names || [];
-        console.log('Loaded ' + allVolunteerNames.length + ' volunteer names');
-      })
-      .withFailureHandler(error => {
-        console.error('Error loading volunteer names:', error);
-        allVolunteerNames = [];
-      })
-      .getAllVolunteerNames();
-  }
-
-  let vsAutocomplete; // autocomplete controller
-
-  function setupAutocomplete() {
-    vsAutocomplete = createAutocomplete({
-      inputId: 'searchName',
-      dropdownId: 'autocompleteDropdown',
-      idPrefix: 'vs-option-',
-      getItems: () => allVolunteerNames,
-      filterItem: (name, term) => name.toLowerCase().includes(term),
-      renderItem: (name, i, term) => autocompleteHighlightMatch(name, term),
-      onSelect: () => searchByName(),
-      onEnterFallback: () => searchByName()
-    });
-  }
-
-  function selectVolunteer(name) {
-    document.getElementById('searchName').value = name;
-    searchByName(name);
-  }
-
-  function clearSearch() {
-    const searchInput = document.getElementById('searchName');
-    searchInput.value = '';
-    if (vsAutocomplete) vsAutocomplete.clear();
-    document.getElementById('nameResults').style.display = 'none';
-  }
-
-  function searchByName() {
-    const searchTerm = document.getElementById('searchName').value.trim().toLowerCase();
-    
-    if (!searchTerm) {
-      alert('Please enter a name to search');
-      return;
-    }
-
-    const nameResults = document.getElementById('nameResults');
-    const nameResultsContent = document.getElementById('nameResultsContent');
-    nameResults.style.display = 'block';
-    nameResultsContent.innerHTML = '<div class="loading"></div> Loading...';
-
-    google.script.run
-      .withSuccessHandler(result => {
-        displayNameResults(result, searchTerm);
-      })
-      .withFailureHandler(error => {
-        nameResultsContent.innerHTML = `<div class="no-results">Error loading schedule: ${error.message || error}</div>`;
-      })
-      .getVolunteerScheduleByName(searchTerm);
-  }
-
-  function displayNameResults(result, searchTerm) {
-    const nameResultsContent = document.getElementById('nameResultsContent');
-    const nameResultsHeader = document.getElementById('nameResultsHeader');
-    
-    if (!result || !result.shifts || result.shifts.length === 0) {
-      nameResultsHeader.textContent = 'Search Results';
-      nameResultsContent.innerHTML = `<div class="no-results">No scheduled shifts found for "${searchTerm}"</div>`;
-      return;
-    }
-
-    // Display volunteer name with tag if available
-    const tagHtml = result.volunteerTag
-      ? `<span class="volunteer-tag">${escapeHtml(result.volunteerTag)}</span>`
-      : '';
-    nameResultsHeader.innerHTML = `Assigned Shifts for: ${escapeHtml(result.volunteerName || searchTerm)} ${tagHtml}`;
-
-    let html = `
-      <table class="schedule-table">
-        <thead>
-          <tr>
-            <th>Day</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-
-    result.shifts.forEach(shift => {
-      html += `
-        <tr>
-          <td>${shift.day}</td>
-          <td>${shift.time}</td>
-        </tr>
-      `;
-    });
-
-    html += `
-        </tbody>
-      </table>
-      <div class="total-shifts">📊 Total Shifts: ${result.shifts.length}</div>
-    `;
-
-    // Show "My Senior Mentor" section if volunteer is a mentor with senior assignments
-    if (result.seniorsByDay && Object.keys(result.seniorsByDay).length > 0) {
-      html += `
-        <div class="senior-mentor-section" style="margin-top: 20px; padding: 15px; background: rgba(52, 152, 219, 0.1); border-radius: 8px; border: 1px solid rgba(52, 152, 219, 0.3);">
-          <h3 style="margin: 0 0 12px 0; color: var(--mentor-color); font-size: 16px;">👤 My Senior Mentor</h3>
-          <div style="display: grid; gap: 8px;">
-      `;
-
-      // Sort days chronologically by parsing dates
-      const sortedDays = Object.entries(result.seniorsByDay).sort((a, b) => {
-        const dateA = new Date(a[0].replace(/^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+/, ''));
-        const dateB = new Date(b[0].replace(/^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+/, ''));
-        return dateA - dateB;
-      });
-
-      for (const [day, senior] of sortedDays) {
-        const seniorDisplay = senior || '<span style="color: #999;">Unassigned</span>';
-        html += `
-          <div style="display: flex; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,0.5); border-radius: 4px;">
-            <span style="font-weight: 500;">${day}</span>
-            <span>${seniorDisplay}</span>
-          </div>
-        `;
-      }
-
-      html += `
-          </div>
-        </div>
-      `;
-    }
-
-    // Show "My Team" section if volunteer is a senior mentor with team members
-    if (result.teamMembersByDay && Object.keys(result.teamMembersByDay).length > 0) {
-      html += `
-        <div class="team-section" style="margin-top: 20px; padding: 15px; background: rgba(155, 89, 182, 0.1); border-radius: 8px; border: 1px solid rgba(155, 89, 182, 0.3);">
-          <h3 style="margin: 0 0 12px 0; color: #9b59b6; font-size: 16px;">👥 My Team</h3>
-          <div style="display: grid; gap: 8px;">
-      `;
-
-      // Sort days chronologically
-      const sortedTeamDays = Object.entries(result.teamMembersByDay).sort((a, b) => {
-        const dateA = new Date(a[0].replace(/^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+/, ''));
-        const dateB = new Date(b[0].replace(/^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+/, ''));
-        return dateA - dateB;
-      });
-
-      for (const [day, members] of sortedTeamDays) {
-        html += `
-          <div style="padding: 8px 12px; background: rgba(255,255,255,0.5); border-radius: 4px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">${day}</div>
-            <div style="color: #666;">${members.join(', ')}</div>
-          </div>
-        `;
-      }
-
-      html += `
-          </div>
-        </div>
-      `;
-    }
-
-    nameResultsContent.innerHTML = html;
   }
 
   function viewDaySchedule() {
@@ -830,8 +524,8 @@
     dayResultsContent.innerHTML = html;
   }
 
-  // Enter key handling is now in setupAutocomplete() for better autocomplete integration
+
 </script>
-<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2026 All rights reserved.</span></div>
 </body>
 </html>

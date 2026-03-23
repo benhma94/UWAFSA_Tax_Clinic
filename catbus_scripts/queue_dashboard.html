@@ -335,6 +335,33 @@
       }
     }
 
+
+  .queue-toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    min-width: 240px;
+    max-width: 360px;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: white;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.22);
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .queue-toast.show { opacity: 1; transform: translateY(0); }
+  .queue-toast.success { background: #2ecc71; }
+  .queue-toast.error   { background: #e74c3c; }
+  .queue-toast.info    { background: #3498db; }
+
   </style>
   <?!= include('shared_scripts') ?>
   <script>
@@ -502,6 +529,10 @@
     const volunteerSelect = document.getElementById('volunteerSelect');
     const clientSelect = document.getElementById('clientSelect');
 
+    // Preserve any in-progress selection across refreshes
+    const prevClient = clientSelect.value;
+    const prevVolunteer = volunteerSelect.value;
+
     // Volunteers are pre-sorted by returns completed (fewest first) from the backend
     let volunteerOptions = '';
     volunteers.forEach(v => {
@@ -522,6 +553,10 @@
       clientOptions += `<option value="${escapeHtml(c.clientId)}">${escapeHtml(c.clientId)}</option>`;
     });
     clientSelect.innerHTML = clientOptions;
+
+    // Restore selections (silently falls back to first option if no longer available)
+    if (prevClient) clientSelect.value = prevClient;
+    if (prevVolunteer) volunteerSelect.value = prevVolunteer;
   }
 
   function assignClient() {
@@ -562,6 +597,15 @@
       renderActiveAssignments();
     }, 250);
   });
+
+  function showToast(message, type = 'info', duration = 4000) {
+    const toast = document.getElementById('queueToast');
+    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+    toast.innerHTML = `<span>${icons[type] || ''}</span><span>${message}</span>`;
+    toast.className = `queue-toast ${type} show`;
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
+  }
 
   // Remove client from queue functions
   let clientToRemove = null;
@@ -618,7 +662,7 @@
     const selectedReason = document.querySelector('input[name="removeReason"]:checked');
 
     if (!selectedReason) {
-      alert('Please select a reason for removal');
+      showToast('Please select a reason for removal', 'error');
       return;
     }
 
@@ -628,7 +672,7 @@
     if (selectedReason.id === 'removeReasonOther') {
       const customText = document.getElementById('removeReasonOtherText').value.trim();
       if (!customText) {
-        alert('Please provide details for the removal reason');
+        showToast('Please provide details for the removal reason', 'error');
         return;
       }
       reason = customText;
@@ -649,15 +693,15 @@
 
   function handleRemoveSuccess(result) {
     if (result.success) {
-      alert('Client removed from queue');
+      showToast('Client removed from queue', 'success');
       loadQueue(); // Refresh the queue
     } else {
-      alert(result.message);
+      showToast(result.message, 'error');
     }
   }
 
   function handleRemoveError(error) {
-    alert('Error removing client: ' + error.message);
+    showToast('Error removing client: ' + error.message, 'error');
   }
 
   function renderActiveAssignments() {
@@ -765,6 +809,30 @@
         loadQueue();
       })
       .reassignClientToVolunteer(clientId, newVolunteer);
+  }
+
+  function confirmUnassign() {
+    const clientId = clientToReassign;
+    if (!confirm('Return client ' + clientId + ' to the queue? This will free up the current volunteer.')) return;
+    closeReassignModal();
+
+    google.script.run
+      .withSuccessHandler(result => {
+        if (result && result.success) {
+          document.getElementById('modalMessage').textContent = result.message;
+          const modal = document.getElementById('confirmationModal');
+          modal.style.display = 'flex';
+          modal.querySelector('button').focus();
+        } else {
+          alert('Unassign failed: ' + (result ? result.message : 'Unknown error'));
+          loadQueue();
+        }
+      })
+      .withFailureHandler(err => {
+        alert('Error: ' + err.message);
+        loadQueue();
+      })
+      .unassignClient(clientId);
   }
 
   window.onload = function() {
@@ -882,11 +950,14 @@
     <select id="reassignVolunteerSelect" style="width:100%; margin-bottom:5px;"></select>
     <div class="modal-btn-group">
       <button class="modal-btn modal-btn-accent" onclick="confirmReassign()">Confirm Reassign</button>
+      <button class="modal-btn modal-btn-danger" onclick="confirmUnassign()">Return to Queue</button>
       <button class="modal-btn modal-btn-cancel" onclick="closeReassignModal()">Cancel</button>
     </div>
   </div>
 </div>
 
-<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+<div id="queueToast" class="queue-toast"></div>
+
+<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2026 All rights reserved.</span></div>
 </body>
 </html>

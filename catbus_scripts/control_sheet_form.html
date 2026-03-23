@@ -1367,7 +1367,8 @@
       </select>
       <div id="noClientMsg">No client assigned — waiting for assignment</div>
     </div>
-    <div style="align-self: end; margin-top: 20px;">
+    <div style="align-self: end;">
+      <label style="visibility: hidden; display: block;">_</label>
       <button id="helpBtn" onclick="toggleHelpRequest()">📞 Quick Question!</button>
       <button id="escalateBtn" onclick="escalateHelpRequest()" style="display: none;">🚨 Escalate to Senior Mentor</button>
     </div>
@@ -1569,6 +1570,8 @@
     let selectedFilesEmail = []; // Store files for email attachment
     let currentEmailRowId = null; // Store current row ID for email receipt
     let currentEmailRowCount = null; // Store current row count for email receipt
+    let isPageVisible = true;
+    let pollingInterval = null;
 
     // Draft persistence (sessionStorage — survives same-tab refresh in private browsing)
     const DRAFT_KEY = 'catbus_draft_control';
@@ -1848,8 +1851,17 @@
         checkAndShowDraftBanner(); // show restore banner if a draft exists
       }).getVolunteersAndClients();
       setupVolunteerAutocomplete();
-      setInterval(pollHelpStatus, 10000);
-      setInterval(pollReviewApproval, 10000);
+      startPolling();
+      // Pause polling when page is not visible
+      document.addEventListener('visibilitychange', function() {
+        isPageVisible = !document.hidden;
+        if (isPageVisible) {
+          startPolling();
+          pollVolunteerStatus(); // Refresh immediately when page becomes visible
+        } else {
+          if (pollingInterval) clearInterval(pollingInterval);
+        }
+      });
       // Wire up auto-save on any meaningful form change
       document.addEventListener('change', function(e) {
         if (!isRestoring) scheduleSaveDraft();
@@ -2092,92 +2104,100 @@
       }).getMentorList();
     }
 
-    function pollHelpStatus() {
+    function startPolling() {
+      if (pollingInterval) clearInterval(pollingInterval);
+      var jitter = Math.floor(Math.random() * 2000);
+      pollingInterval = setInterval(pollVolunteerStatus, 10000 + jitter);
+    }
+
+    function pollVolunteerStatus() {
       const volunteer = document.getElementById('volunteer').value;
       if (!volunteer) return;
 
-      google.script.run.withSuccessHandler(status => {
-        const helpBtn = document.getElementById('helpBtn');
-        const escalateBtn = document.getElementById('escalateBtn');
-
-        if (status === "active" || status === "escalated") {
-          helpActive = true;
-          helpBtn.textContent = '✅ Cancel Call';
-          helpBtn.classList.add('active');
-          escalateBtn.style.display = 'inline-block';
-          escalateBtn.disabled = (status === "escalated");
-        } else {
-          helpActive = false;
-          helpBtn.textContent = '📞 Quick Question!';
-          helpBtn.classList.remove('active');
-          escalateBtn.style.display = 'none';
-        }
-      }).getHelpStatus(volunteer);
+      google.script.run.withSuccessHandler(data => {
+        if (!data) return;
+        // Handle help status
+        handleHelpStatusUpdate(data.helpStatus);
+        // Handle review approval
+        handleReviewApprovalUpdate(data.reviewResult, volunteer);
+      }).getVolunteerPollingStatus(volunteer);
     }
 
-    // Poll every 10 seconds
+    function handleHelpStatusUpdate(status) {
+      const helpBtn = document.getElementById('helpBtn');
+      const escalateBtn = document.getElementById('escalateBtn');
 
-    function pollReviewApproval() {
-      const volunteer = document.getElementById('volunteer').value.trim();
-      if (!volunteer) return;
+      if (status === "active" || status === "escalated") {
+        helpActive = true;
+        helpBtn.textContent = '✅ Cancel Call';
+        helpBtn.classList.add('active');
+        escalateBtn.style.display = 'inline-block';
+        escalateBtn.disabled = (status === "escalated");
+      } else {
+        helpActive = false;
+        helpBtn.textContent = '📞 Quick Question!';
+        helpBtn.classList.remove('active');
+        escalateBtn.style.display = 'none';
+      }
+    }
+
+    function handleReviewApprovalUpdate(result, volunteer) {
+      if (!result || !result.resolved) return;
+
       const volunteerNameOnly = volunteer.includes('–')
         ? volunteer.split('–')[1].trim()
         : volunteer.trim();
 
-      google.script.run.withSuccessHandler(result => {
-        if (!result || !result.resolved) return;
-
-        // Find the row matching the tax year from the resolved review
-        const table = document.getElementById('taxYearTable');
-        let targetRow = null;
-        let targetRowId = null;
-        let targetRowNum = null;
-        for (let i = 1; i < table.rows.length; i++) {
-          const r = table.rows[i];
-          const rid = r.getAttribute('data-row-id');
-          if (!rid) continue;
-          const yearSel = r.querySelector('select[name="taxYear"]');
-          if (yearSel && (!result.taxYear || yearSel.value === result.taxYear)) {
-            const reviewActions = document.getElementById(`reviewActions${rid}`);
-            if (reviewActions && reviewActions.style.display === 'block') {
-              targetRow = r;
-              targetRowId = rid;
-              targetRowNum = rid.split('_')[1];
-              break;
-            }
+      // Find the row matching the tax year from the resolved review
+      const table = document.getElementById('taxYearTable');
+      let targetRow = null;
+      let targetRowId = null;
+      let targetRowNum = null;
+      for (let i = 1; i < table.rows.length; i++) {
+        const r = table.rows[i];
+        const rid = r.getAttribute('data-row-id');
+        if (!rid) continue;
+        const yearSel = r.querySelector('select[name="taxYear"]');
+        if (yearSel && (!result.taxYear || yearSel.value === result.taxYear)) {
+          const reviewActions = document.getElementById(`reviewActions${rid}`);
+          if (reviewActions && reviewActions.style.display === 'block') {
+            targetRow = r;
+            targetRowId = rid;
+            targetRowNum = rid.split('_')[1];
+            break;
           }
         }
+      }
 
-        if (result.approved) {
-          if (targetRow && targetRowId) {
-            // Transition: reviewActions → reviewInput, auto-fill reviewer name
-            const reviewActions = document.getElementById(`reviewActions${targetRowId}`);
-            const reviewInput = document.getElementById(`reviewInput${targetRowId}`);
-            if (reviewActions) reviewActions.style.display = 'none';
-            if (reviewInput) reviewInput.style.display = 'block';
-            const reviewerInput = targetRow.querySelector('input[name="reviewer"]');
-            if (reviewerInput) {
-              reviewerInput.value = result.reviewerName;
-              reviewerInput.style.border = '2px solid #27ae60';
-            }
-            checkReviewerAndEnableFilingStatus(targetRowId, parseInt(targetRowNum));
+      if (result.approved) {
+        if (targetRow && targetRowId) {
+          // Transition: reviewActions → reviewInput, auto-fill reviewer name
+          const reviewActions = document.getElementById(`reviewActions${targetRowId}`);
+          const reviewInput = document.getElementById(`reviewInput${targetRowId}`);
+          if (reviewActions) reviewActions.style.display = 'none';
+          if (reviewInput) reviewInput.style.display = 'block';
+          const reviewerInput = targetRow.querySelector('input[name="reviewer"]');
+          if (reviewerInput) {
+            reviewerInput.value = result.reviewerName;
+            reviewerInput.style.border = '2px solid #27ae60';
           }
-          showMessage(`Review approved by ${result.reviewerName}. Enter filing status to continue.`);
-          // Consume the result so we stop seeing it
-          google.script.run.completeReviewApproval(volunteerNameOnly);
-        } else {
-          if (targetRow && targetRowId) {
-            // Revert: hide reviewActions, show reviewInitial
-            const reviewActions = document.getElementById(`reviewActions${targetRowId}`);
-            const reviewInitial = document.getElementById(`reviewInitial${targetRowId}`);
-            if (reviewActions) reviewActions.style.display = 'none';
-            if (reviewInitial) reviewInitial.style.display = 'block';
-          }
-          const reasonText = result.reason ? `: ${result.reason}` : '';
-          showError(`Return flagged for corrections${reasonText}`, true);
-          google.script.run.completeReviewApproval(volunteerNameOnly);
+          checkReviewerAndEnableFilingStatus(targetRowId, parseInt(targetRowNum));
         }
-      }).getReviewApprovalResult(volunteerNameOnly);
+        showMessage(`Review approved by ${result.reviewerName}. Enter filing status to continue.`);
+        // Consume the result so we stop seeing it
+        google.script.run.completeReviewApproval(volunteerNameOnly);
+      } else {
+        if (targetRow && targetRowId) {
+          // Revert: hide reviewActions, show reviewInitial
+          const reviewActions = document.getElementById(`reviewActions${targetRowId}`);
+          const reviewInitial = document.getElementById(`reviewInitial${targetRowId}`);
+          if (reviewActions) reviewActions.style.display = 'none';
+          if (reviewInitial) reviewInitial.style.display = 'block';
+        }
+        const reasonText = result.reason ? `: ${result.reason}` : '';
+        showError(`Return flagged for corrections${reasonText}`, true);
+        google.script.run.completeReviewApproval(volunteerNameOnly);
+      }
     }
 
     // Review functions
@@ -2715,7 +2735,24 @@
       while (table.rows.length > 1) table.deleteRow(1);
       rowCount = 1;
       currentClientData = null; // Clear stored client data
+      currentTrackerStatus = [];
       clearDraft(); // Discard any saved draft after successful submission/cancel
+
+      // Clear notes section
+      document.getElementById('notesContainer').style.display = 'none';
+      document.getElementById('notesDisplay').textContent = '';
+
+      // Clear situation notes
+      document.getElementById('situationNotes').style.display = 'none';
+      document.getElementById('situationChips').innerHTML = '';
+      document.getElementById('situationReminderList').innerHTML = '';
+
+      // Close document checklist panel
+      document.body.classList.remove('panel-open');
+      document.getElementById('documentChecklist').setAttribute('aria-hidden', 'true');
+
+      // Update button states
+      checkFormReady();
     }
 
     function removeRow(button) {
@@ -3700,6 +3737,6 @@
     });
 
   </script>
-<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2026 All rights reserved.</span></div>
 </body>
 </html>

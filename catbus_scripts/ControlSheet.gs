@@ -31,7 +31,7 @@ function getVolunteersAndClients() {
             const label     = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim() || '';
             const volunteer = label.includes('–') ? label.split('–')[1].trim() : label;
             const completed = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
-            if (volunteer && client && completed !== 'complete') {
+            if (volunteer && client && completed !== 'complete' && completed !== 'reassigned' && completed !== 'unassigned') {
               volunteerToClient[volunteer] = client;
             }
           }
@@ -85,6 +85,26 @@ function getVolunteersAndClients() {
       CACHE_CONFIG.TTL.VOLUNTEERS_AND_CLIENTS
     );
   }, 'getVolunteersAndClients');
+}
+
+/**
+ * Consolidated polling endpoint for the control sheet.
+ * Returns both help status and review approval result in a single call,
+ * reducing from 2 google.script.run calls to 1 per poll cycle.
+ * @param {string} volunteer - Full volunteer string (may include station prefix)
+ * @returns {{ helpStatus: string, reviewResult: Object|null }}
+ */
+function getVolunteerPollingStatus(volunteer) {
+  return safeExecute(() => {
+    const volunteerNameOnly = volunteer.includes('–')
+      ? volunteer.split('–')[1].trim()
+      : volunteer.trim();
+
+    return {
+      helpStatus: getHelpStatus(volunteer),
+      reviewResult: getReviewApprovalResult(volunteerNameOnly)
+    };
+  }, 'getVolunteerPollingStatus');
 }
 
 /**
@@ -556,7 +576,7 @@ function cancelClientAndStore(volunteer, client, rows) {
 
 /**
  * Inner helper — reads tracker status without safeExecute wrapper.
- * Called by getClientTrackerStatus and getClientData.
+ * Called by getClientData.
  */
 function getClientTrackerStatusInner(clientID) {
   if (!clientID?.trim()) return [];
@@ -583,15 +603,6 @@ function getClientTrackerStatusInner(clientID) {
     }
   }
   return result;
-}
-
-/**
- * Returns all Tax Return Tracker rows for a given client, with their status.
- * @param {string} clientID - Client ID to look up
- * @returns {Array<{taxYear: string, status: string}>} Array of tracker row summaries
- */
-function getClientTrackerStatus(clientID) {
-  return safeExecute(() => getClientTrackerStatusInner(clientID), 'getClientTrackerStatus');
 }
 
 /**

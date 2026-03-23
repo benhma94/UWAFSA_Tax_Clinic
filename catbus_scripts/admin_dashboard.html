@@ -94,6 +94,18 @@
       opacity: 0.7;
     }
 
+    .blurred-name {
+      filter: blur(5px);
+      cursor: pointer;
+      transition: filter 0.4s ease;
+      user-select: none;
+    }
+
+    .blurred-name.revealed {
+      filter: none;
+      cursor: default;
+    }
+
     .summary-box h4 {
       margin-top: 20px;
       margin-bottom: 10px;
@@ -249,10 +261,78 @@
     .admin-toast.success { background: #2ecc71; }
     .admin-toast.error   { background: #e74c3c; }
     .admin-toast.info    { background: #3498db; }
+
+    /* Duplicate modal overrides */
+    #duplicateModal .modal-content {
+      max-width: 520px;
+      text-align: left;
+    }
+
+    #duplicateModal h3 {
+      margin: 0 0 16px 0;
+      border-bottom: none;
+      text-align: center;
+    }
+
+    .dup-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 0.92em;
+    }
+
+    .dup-table th, .dup-table td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    body.dark .dup-table th, body.dark .dup-table td {
+      border-color: var(--border-dark);
+    }
+
+    .dup-table th {
+      font-weight: 700;
+      color: var(--accent-color);
+      font-size: 0.85em;
+      text-transform: uppercase;
+    }
+
+    .dup-table-wrap {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .dup-modal-msg {
+      text-align: center;
+      padding: 20px 0;
+      opacity: 0.7;
+      font-style: italic;
+    }
+
+    .dup-btn-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 18px;
+    }
+
+    .dup-btn {
+      padding: 10px 22px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      color: white;
+    }
+
+    .dup-btn-confirm { background: #e74c3c; }
+    .dup-btn-cancel  { background: #7f8c8d; }
+    .dup-btn-ok      { background: var(--accent-color); }
   </style>
 </head>
 <body class="light">
-  <?!= include('_PasswordGate') ?>
   <header>
     <div>
       <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
@@ -264,15 +344,23 @@
     <div style="display: flex; align-items: center; gap: 12px;">
       <a class="nav-link" id="homeLink" href="#">🏠 Home</a>
       <a class="nav-link" id="alertLink" href="#">🚨 Alert Dashboard</a>
+      <button onclick="removeDuplicates()" style="padding: 8px 16px; font-size: 0.9em; background-color: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer;">🗑️ Remove Duplicates</button>
       <button onclick="clearStaleSessions()" style="padding: 8px 16px; font-size: 0.9em; background-color: #888; color: white; border: none; border-radius: 5px; cursor: pointer;">🧹 Clear Stale</button>
       <button onclick="refresh()" style="padding: 8px 16px; font-size: 0.9em; background-color: var(--accent-color); color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 Refresh</button>
     </div>
   </div>
 
+  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+    <label for="daySelector" style="font-weight: bold; font-size: 0.95em;">View day:</label>
+    <select id="daySelector" onchange="onDaySelectorChange()" style="padding: 6px 10px; font-size: 0.9em; border-radius: 5px; border: 1px solid #ccc; background: white; cursor: pointer;">
+      <option value="">Today</option>
+    </select>
+  </div>
+
   <div class="summary-box">
     <h3>📊 Return Completion Summary</h3>
     <p>Total Completed: <strong id="totalCount">0</strong></p>
-    <p>Completed Today: <strong id="todayCount">0</strong></p>
+    <p>Completed <span id="todayLabel">Today</span>: <strong id="todayCount">0</strong></p>
     <canvas id="completionChart" width="400" height="200"></canvas>
   </div>
 
@@ -284,7 +372,7 @@
     <h4 style="margin-top: 20px;">Top 10 All-Time</h4>
     <div id="topVolunteersAllTime"></div>
 
-    <h4 style="margin-top: 20px;">Top 10 Today</h4>
+    <h4 id="volTodayHeading" style="margin-top: 20px;">Top 10 Today</h4>
     <div id="topVolunteersToday"></div>
   </div>
 
@@ -294,7 +382,7 @@
     <h4 style="margin-top: 20px;">Top 10 All-Time</h4>
     <div id="topReviewersAllTime"></div>
 
-    <h4 style="margin-top: 20px;">Top 10 Today</h4>
+    <h4 id="reviewerTodayHeading" style="margin-top: 20px;">Top 10 Today</h4>
     <div id="topReviewersToday"></div>
   </div>
 
@@ -315,6 +403,13 @@
   let lastPerformanceSerialized = "";
   let lastReviewerLeaderboardSerialized = "";
   let chartInstance = null;
+
+  function setupBlurReveal(el) {
+    el.classList.add('blurred-name');
+    el.addEventListener('click', function() {
+      this.classList.add('revealed');
+    });
+  }
 
   function formatDuration(minutes) {
     if (minutes === null || minutes === undefined) return '';
@@ -411,7 +506,7 @@
     }
   }
 
-  function renderPerformanceMetrics(data) {
+  function renderPerformanceMetrics(data, selectedDateStr, clinicDays) {
     const serialized = JSON.stringify(data);
     if (serialized === lastPerformanceSerialized) return;
     lastPerformanceSerialized = serialized;
@@ -429,6 +524,7 @@
       data.topVolunteers.forEach(vol => {
         const li = document.createElement("li");
         li.innerHTML = `<strong>${escapeHtml(vol.name)}</strong>: ${vol.count} returns`;
+        setupBlurReveal(li.querySelector("strong"));
         allTimeList.appendChild(li);
       });
       allTimeContainer.appendChild(allTimeList);
@@ -437,20 +533,22 @@
     const todayContainer = document.getElementById("topVolunteersToday");
     todayContainer.innerHTML = "";
     if (data.todayVolunteers.length === 0) {
-      todayContainer.innerHTML = "<p>No returns completed today yet</p>";
+      const lbl = getDayLabel(selectedDateStr, clinicDays);
+      todayContainer.innerHTML = `<p>No returns completed ${lbl === 'Today' ? 'today' : 'on ' + lbl} yet</p>`;
     } else {
       const todayList = document.createElement("ol");
       todayList.style.paddingLeft = "20px";
       data.todayVolunteers.forEach(vol => {
         const li = document.createElement("li");
         li.innerHTML = `<strong>${escapeHtml(vol.name)}</strong>: ${vol.count} returns`;
+        setupBlurReveal(li.querySelector("strong"));
         todayList.appendChild(li);
       });
       todayContainer.appendChild(todayList);
     }
   }
 
-  function renderReviewerLeaderboard(data) {
+  function renderReviewerLeaderboard(data, selectedDateStr, clinicDays) {
     const serialized = JSON.stringify(data);
     if (serialized === lastReviewerLeaderboardSerialized) return;
     lastReviewerLeaderboardSerialized = serialized;
@@ -465,6 +563,7 @@
       data.topReviewers.forEach(r => {
         const li = document.createElement("li");
         li.innerHTML = `<strong>${escapeHtml(r.name)}</strong>: ${r.count} review${r.count !== 1 ? 's' : ''}`;
+        setupBlurReveal(li.querySelector("strong"));
         allTimeList.appendChild(li);
       });
       allTimeContainer.appendChild(allTimeList);
@@ -473,13 +572,15 @@
     const todayContainer = document.getElementById("topReviewersToday");
     todayContainer.innerHTML = "";
     if (data.todayReviewers.length === 0) {
-      todayContainer.innerHTML = "<p>No reviews completed today yet</p>";
+      const lbl = getDayLabel(selectedDateStr, clinicDays);
+      todayContainer.innerHTML = `<p>No reviews completed ${lbl === 'Today' ? 'today' : 'on ' + lbl} yet</p>`;
     } else {
       const todayList = document.createElement("ol");
       todayList.style.paddingLeft = "20px";
       data.todayReviewers.forEach(r => {
         const li = document.createElement("li");
         li.innerHTML = `<strong>${escapeHtml(r.name)}</strong>: ${r.count} review${r.count !== 1 ? 's' : ''}`;
+        setupBlurReveal(li.querySelector("strong"));
         todayList.appendChild(li);
       });
       todayContainer.appendChild(todayList);
@@ -511,23 +612,164 @@
       .clearStaleSessions(12);
   }
 
+  let dupModalDidRemove = false;
+
+  function openDupModal() {
+    document.getElementById('duplicateModal').style.display = 'flex';
+  }
+
+  function closeDupModal() {
+    document.getElementById('duplicateModal').style.display = 'none';
+    if (dupModalDidRemove) { dupModalDidRemove = false; refresh(); }
+  }
+
+  function buildDupTable(rows) {
+    let html = '<div class="dup-table-wrap"><table class="dup-table"><thead><tr><th>Client ID</th><th>Tax Year</th><th>Duplicates</th></tr></thead><tbody>';
+    for (const d of rows) {
+      html += `<tr><td>${escapeHtml(d.clientId)}</td><td>${escapeHtml(d.taxYear)}</td><td>${d.count}</td></tr>`;
+    }
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  function removeDuplicates() {
+    const body = document.getElementById('dupModalBody');
+    const btns = document.getElementById('dupModalButtons');
+    body.innerHTML = '<p class="dup-modal-msg">Scanning for duplicates...</p>';
+    btns.innerHTML = '';
+    dupModalDidRemove = false;
+    openDupModal();
+
+    google.script.run
+      .withSuccessHandler(result => {
+        if (result.total === 0) {
+          body.innerHTML = '<p class="dup-modal-msg">No duplicates found.</p>';
+          btns.innerHTML = '<button class="dup-btn dup-btn-ok" onclick="closeDupModal()">OK</button>';
+        } else {
+          body.innerHTML = `<p style="text-align:center;margin-bottom:4px;">Found <strong>${result.total}</strong> duplicate row(s) to remove.<br><span style="font-size:0.85em;opacity:0.7;">The most recent entry for each will be kept.</span></p>` + buildDupTable(result.duplicates);
+          btns.innerHTML = '<button class="dup-btn dup-btn-confirm" onclick="confirmRemoveDuplicates()">Remove</button><button class="dup-btn dup-btn-cancel" onclick="closeDupModal()">Cancel</button>';
+        }
+      })
+      .withFailureHandler(err => {
+        body.innerHTML = `<p class="dup-modal-msg" style="color:#e74c3c;">Error: ${escapeHtml(err.message || String(err))}</p>`;
+        btns.innerHTML = '<button class="dup-btn dup-btn-ok" onclick="closeDupModal()">Close</button>';
+      })
+      .findDuplicateReturns();
+  }
+
+  function confirmRemoveDuplicates() {
+    const body = document.getElementById('dupModalBody');
+    const btns = document.getElementById('dupModalButtons');
+    body.innerHTML = '<p class="dup-modal-msg">Removing duplicates...</p>';
+    btns.innerHTML = '';
+
+    google.script.run
+      .withSuccessHandler(result => {
+        dupModalDidRemove = true;
+        if (result.removed === 0) {
+          body.innerHTML = '<p class="dup-modal-msg">No duplicates were found.</p>';
+        } else {
+          body.innerHTML = `<p style="text-align:center;margin-bottom:4px;">Removed <strong>${result.removed}</strong> duplicate row(s).</p>` + buildDupTable(result.duplicates);
+        }
+        btns.innerHTML = '<button class="dup-btn dup-btn-ok" onclick="closeDupModal()">Done</button>';
+      })
+      .withFailureHandler(err => {
+        body.innerHTML = `<p class="dup-modal-msg" style="color:#e74c3c;">Error: ${escapeHtml(err.message || String(err))}</p>`;
+        btns.innerHTML = '<button class="dup-btn dup-btn-ok" onclick="closeDupModal()">Close</button>';
+      })
+      .removeDuplicateReturns();
+  }
+
+  // Close modal on Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('duplicateModal').style.display === 'flex') {
+      closeDupModal();
+    }
+  });
+
+  function shortDate(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
+  }
+
+  function getDayLabel(selectedDateStr, clinicDays) {
+    if (!selectedDateStr || !clinicDays) return 'Today';
+    const idx = clinicDays.indexOf(selectedDateStr);
+    return idx >= 0 ? 'Day ' + (idx + 1) : 'Today';
+  }
+
+  function populateDaySelector(clinicDays) {
+    const sel = document.getElementById('daySelector');
+    if (sel.options.length > 1) return; // already populated
+    clinicDays.forEach(function(dateStr, i) {
+      const opt = document.createElement('option');
+      opt.value = dateStr;
+      opt.textContent = 'Day ' + (i + 1) + ' (' + shortDate(dateStr) + ')';
+      sel.appendChild(opt);
+    });
+  }
+
+  function updateDayLabels(selectedDateStr, clinicDays) {
+    const label = getDayLabel(selectedDateStr, clinicDays);
+    document.getElementById('todayLabel').textContent = label;
+    document.getElementById('volTodayHeading').textContent = 'Top 10 ' + label;
+    document.getElementById('reviewerTodayHeading').textContent = 'Top 10 ' + label;
+  }
+
+  function onDaySelectorChange() {
+    lastSummarySerialized = '';
+    lastPerformanceSerialized = '';
+    lastReviewerLeaderboardSerialized = '';
+    refresh();
+  }
+
   function refresh() {
+    const selectedDate = document.getElementById('daySelector').value || null;
     google.script.run.withSuccessHandler(function(data) {
+      if (data.clinicDays) populateDaySelector(data.clinicDays);
+      updateDayLabels(selectedDate, data.clinicDays);
       renderActiveReturns(data.activeReturns);
       renderSummary(data.returnSummary);
-      renderPerformanceMetrics(data.performanceMetrics);
-      renderReviewerLeaderboard(data.reviewerLeaderboard);
-    }).getAdminDashboardData();
+      renderPerformanceMetrics(data.performanceMetrics, selectedDate, data.clinicDays);
+      renderReviewerLeaderboard(data.reviewerLeaderboard, selectedDate, data.clinicDays);
+    }).getAdminDashboardData(selectedDate);
   }
+
+  var isPageVisible = true;
+  var refreshInterval = null;
+
+  function startAutoRefresh() {
+    if (refreshInterval) clearInterval(refreshInterval);
+    var jitter = Math.floor(Math.random() * 2000);
+    refreshInterval = setInterval(refresh, 30000 + jitter);
+  }
+
+  // Pause refresh when page is not visible
+  document.addEventListener('visibilitychange', function() {
+    isPageVisible = !document.hidden;
+    if (isPageVisible) {
+      startAutoRefresh();
+      refresh();
+    } else {
+      if (refreshInterval) clearInterval(refreshInterval);
+    }
+  });
 
   window.addEventListener('load', function() {
     refresh();
+    startAutoRefresh();
   });
-
-  // Auto-refresh every 30 seconds
-  setInterval(refresh, 30000);
 </script>
+<div id="duplicateModal" class="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <h3>🗑️ Remove Duplicates</h3>
+    <div id="dupModalBody">
+      <p class="dup-modal-msg">Scanning for duplicates...</p>
+    </div>
+    <div id="dupModalButtons" class="dup-btn-group"></div>
+  </div>
+</div>
 <div id="adminToast" class="admin-toast"></div>
-<div class="footer-copyright">The Client And Tax Booking Utility System (CATBUS) is designed for use only by UW AFSA Tax Clinic.</div>
+<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2026 All rights reserved.</span></div>
 </body>
 </html>

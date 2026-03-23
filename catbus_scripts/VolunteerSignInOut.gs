@@ -21,23 +21,32 @@ function getAvailableStations() {
       return [...exceptionStations, ...stationList];
     }
 
-    const signInData = signInSheet.getDataRange().getValues();
-    const signOutData = signOutSheet.getDataRange().getValues();
+    const signInLastRow = signInSheet.getLastRow();
+    const signOutLastRow = signOutSheet.getLastRow();
     const activeStations = new Set();
+
+    // Read only needed columns: STATION (col 3) and SESSION_ID (col 4) from sign-in
+    const signInData = signInLastRow > 1
+      ? signInSheet.getRange(2, CONFIG.COLUMNS.VOLUNTEER_LIST.STATION + 1, signInLastRow - 1, 2).getValues()
+      : [];
+    // Read only SESSION_ID column from sign-out
+    const signOutData = signOutLastRow > 1
+      ? signOutSheet.getRange(2, CONFIG.COLUMNS.SIGNOUT.SESSION_ID + 1, signOutLastRow - 1, 1).getValues()
+      : [];
 
     // Get ALL signed-out session IDs (no date filter — catches previous-day stragglers)
     const signedOutIds = new Set();
-    for (let i = 1; i < signOutData.length; i++) {
-      const outId = signOutData[i][CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim();
+    for (let i = 0; i < signOutData.length; i++) {
+      const outId = signOutData[i][0]?.toString().trim();
       if (outId) {
         signedOutIds.add(outId);
       }
     }
 
     // Find stations that are active (signed in but not signed out, any day)
-    for (let i = 1; i < signInData.length; i++) {
-      const station = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.STATION]?.toString().trim();
-      const sessionId = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
+    for (let i = 0; i < signInData.length; i++) {
+      const station = signInData[i][0]?.toString().trim(); // STATION
+      const sessionId = signInData[i][1]?.toString().trim(); // SESSION_ID
 
       if (station && sessionId && !signedOutIds.has(sessionId) && !exceptionStations.includes(station)) {
         activeStations.add(station);
@@ -66,13 +75,23 @@ function getActiveSessions() {
     // If sheets don't exist yet, no one has signed in
     if (!signInSheet || !signOutSheet) return [];
 
-    const signInData = signInSheet.getDataRange().getValues();
-    const signOutData = signOutSheet.getDataRange().getValues();
+    const signInLastRow = signInSheet.getLastRow();
+    const signOutLastRow = signOutSheet.getLastRow();
+
+    // Read needed columns from sign-in: TIMESTAMP, NAME, STATION, SESSION_ID (cols 1-4)
+    const cols = CONFIG.COLUMNS.VOLUNTEER_LIST;
+    const signInData = signInLastRow > 1
+      ? signInSheet.getRange(2, 1, signInLastRow - 1, cols.SESSION_ID + 1).getValues()
+      : [];
+    // Read only SESSION_ID column from sign-out
+    const signOutData = signOutLastRow > 1
+      ? signOutSheet.getRange(2, CONFIG.COLUMNS.SIGNOUT.SESSION_ID + 1, signOutLastRow - 1, 1).getValues()
+      : [];
 
     // Get ALL signed-out session IDs (no date filter — catches previous-day stragglers)
     const signedOutIds = new Set();
-    for (let i = 1; i < signOutData.length; i++) {
-      const outId = signOutData[i][CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim();
+    for (let i = 0; i < signOutData.length; i++) {
+      const outId = signOutData[i][0]?.toString().trim();
       if (outId) {
         signedOutIds.add(outId);
       }
@@ -81,11 +100,11 @@ function getActiveSessions() {
     const activeSessions = [];
 
     // Include sign-ins from any day that haven't been signed out (catches previous-day stragglers)
-    for (let i = 1; i < signInData.length; i++) {
-      const name = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
-      const station = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.STATION]?.toString().trim();
-      const sessionId = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
-      const timestamp = signInData[i][CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP];
+    for (let i = 0; i < signInData.length; i++) {
+      const name = signInData[i][cols.NAME]?.toString().trim();
+      const station = signInData[i][cols.STATION]?.toString().trim();
+      const sessionId = signInData[i][cols.SESSION_ID]?.toString().trim();
+      const timestamp = signInData[i][cols.TIMESTAMP];
 
       if (name && sessionId && !signedOutIds.has(sessionId)) {
         const time = Utilities.formatDate(new Date(timestamp), Session.getScriptTimeZone(), 'HH:mm');
@@ -361,7 +380,7 @@ function clearStaleSessions(hoursThreshold) {
         for (let i = 0; i < assignData.length; i++) {
           const vol = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
           const completed = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
-          if (vol && staleNames.has(vol) && completed !== 'complete') {
+          if (vol && staleNames.has(vol) && completed !== 'complete' && completed !== 'reassigned' && completed !== 'unassigned') {
             assignmentSheet.getRange(
               i + 2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1
             ).setValue('complete');

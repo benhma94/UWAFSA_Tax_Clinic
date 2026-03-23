@@ -102,20 +102,17 @@ function updateRequestStatus(volunteer, requestType, fromStatus, toStatus) {
 
     const fromStatuses = Array.isArray(fromStatus) ? fromStatus : [fromStatus];
 
-    // Optimization: Only check last N requests (most are recent)
+    // Read all rows once and scan from most recent backwards
     if (lastRow > 1) {
-      const checkRows = Math.min(config.checkLimit, lastRow - 1);
-      const startRow = Math.max(2, lastRow - checkRows + 1);
-      const data = sheet.getRange(startRow, config.columns.VOLUNTEER + 1,
-                                   checkRows, 2).getValues();
+      const numRows = lastRow - 1;
+      const data = sheet.getRange(2, config.columns.VOLUNTEER + 1, numRows, 2).getValues();
 
-      // Check from most recent backwards
       for (let i = data.length - 1; i >= 0; i--) {
         const v = data[i][0]?.toString().trim();
         const status = data[i][1]?.toString().trim();
 
         if (v === volunteer && fromStatuses.some(fs => fs.toLowerCase() === status.toLowerCase())) {
-          const rowNum = startRow + i;
+          const rowNum = i + 2;
           sheet.getRange(rowNum, config.columns.STATUS + 1).setValue(toStatus);
 
           // Invalidate cache since request data changed
@@ -123,23 +120,6 @@ function updateRequestStatus(volunteer, requestType, fromStatus, toStatus) {
           invalidateCache(cacheKey);
 
           return true;
-        }
-      }
-
-      // If not found in recent rows, check older rows (unlikely but possible)
-      if (lastRow > config.checkLimit) {
-        const olderRows = lastRow - config.checkLimit;
-        const olderData = sheet.getRange(2, config.columns.VOLUNTEER + 1,
-                                          olderRows, 2).getValues();
-        for (let i = olderData.length - 1; i >= 0; i--) {
-          const v = olderData[i][0]?.toString().trim();
-          const status = olderData[i][1]?.toString().trim();
-
-          if (v === volunteer && fromStatuses.some(fs => fs.toLowerCase() === status.toLowerCase())) {
-            const rowNum = i + 2;
-            sheet.getRange(rowNum, config.columns.STATUS + 1).setValue(toStatus);
-            return true;
-          }
         }
       }
     }

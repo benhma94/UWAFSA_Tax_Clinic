@@ -22,14 +22,15 @@ function getClientQueue() {
       ? intakeSheet.getRange(2, 1, intakeLastRow - 1, 8).getValues()
       : [];
 
-    // Build set of assigned client IDs - only read if there are assignments
+    // Build set of actively assigned client IDs - only read if there are assignments
     const assignedClientIds = new Set();
     if (assignmentLastRow > 1) {
       const assignmentData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1,
-                                                      assignmentLastRow - 1, 1).getValues();
+                                                      assignmentLastRow - 1, 3).getValues();
       assignmentData.forEach(row => {
         const clientId = row[0]?.toString().trim();
-        if (clientId) assignedClientIds.add(clientId);
+        const completed = row[2]?.toString().trim().toLowerCase();
+        if (clientId && completed !== 'unassigned') assignedClientIds.add(clientId);
       });
     }
 
@@ -105,46 +106,29 @@ function assignClientToVolunteer(clientId, volunteerName) {
         throw new Error(`Client ID ${clientId} not found in intake`);
       }
 
-      // Optimization: Check only recent assignments (last N rows) for conflicts
-      // Most assignments are recent, so this is much faster than reading entire sheet
+      // Check all assignments for conflicts (single read, scan from most recent)
       // IMPORTANT: Each volunteer can only have ONE active client at a time
       const assignmentLastRow = assignmentSheet.getLastRow();
       if (assignmentLastRow > 1) {
-        const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, assignmentLastRow - 1);
-        const startRow = Math.max(2, assignmentLastRow - checkRows + 1);
-        // Read Volunteer, Client ID, and Completed columns
-        const assignmentData = assignmentSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1,
-                                                         checkRows, 3).getValues();
+        const numRows = assignmentLastRow - 1;
+        const assignmentData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1,
+                                                         numRows, 3).getValues();
 
-        for (let i = 0; i < assignmentData.length; i++) {
+        for (let i = assignmentData.length - 1; i >= 0; i--) {
           const assignedClient = assignmentData[i][0]?.toString().trim();
           const assignedVolunteer = assignmentData[i][1]?.toString().trim();
           const completed = assignmentData[i][2]?.toString().trim().toLowerCase();
 
+          if (completed) continue;
+
           // Check if client is already assigned to someone else
-          if (assignedClient === clientId && completed !== 'complete' && completed !== 'reassigned') {
+          if (assignedClient === clientId) {
             throw new Error(`Client ${clientId} is already assigned to ${assignedVolunteer}`);
           }
 
-          // IMPORTANT: Check if volunteer already has an active client (one client at a time rule)
-          if (assignedVolunteer === volunteerName && completed !== 'complete' && completed !== 'reassigned') {
+          // Check if volunteer already has an active client (one client at a time rule)
+          if (assignedVolunteer === volunteerName) {
             throw new Error(`${volunteerName} is already assigned to client ${assignedClient}. Please complete that assignment first.`);
-          }
-        }
-
-        // If not found in recent rows, check older rows for volunteer's active assignment
-        if (assignmentLastRow > CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK) {
-          const olderRows = assignmentLastRow - CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK;
-          const olderData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1,
-                                                      olderRows, 3).getValues();
-          for (let i = 0; i < olderData.length; i++) {
-            const assignedVolunteer = olderData[i][1]?.toString().trim();
-            const completed = olderData[i][2]?.toString().trim().toLowerCase();
-
-            if (assignedVolunteer === volunteerName && completed !== 'complete' && completed !== 'reassigned') {
-              const assignedClient = olderData[i][0]?.toString().trim();
-              throw new Error(`${volunteerName} is already assigned to client ${assignedClient}. Please complete that assignment first.`);
-            }
           }
         }
       }
@@ -171,6 +155,72 @@ function assignClientToVolunteer(clientId, volunteerName) {
 }
 
 /**
+ * Reads the Shift Schedule sheet and returns a map of volunteerName (lowercase) → [slotKeys]
+ * for today's clinic date. Returns an empty object if the sheet is missing or today is not a clinic day.
+ */
+function buildTodayShiftMap() {
+  try {
+    const sheet = getSpreadsheet().getSheetByName(CONFIG.SHEETS.SCHEDULE_OUTPUT);
+    if (!sheet || sheet.getLastRow() < 4) return {};
+
+    // Row 1: headers ['Time / Day', Day1Label, Day2Label, Day3Label, Day4Label]
+    // Rows 2-4: slot A, B, C data (comma-separated volunteer names per day)
+    const data = sheet.getRange(1, 1, 4, 5).getValues();
+    const headers = data[0];
+
+    // Find which column matches today
+    const todayLabel = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'EEEE, MMMM d, yyyy');
+    let todayColIndex = -1;
+    for (let col = 1; col <= 4; col++) {
+      if (headers[col] && headers[col].toString().trim() === todayLabel) {
+        todayColIndex = col;
+        break;
+      }
+    }
+    if (todayColIndex === -1) return {};
+
+    // Build map: lowercaseName → [slotKeys]
+    const slotKeys = ['A', 'B', 'C'];
+    const shiftMap = {};
+    for (let slotIdx = 0; slotIdx < 3; slotIdx++) {
+      const cellValue = data[slotIdx + 1][todayColIndex] || '';
+      const names = cellValue.split(',').map(n => n.trim()).filter(Boolean);
+      for (const name of names) {
+        const key = name.toLowerCase();
+        if (!shiftMap[key]) shiftMap[key] = [];
+        shiftMap[key].push(slotKeys[slotIdx]);
+      }
+    }
+    return shiftMap;
+  } catch (e) {
+    Logger.log('buildTodayShiftMap error (non-fatal): ' + e.message);
+    return {};
+  }
+}
+
+/**
+ * Returns true if the current time is within 30 minutes of the end of the volunteer's
+ * last scheduled slot for today. Uses SCHEDULE_CONFIG.TIME_SLOTS for end times.
+ */
+function isNearShiftEnd(slots) {
+  if (!slots || slots.length === 0) return false;
+
+  const slotOrder = { 'A': 0, 'B': 1, 'C': 2 };
+  const lastSlot = slots.slice().sort((a, b) => slotOrder[a] - slotOrder[b]).pop();
+
+  const endStr = SCHEDULE_CONFIG.TIME_SLOTS[lastSlot].end; // e.g. '1:15'
+  const [rawHour, rawMin] = endStr.split(':').map(Number);
+  // Hours < 9 are PM (clinic runs 9:45 AM – 8:00 PM)
+  const endHour = rawHour < 9 ? rawHour + 12 : rawHour;
+
+  const now = new Date();
+  const shiftEnd = new Date(now);
+  shiftEnd.setHours(endHour, rawMin, 0, 0);
+
+  return (shiftEnd - now) <= 30 * 60 * 1000;
+}
+
+/**
  * Gets available volunteers (signed in today, not signed out, not mentors/receptionists)
  * Sorted by idle time (longest idle first) so queue managers prioritize waiting volunteers.
  * @returns {Array<Object>} Array of {name, station, displayText, idleMinutes}
@@ -191,8 +241,9 @@ function getAvailableVolunteers() {
       ? volunteerSheet.getRange(2, 1, volunteerLastRow - 1, 5).getValues()
       : [];
 
+    // Read only SESSION_ID column from sign-out
     const signOutData = signOutLastRow > 1
-      ? signOutSheet.getRange(2, 1, signOutLastRow - 1, 3).getValues()
+      ? signOutSheet.getRange(2, CONFIG.COLUMNS.SIGNOUT.SESSION_ID + 1, signOutLastRow - 1, 1).getValues()
       : [];
 
     // Build busy-volunteer set from recent assignment rows.
@@ -211,7 +262,7 @@ function getAvailableVolunteers() {
         const completed = row[CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
         const name = label.includes('–') ? label.split('–')[1].trim() : label.trim();
         if (!name) return;
-        if (completed !== 'complete' && completed !== 'reassigned') {
+        if (!completed) {
           busyVolunteers.add(name);
         }
       });
@@ -223,19 +274,22 @@ function getAvailableVolunteers() {
     const trackerSheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
     const trackerLastRow = trackerSheet ? trackerSheet.getLastRow() : 0;
     if (trackerLastRow > 1) {
-      // Read Timestamp (col 1), Volunteer (col 2), Incomplete (col 10)
+      // Read Timestamp, Volunteer, and up to Incomplete in one batch read
       const numCols = CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE + 1;
       const trackerData = trackerSheet.getRange(2, 1, trackerLastRow - 1, numCols).getValues();
-      trackerData.forEach(row => {
-        const ts         = row[CONFIG.COLUMNS.TAX_RETURN_TRACKER.TIMESTAMP];
-        const name       = row[CONFIG.COLUMNS.TAX_RETURN_TRACKER.VOLUNTEER]?.toString().trim();
-        const incomplete = row[CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE]?.toString().trim().toLowerCase();
-        if (!name || !ts) return;
+      for (let i = 0; i < trackerData.length; i++) {
+        const ts         = trackerData[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.TIMESTAMP];
+        const name       = trackerData[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.VOLUNTEER]?.toString().trim();
+        const incomplete = trackerData[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE]?.toString().trim().toLowerCase();
+        if (!name || !ts) continue;
         if (new Date(ts).toDateString() === today && incomplete !== 'yes') {
           completedCountMap[name] = (completedCountMap[name] || 0) + 1;
         }
-      });
+      }
     }
+
+    // Build shift map for near-end-of-shift filtering
+    const todayShiftMap = buildTodayShiftMap();
 
     const activeVolunteers = [];
 
@@ -256,13 +310,17 @@ function getAvailableVolunteers() {
 
       // Check if signed out
       const signedOut = signOutData.some(row => {
-        const outId = row[2]?.toString().trim();
+        const outId = row[0]?.toString().trim();
         return outId === sessionId;
       });
 
       if (signedOut) continue;
       if (busyVolunteers.has(name)) continue;
       if (onBreak === 'yes') continue;
+
+      // Exclude volunteers within 30 min of their last shift end (if schedule data exists)
+      const scheduledSlots = todayShiftMap[name.toLowerCase()];
+      if (scheduledSlots && isNearShiftEnd(scheduledSlots)) continue;
 
       activeVolunteers.push({
         name,
@@ -369,12 +427,15 @@ function getActiveAssignments() {
         : [];
       const signedOutIds = new Set(signOutData.map(r => r[2]?.toString().trim()).filter(Boolean));
 
+      const nonFilerStations = CONFIG.SIGN_IN_OUT.NON_FILER_STATIONS;
       volunteerData.forEach(row => {
         const ts        = row[CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP];
         const name      = row[CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
+        const station   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.STATION]?.toString().trim();
         const sessionId = row[CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
         if (!name || !sessionId) return;
         if (new Date(ts).toDateString() !== today) return;
+        if (station && nonFilerStations.some(r => station.toLowerCase() === r)) return;
         if (!signedOutIds.has(sessionId)) activeVolunteerNames.add(name);
       });
     }
@@ -421,8 +482,7 @@ function getActiveAssignments() {
 
 /**
  * Reassigns an active client to a different volunteer
- * Marks the old assignment as "reassigned" (frees original volunteer, preserves audit trail)
- * and appends a new assignment row for the new volunteer.
+ * Updates the existing assignment row in-place (volunteer name + timestamp).
  * @param {string} clientId - Client ID to reassign
  * @param {string} newVolunteerName - New volunteer name (display text)
  * @returns {Object} {success, message}
@@ -472,22 +532,16 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
       for (let i = 0; i < assignmentData.length; i++) {
         const assignedVolunteer = assignmentData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
         const completed = assignmentData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
-        if (assignedVolunteer === newVolunteerName && completed !== 'complete' && completed !== 'reassigned') {
+        if (assignedVolunteer === newVolunteerName && !completed) {
           const busyClient = assignmentData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
           return { success: false, message: `${newVolunteerName} is already assigned to client ${busyClient}` };
         }
       }
 
-      // Mark the old assignment as "reassigned" (frees the original volunteer)
-      const oldRowNumber = activeRowIndex + 2; // +2: skip header (row 1) + 0-indexed
-      assignmentSheet.getRange(oldRowNumber, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1).setValue('reassigned');
-
-      // Append new assignment for the new volunteer
-      assignmentSheet.appendRow([
-        new Date(),
-        clientId,
-        newVolunteerName
-      ]);
+      // Update the existing assignment row in-place
+      const rowNumber = activeRowIndex + 2; // +2: skip header (row 1) + 0-indexed
+      assignmentSheet.getRange(rowNumber, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1).setValue(new Date());
+      assignmentSheet.getRange(rowNumber, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER + 1).setValue(newVolunteerName);
     } finally {
       lock.releaseLock();
     }
@@ -500,6 +554,69 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
 
     return { success: true, message: `Client ${clientId} has been reassigned to ${newVolunteerName}` };
   }, 'reassignClientToVolunteer');
+}
+
+/**
+ * Unassigns a client from their current volunteer and returns them to the queue.
+ * Deletes the assignment row so the client reappears in the queue.
+ * @param {string} clientId - Client ID to unassign
+ * @returns {Object} {success, message}
+ */
+function unassignClient(clientId) {
+  return safeExecute(() => {
+    clientId = sanitizeInput(clientId, 10);
+
+    if (!clientId) {
+      return { success: false, message: 'Client ID is required' };
+    }
+
+    if (!validateClientID(clientId)) {
+      return { success: false, message: `Invalid client ID format: ${clientId}` };
+    }
+
+    const lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+
+    try {
+      const assignmentSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+      const assignmentLastRow = assignmentSheet.getLastRow();
+
+      if (assignmentLastRow <= 1) {
+        return { success: false, message: `Client ${clientId} is not currently assigned` };
+      }
+
+      const assignmentData = assignmentSheet.getRange(2, 1, assignmentLastRow - 1, 4).getValues();
+
+      // Find the active assignment row for this client
+      let activeRowIndex = -1;
+      for (let i = 0; i < assignmentData.length; i++) {
+        const assignedClient = assignmentData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
+        const completed = assignmentData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
+        if (assignedClient === clientId && !completed) {
+          activeRowIndex = i;
+          break;
+        }
+      }
+
+      if (activeRowIndex === -1) {
+        return { success: false, message: `Client ${clientId} is not currently assigned` };
+      }
+
+      // Delete the assignment row (frees the volunteer, returns client to queue)
+      const rowNumber = activeRowIndex + 2;
+      assignmentSheet.deleteRow(rowNumber);
+    } finally {
+      lock.releaseLock();
+    }
+
+    invalidateMultiple([
+      CACHE_CONFIG.KEYS.QUEUE,
+      CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
+      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
+    ]);
+
+    return { success: true, message: `Client ${clientId} has been returned to the queue` };
+  }, 'unassignClient');
 }
 
 /**
@@ -556,7 +673,7 @@ function removeClientFromQueue(clientId, reason) {
         const assignedClient = assignmentData[i][0]?.toString().trim();
         const completed = assignmentData[i][1]?.toString().trim().toLowerCase();
 
-        if (assignedClient === clientId && completed !== 'complete' && completed !== 'reassigned') {
+        if (assignedClient === clientId && completed !== 'complete' && completed !== 'reassigned' && completed !== 'unassigned') {
           return {success: false, message: 'Cannot remove assigned client'};
         }
       }
