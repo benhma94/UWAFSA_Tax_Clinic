@@ -157,12 +157,12 @@ function buildReceiptEmailBody(emailData, filingStatus) {
               <p><strong>${escapeHtmlServer(emailData.refundLabel)}:</strong> ${escapeHtmlServer(emailData.refundBalance)}</p>
             ` : ''}
 
-            ${emailData.gstHst ? `
-              <p><strong>CGEB or GST/HST Credit:</strong> ${escapeHtmlServer(emailData.gstHst)}, paid over 4 quarterly payments</p>
-            ` : ''}
-
             ${emailData.onBen ? `
               <p><strong>Ontario Trillium Benefit:</strong> ${escapeHtmlServer(emailData.onBen)}, paid over 12 monthly payments</p>
+            ` : ''}
+
+            ${emailData.gstHst ? `
+              <p><strong>CGEB or GST/HST Credit:</strong> ${escapeHtmlServer(emailData.gstHst)}, paid over 4 quarterly payments</p>
             ` : ''}
 
             ${emailData.other ? `

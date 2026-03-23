@@ -102,7 +102,8 @@ function getVolunteerPollingStatus(volunteer) {
 
     return {
       helpStatus: getHelpStatus(volunteer),
-      reviewResult: getReviewApprovalResult(volunteerNameOnly)
+      reviewResult: getReviewApprovalResult(volunteerNameOnly),
+      mentors: getMentorList()
     };
   }, 'getVolunteerPollingStatus');
 }
