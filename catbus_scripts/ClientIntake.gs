@@ -110,3 +110,102 @@ function storeMainFormData(formData) {
   }, 'storeMainFormData');
 }
 
+/**
+ * Fetches current intake data for a client by ID (for pre-filling the edit modal)
+ * @param {string} clientId - Client ID to look up
+ * @returns {Object} { householdSize, filingYears, situations, notes, needsSeniorReview, isHighPriority }
+ */
+function getClientIntakeData(clientId) {
+  return safeExecute(() => {
+    if (!clientId || !validateClientID(clientId)) {
+      throw new Error('Invalid client ID: ' + clientId);
+    }
+
+    const sheet = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) throw new Error('Client not found: ' + clientId);
+
+    const cols = CONFIG.COLUMNS.CLIENT_INTAKE;
+    const data = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
+
+    // Scan backward (most recent row first)
+    for (let i = data.length - 1; i >= 0; i--) {
+      const row = data[i];
+      if (row[cols.CLIENT_ID] === clientId) {
+        const filingYearsRaw = row[cols.FILING_YEARS];
+        const situationsRaw = row[cols.SITUATIONS];
+        return {
+          householdSize: row[cols.HOUSEHOLD_SIZE],
+          filingYears: filingYearsRaw ? filingYearsRaw.toString().split(',').map(s => s.trim()).filter(Boolean) : [],
+          situations: situationsRaw ? situationsRaw.toString().split(',').map(s => s.trim()).filter(Boolean) : [],
+          notes: row[cols.NOTES] || '',
+          needsSeniorReview: row[cols.NEEDS_SENIOR_REVIEW] === true || row[cols.NEEDS_SENIOR_REVIEW] === 'TRUE',
+          isHighPriority: row[cols.IS_HIGH_PRIORITY] === true || row[cols.IS_HIGH_PRIORITY] === 'TRUE',
+        };
+      }
+    }
+
+    throw new Error('Client not found: ' + clientId);
+  }, 'getClientIntakeData');
+}
+
+/**
+ * Updates editable intake fields for an existing client record
+ * Does not modify TIMESTAMP, CLIENT_ID, or DOCUMENTS columns
+ * @param {string} clientId - Client ID to update
+ * @param {Object} formData - { householdSize, filingYears[], situations[], notes, needsSeniorReview, isHighPriority }
+ * @returns {{ success: boolean }}
+ */
+function updateClientIntake(clientId, formData) {
+  return safeExecute(() => {
+    if (!clientId || !validateClientID(clientId)) {
+      throw new Error('Invalid client ID: ' + clientId);
+    }
+    if (!formData || !formData.filingYears || formData.filingYears.length === 0) {
+      throw new Error('At least one filing year is required');
+    }
+
+    // Sanitize inputs
+    formData.notes = sanitizeInput(formData.notes || '', 1000);
+    formData.filingYears = formData.filingYears.map(y => sanitizeInput(y, 10));
+    formData.situations = formData.situations ? formData.situations.map(s => sanitizeInput(s, 50)) : [];
+
+    const lock = LockService.getScriptLock();
+    try {
+      if (!lock.tryLock(CONFIG.PERFORMANCE.LOCK_TIMEOUT_MS)) {
+        throw new Error('System is busy. Please try again.');
+      }
+
+      const sheet = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
+      const lastRow = sheet.getLastRow();
+      if (lastRow < 2) throw new Error('Client not found: ' + clientId);
+
+      const cols = CONFIG.COLUMNS.CLIENT_INTAKE;
+      const idColVals = sheet.getRange(2, cols.CLIENT_ID + 1, lastRow - 1, 1).getValues();
+
+      // Scan backward to find the row
+      let targetRow = -1;
+      for (let i = idColVals.length - 1; i >= 0; i--) {
+        if (idColVals[i][0] === clientId) {
+          targetRow = i + 2; // +2: 1-indexed row + skip header
+          break;
+        }
+      }
+
+      if (targetRow === -1) throw new Error('Client not found: ' + clientId);
+
+      // Update only editable columns (leave TIMESTAMP, CLIENT_ID, DOCUMENTS untouched)
+      sheet.getRange(targetRow, cols.HOUSEHOLD_SIZE + 1).setValue(Number(formData.householdSize) || 1);
+      sheet.getRange(targetRow, cols.FILING_YEARS + 1).setValue(formData.filingYears.join(', '));
+      sheet.getRange(targetRow, cols.SITUATIONS + 1).setValue(formData.situations.join(', '));
+      sheet.getRange(targetRow, cols.NOTES + 1).setValue(formData.notes);
+      sheet.getRange(targetRow, cols.NEEDS_SENIOR_REVIEW + 1).setValue(formData.needsSeniorReview === true);
+      sheet.getRange(targetRow, cols.IS_HIGH_PRIORITY + 1).setValue(formData.isHighPriority === true);
+
+      return { success: true };
+    } finally {
+      lock.releaseLock();
+    }
+  }, 'updateClientIntake');
+}
+

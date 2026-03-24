@@ -339,16 +339,13 @@
       </label>
       <div class="help-text" style="margin-left: 28px;">Keep the existing schedule for clinic days before today unchanged. Only future days will be regenerated.</div>
     </div>
-    <div class="form-group" style="margin-bottom: 0;">
+    <div class="form-group">
       <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
         <input type="checkbox" id="partialUpdate" style="width: 18px; height: 18px; cursor: pointer;">
         <span>Preserve unchanged volunteers</span>
       </label>
       <div class="help-text" style="margin-left: 28px;">Only re-schedule volunteers who updated their availability since the last generation. All others keep their existing shifts.</div>
     </div>
-  </div>
-
-  <div class="form-section">
     <div class="form-group" style="margin-bottom: 0;">
       <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
         <input type="checkbox" id="notifyChanges" style="width: 18px; height: 18px; cursor: pointer;">
@@ -876,6 +873,9 @@
     }
 
     html += '</tbody></table></div>';
+    html += '<div style="margin-top:12px;"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;">';
+    html += '<input type="checkbox" id="editorNotifyEmail" style="width:18px;height:18px;cursor:pointer;">';
+    html += '<span>Send schedule update email to this volunteer</span></label></div>';
     html += '<div class="button-group" style="margin-top:15px;">';
     html += '<button class="btn-primary" onclick="saveEditorChanges()" id="editorSaveBtn">Save Changes</button>';
     html += '<button class="btn-secondary" onclick="document.getElementById(\'editorPanel\').style.display=\'none\';document.getElementById(\'editorSearchName\').value=\'\';">Cancel</button>';
@@ -888,6 +888,7 @@
   function saveEditorChanges() {
     const saveBtn = document.getElementById('editorSaveBtn');
     const status = document.getElementById('editorStatus');
+    const sendEmail = document.getElementById('editorNotifyEmail').checked;
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving...';
     status.innerHTML = '<div class="loading" style="display:inline-block;"></div> Saving changes...';
@@ -896,14 +897,20 @@
       .withSuccessHandler(result => {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Save Changes';
-        status.innerHTML = '<div style="color:var(--success-color);font-weight:600;">Saved! ' + result.changesApplied + ' shift(s) updated.</div>';
+        let msg = 'Saved! ' + result.changesApplied + ' shift(s) updated.';
+        if (result.emailSent) {
+          msg += ' Notification email sent.';
+        } else if (result.emailError) {
+          msg += '</div><div style="color:#b8860b;font-weight:500;margin-top:4px;">Email not sent: ' + result.emailError;
+        }
+        status.innerHTML = '<div style="color:var(--success-color);font-weight:600;">' + msg + '</div>';
       })
       .withFailureHandler(error => {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Save Changes';
         status.innerHTML = '<div style="color:var(--error-color);">Error: ' + (error.message || error) + '</div>';
       })
-      .saveVolunteerScheduleEdits(editorVolunteerName, editorShiftMap);
+      .saveVolunteerScheduleEdits(editorVolunteerName, editorShiftMap, sendEmail);
   }
 
   function viewDistribution() {

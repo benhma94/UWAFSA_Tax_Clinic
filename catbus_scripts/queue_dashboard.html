@@ -336,6 +336,59 @@
     }
 
 
+  /* Edit modal: wider to fit intake fields */
+  #editClientModal .modal-content {
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  #editClientModal .modal-content h3 {
+    color: var(--accent-color);
+  }
+
+  .edit-section-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+  }
+
+  .edit-section {
+    margin-bottom: 14px;
+  }
+
+  .edit-checkbox-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .edit-checkbox-row label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
+
+  .edit-situations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .edit-situations-list label {
+    cursor: pointer;
+  }
+
+  .edit-modal-error {
+    color: #c0392b;
+    background: #fde8e8;
+    padding: 8px 12px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    display: none;
+  }
+
   .queue-toast {
     position: fixed;
     bottom: 28px;
@@ -475,7 +528,11 @@
           ${priorityBadge}
           <div class="mobile-card-title">${escapeHtml(client.clientId)}</div>
           <div class="mobile-card-info">⏱️ Wait Time: ${escapeHtml(client.waitTime)}</div>
-          <div style="margin-top: 10px; text-align: center;">
+          <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+            <button onclick="openEditClientModal('${escapeHtml(client.clientId)}')"
+                    style="background-color:var(--accent-color); color:white; border:none; padding:12px 16px; border-radius:8px; cursor:pointer; font-weight:600; width:100%; min-height:44px; font-size:1em;">
+              ✏️ Edit Intake
+            </button>
             <button onclick="openRemoveClientModal('${escapeHtml(client.clientId)}')"
                     style="background-color:#c0392b; color:white; border:none; padding:12px 16px; border-radius:8px; cursor:pointer; font-weight:600; width:100%; min-height:44px; font-size:1em;">
               🗑️ Remove from Queue
@@ -503,7 +560,11 @@
         row.innerHTML = `
           <td>${priorityBadge}${escapeHtml(client.clientId)}</td>
           <td>${escapeHtml(client.waitTime)}</td>
-          <td style="text-align: center;">
+          <td style="text-align: center; white-space: nowrap;">
+            <button onclick="openEditClientModal('${escapeHtml(client.clientId)}')"
+                    style="background-color:var(--accent-color); color:white; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; font-weight:600; font-size:0.85em; margin-right:4px;">
+              ✏️ Edit
+            </button>
             <button onclick="openRemoveClientModal('${escapeHtml(client.clientId)}')"
                     style="background-color:#c0392b; color:white; border:none; padding:6px 12px; border-radius:5px; cursor:pointer; font-weight:600; font-size:0.85em;">
               🗑️ Remove
@@ -632,13 +693,13 @@
   // Close modals on Escape key
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-      if (document.getElementById('removeClientModal').style.display === 'flex') {
+      if (document.getElementById('editClientModal').style.display === 'flex') {
+        closeEditClientModal();
+      } else if (document.getElementById('removeClientModal').style.display === 'flex') {
         closeRemoveClientModal();
-      }
-      if (document.getElementById('reassignModal').style.display === 'flex') {
+      } else if (document.getElementById('reassignModal').style.display === 'flex') {
         closeReassignModal();
-      }
-      if (document.getElementById('confirmationModal').style.display === 'flex') {
+      } else if (document.getElementById('confirmationModal').style.display === 'flex') {
         refreshAfterModal();
       }
     }
@@ -702,6 +763,160 @@
 
   function handleRemoveError(error) {
     showToast('Error removing client: ' + error.message, 'error');
+  }
+
+  // Edit client intake functions
+  let clientToEdit = null;
+  const FILING_YEARS_OPTIONS = ['2025','2024','2023','2022','2021','2020','2019','2018','2017'];
+
+  function openEditClientModal(clientId) {
+    clientToEdit = clientId;
+    document.getElementById('editModalClientId').textContent = 'Editing: ' + clientId;
+    document.getElementById('editModalError').style.display = 'none';
+    document.getElementById('editSaveBtn').disabled = true;
+    document.getElementById('editSaveBtn').textContent = 'Loading...';
+
+    // Build filing year checkboxes once
+    const fyContainer = document.getElementById('editFilingYearsContainer');
+    if (!fyContainer.children.length) {
+      FILING_YEARS_OPTIONS.forEach(y => {
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" name="editFilingYear" value="${y}"> ${y}`;
+        fyContainer.appendChild(label);
+      });
+    }
+
+    const modal = document.getElementById('editClientModal');
+    modal.style.display = 'flex';
+
+    google.script.run
+      .withSuccessHandler(data => {
+        populateEditModal(data);
+        document.getElementById('editSaveBtn').disabled = false;
+        document.getElementById('editSaveBtn').textContent = 'Save Changes';
+      })
+      .withFailureHandler(err => {
+        document.getElementById('editModalError').textContent = 'Failed to load client data: ' + err.message;
+        document.getElementById('editModalError').style.display = 'block';
+        document.getElementById('editSaveBtn').textContent = 'Save Changes';
+      })
+      .getClientIntakeData(clientId);
+  }
+
+  function populateEditModal(data) {
+    // Household size
+    document.getElementById('editHouseholdSize').value = data.householdSize || 1;
+
+    // Filing years
+    document.querySelectorAll('input[name="editFilingYear"]').forEach(cb => {
+      cb.checked = data.filingYears.includes(cb.value);
+    });
+
+    // Situations — uncheck all first, then check those in data
+    document.querySelectorAll('input[name="editSituation"]').forEach(cb => {
+      cb.checked = data.situations.includes(cb.value);
+    });
+    handleEditStudentChange();
+
+    // Parse newcomer entry date out of notes prefix
+    const notesFull = data.notes || '';
+    let newcomerDate = '';
+    let notesForTextarea = notesFull;
+    const dateMatch = notesFull.match(/^Date of entry: (\d{4}-\d{2}-\d{2})\n?/);
+    if (dateMatch) {
+      newcomerDate = dateMatch[1];
+      notesForTextarea = notesFull.slice(dateMatch[0].length);
+    }
+    document.getElementById('editNewcomerDate').value = newcomerDate;
+    handleEditNewcomerChange();
+
+    document.getElementById('editNotes').value = notesForTextarea;
+
+    // Flags
+    document.getElementById('editNeedsSeniorReview').checked = !!data.needsSeniorReview;
+    document.getElementById('editIsHighPriority').checked = !!data.isHighPriority;
+  }
+
+  function handleEditStudentChange() {
+    const studentCb = document.querySelector('input[name="editSituation"][value="Student"]');
+    const intlRow = document.getElementById('editInternationalStudentRow');
+    const intlCb = document.querySelector('input[name="editSituation"][value="International Student"]');
+    const show = studentCb && studentCb.checked;
+    intlRow.style.display = show ? 'block' : 'none';
+    if (!show && intlCb) intlCb.checked = false;
+  }
+
+  function handleEditNewcomerChange() {
+    const newcomerCb = document.querySelector('input[name="editSituation"][value="Newcomer"]');
+    const dateRow = document.getElementById('editNewcomerDateRow');
+    const show = newcomerCb && newcomerCb.checked;
+    dateRow.style.display = show ? 'block' : 'none';
+    if (!show) document.getElementById('editNewcomerDate').value = '';
+  }
+
+  function closeEditClientModal() {
+    document.getElementById('editClientModal').style.display = 'none';
+    clientToEdit = null;
+  }
+
+  function confirmEditClient() {
+    const householdSize = parseInt(document.getElementById('editHouseholdSize').value);
+    if (!householdSize || householdSize < 1) {
+      document.getElementById('editModalError').textContent = 'Household size must be at least 1.';
+      document.getElementById('editModalError').style.display = 'block';
+      return;
+    }
+
+    const filingYears = [...document.querySelectorAll('input[name="editFilingYear"]:checked')].map(cb => cb.value);
+    if (filingYears.length === 0) {
+      document.getElementById('editModalError').textContent = 'At least one filing year must be selected.';
+      document.getElementById('editModalError').style.display = 'block';
+      return;
+    }
+
+    const situations = [...document.querySelectorAll('input[name="editSituation"]:checked')].map(cb => cb.value);
+
+    // Rebuild notes: re-add newcomer date prefix if applicable; keep rest of notes as typed
+    const newcomerCb = document.querySelector('input[name="editSituation"][value="Newcomer"]');
+    const newcomerDate = document.getElementById('editNewcomerDate').value;
+    const baseNotes = document.getElementById('editNotes').value;
+    const notes = (newcomerCb && newcomerCb.checked && newcomerDate ? `Date of entry: ${newcomerDate}\n` : '') + baseNotes;
+
+    const formData = {
+      householdSize: householdSize,
+      filingYears: filingYears,
+      situations: situations,
+      notes: notes,
+      needsSeniorReview: document.getElementById('editNeedsSeniorReview').checked,
+      isHighPriority: document.getElementById('editIsHighPriority').checked
+    };
+
+    const clientId = clientToEdit;
+    const saveBtn = document.getElementById('editSaveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    document.getElementById('editModalError').style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(result => {
+        if (result && result.success) {
+          closeEditClientModal();
+          showToast('Client ' + clientId + ' updated successfully', 'success');
+          loadQueue();
+        } else {
+          document.getElementById('editModalError').textContent = 'Save failed. Please try again.';
+          document.getElementById('editModalError').style.display = 'block';
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Changes';
+        }
+      })
+      .withFailureHandler(err => {
+        document.getElementById('editModalError').textContent = 'Error: ' + err.message;
+        document.getElementById('editModalError').style.display = 'block';
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      })
+      .updateClientIntake(clientId, formData);
   }
 
   function renderActiveAssignments() {
@@ -952,6 +1167,64 @@
       <button class="modal-btn modal-btn-accent" onclick="confirmReassign()">Confirm Reassign</button>
       <button class="modal-btn modal-btn-danger" onclick="confirmUnassign()">Return to Queue</button>
       <button class="modal-btn modal-btn-cancel" onclick="closeReassignModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Client Intake Modal -->
+<div id="editClientModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+  <div class="modal-content">
+    <h3 id="editModalTitle">Edit Client Intake</h3>
+    <p id="editModalClientId" style="font-weight: bold; color: #555; margin: 0 0 14px;"></p>
+    <div id="editModalError" class="edit-modal-error"></div>
+
+    <div class="edit-section">
+      <label class="edit-section-label" for="editHouseholdSize">Household Size</label>
+      <input type="number" id="editHouseholdSize" min="1" max="20"
+             style="width: 90px; padding: 8px; border-radius: 5px; border: 1px solid var(--border-light);">
+    </div>
+
+    <div class="edit-section">
+      <span class="edit-section-label">Filing Years</span>
+      <div id="editFilingYearsContainer" class="edit-checkbox-row">
+        <!-- built by JS -->
+      </div>
+    </div>
+
+    <div class="edit-section">
+      <span class="edit-section-label">Situations</span>
+      <div class="edit-situations-list">
+        <label><input type="checkbox" name="editSituation" value="Student" onchange="handleEditStudentChange()"> Student</label>
+        <div id="editInternationalStudentRow" style="display:none; margin-left: 20px;">
+          <label><input type="checkbox" name="editSituation" value="International Student"> International Student</label>
+        </div>
+        <label><input type="checkbox" name="editSituation" value="Employed"> Employed</label>
+        <label><input type="checkbox" name="editSituation" value="Married/Common-Law"> Married/Common-Law</label>
+        <label><input type="checkbox" name="editSituation" value="Newcomer" onchange="handleEditNewcomerChange()"> Newcomer</label>
+        <div id="editNewcomerDateRow" style="display:none; margin-left: 20px;">
+          <label style="font-size: 0.9em; font-weight: normal;">Date of entry to Canada:
+            <input type="date" id="editNewcomerDate" style="margin-left: 6px;">
+          </label>
+        </div>
+        <label><input type="checkbox" name="editSituation" value="Children"> Children</label>
+        <label><input type="checkbox" name="editSituation" value="First-Time Filer"> First-Time Filer</label>
+      </div>
+    </div>
+
+    <div class="edit-section">
+      <label class="edit-section-label" for="editNotes">Additional Notes</label>
+      <textarea id="editNotes" style="width: 100%; min-height: 70px; padding: 8px; border-radius: 5px;
+                border: 1px solid var(--border-light); font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+    </div>
+
+    <div class="edit-section" style="display: flex; flex-direction: column; gap: 8px;">
+      <label><input type="checkbox" id="editNeedsSeniorReview"> Flag for Senior Review</label>
+      <label><input type="checkbox" id="editIsHighPriority"> High Priority Client</label>
+    </div>
+
+    <div class="modal-btn-group">
+      <button class="modal-btn modal-btn-accent" id="editSaveBtn" onclick="confirmEditClient()">Save Changes</button>
+      <button class="modal-btn modal-btn-cancel" onclick="closeEditClientModal()">Cancel</button>
     </div>
   </div>
 </div>

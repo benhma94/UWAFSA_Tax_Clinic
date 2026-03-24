@@ -50,8 +50,8 @@ function checkExistingVolunteer(email) {
       const rowEmail = normalizeEmail(row[emailColIndex]);
 
       if (rowEmail === normalizedEmail) {
-        const timestamp = row[0] instanceof Date ? row[0].toISOString() : row[0];
-        const lastModified = row[9] instanceof Date ? row[9].toISOString() : (row[9] || null);
+        const timestamp = row[0];
+        const lastModified = row[9] || null;
 
         return {
           exists: true,
@@ -76,6 +76,47 @@ function checkExistingVolunteer(email) {
   } catch (error) {
     Logger.log('checkExistingVolunteer error: ' + error.message);
     return { exists: false, error: error.message };
+  }
+}
+
+/**
+ * Checks if a volunteer with the given full name already exists in the sheet
+ * Used to detect duplicate sign-ups under different email addresses
+ * @param {string} firstName - First name to search for
+ * @param {string} lastName - Last name to search for
+ * @returns {Object} { exists: true, maskedEmail } or { exists: false }
+ */
+function checkAvailabilityNameExists(firstName, lastName) {
+  try {
+    const sheet = getOrCreateAvailabilitySheet();
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return { exists: false };
+
+    const allData = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
+    const normFirst = firstName.trim().toLowerCase();
+    const normLast = lastName.trim().toLowerCase();
+
+    for (let i = 0; i < allData.length; i++) {
+      const row = allData[i];
+      if (row[1].toString().trim().toLowerCase() === normFirst &&
+          row[2].toString().trim().toLowerCase() === normLast) {
+        const email = row[3].toString();
+        const atIdx = email.indexOf('@');
+        let maskedEmail;
+        if (atIdx > 2) {
+          maskedEmail = email.substring(0, 2) + '***' + email.substring(atIdx);
+        } else if (atIdx > 0) {
+          maskedEmail = email.substring(0, 1) + '***' + email.substring(atIdx);
+        } else {
+          maskedEmail = '***';
+        }
+        return { exists: true, maskedEmail: maskedEmail };
+      }
+    }
+    return { exists: false };
+  } catch (error) {
+    Logger.log('checkAvailabilityNameExists error: ' + error.message);
+    return { exists: false };
   }
 }
 

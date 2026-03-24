@@ -45,9 +45,10 @@ function getVolunteerShiftMap(volunteerName) {
  * Batch saves schedule edits for a volunteer across all shifts
  * @param {string} volunteerName - Exact volunteer name
  * @param {Object} shiftUpdates - Map of shift ID -> boolean (true = assign, false = remove)
- * @returns {Object} Result with success status and number of changes applied
+ * @param {boolean} [sendEmail] - If true, send schedule change notification email
+ * @returns {Object} Result with success status, changes applied, and email status
  */
-function saveVolunteerScheduleEdits(volunteerName, shiftUpdates) {
+function saveVolunteerScheduleEdits(volunteerName, shiftUpdates, sendEmail) {
   return safeExecute(() => {
     if (!volunteerName || !volunteerName.trim()) {
       throw new Error('Volunteer name is required');
@@ -55,6 +56,8 @@ function saveVolunteerScheduleEdits(volunteerName, shiftUpdates) {
 
     const sheet = getScheduleSheet();
     let changeCount = 0;
+    const oldShifts = [];
+    const newShifts = [];
 
     for (const [shiftId, shouldBeAssigned] of Object.entries(shiftUpdates)) {
       if (!SCHEDULE_CONFIG.isValidShiftId(shiftId)) continue;
@@ -73,6 +76,12 @@ function saveVolunteerScheduleEdits(volunteerName, shiftUpdates) {
       }
 
       const nameIndex = names.findIndex(n => n.toLowerCase() === volunteerName.trim().toLowerCase());
+
+      // Track old state for email notification
+      if (nameIndex !== -1) {
+        oldShifts.push(shiftId);
+      }
+
       let changed = false;
 
       if (shouldBeAssigned && nameIndex === -1) {
@@ -88,8 +97,69 @@ function saveVolunteerScheduleEdits(volunteerName, shiftUpdates) {
         cell.setValue(newValue);
         changeCount++;
       }
+
+      // Track new state for email notification
+      if (shouldBeAssigned) {
+        newShifts.push(shiftId);
+      }
     }
 
-    return { success: true, changesApplied: changeCount };
+    const result = { success: true, changesApplied: changeCount, emailSent: false, emailError: null };
+
+    // Send notification email if requested and changes were made
+    if (sendEmail && changeCount > 0) {
+      try {
+        const email = lookupVolunteerEmail_(volunteerName);
+        if (!email) {
+          result.emailError = 'No email found for this volunteer';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          result.emailError = 'Invalid email address on file';
+        } else {
+          // Only include future shifts in the email
+          const pastShiftIds = getPastShiftIds();
+          const futureOldShifts = oldShifts.filter(s => !pastShiftIds.includes(s));
+          const futureNewShifts = newShifts.filter(s => !pastShiftIds.includes(s));
+          const htmlBody = buildScheduleChangeEmailBody(
+            volunteerName, futureOldShifts, futureNewShifts, SCHEDULE_CONFIG.DEFAULT_DAY_LABELS
+          );
+          MailApp.sendEmail({
+            to: email,
+            subject: 'Your Tax Clinic Schedule Has Changed',
+            htmlBody: htmlBody
+          });
+          result.emailSent = true;
+        }
+      } catch (e) {
+        result.emailError = e.message || 'Failed to send email';
+      }
+    }
+
+    return result;
   }, 'saveVolunteerScheduleEdits');
+}
+
+/**
+ * Looks up a volunteer's email from the Schedule Availability sheet
+ * @param {string} volunteerName - Full name (first + last)
+ * @returns {string|null} Email address or null if not found
+ */
+function lookupVolunteerEmail_(volunteerName) {
+  const sheet = getSpreadsheet().getSheetByName(CONFIG.SHEETS.SCHEDULE_AVAILABILITY);
+  if (!sheet) return null;
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return null;
+
+  const data = sheet.getRange(2, 2, lastRow - 1, 3).getValues(); // columns B(first), C(last), D(email)
+  const target = volunteerName.trim().toLowerCase();
+
+  // Scan bottom-to-top to get most recent submission
+  for (let i = data.length - 1; i >= 0; i--) {
+    const fullName = ((data[i][0] || '') + ' ' + (data[i][1] || '')).trim().toLowerCase();
+    if (fullName === target) {
+      return data[i][2]?.toString().trim() || null;
+    }
+  }
+
+  return null;
 }

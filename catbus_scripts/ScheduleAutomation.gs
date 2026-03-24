@@ -76,6 +76,45 @@ function fillRoleMinimum(shiftId, roleCategory, minimum, volunteers, schedule,
 }
 
 /**
+ * Ensures every volunteer of a given role has at least `minShifts` assignments.
+ * Used by Phase 3 (filers) and Phase 3.5 (frontline) — extracted to avoid duplication.
+ */
+function ensureRoleMinShifts(roleCategory, minShifts, sortedVolunteers, schedule,
+                              volunteerAssignments, shiftRoleCounts, lockedShiftIds, hardCap) {
+  const underAssigned = sortedVolunteers
+    .filter(v => v.roleCategory === roleCategory &&
+                 volunteerAssignments[v.fullName].length < minShifts &&
+                 v.maxShifts >= minShifts)
+    .sort((a, b) => volunteerAssignments[a.fullName].length - volunteerAssignments[b.fullName].length);
+
+  for (const vol of underAssigned) {
+    while (volunteerAssignments[vol.fullName].length < minShifts &&
+           volunteerAssignments[vol.fullName].length < vol.maxShifts) {
+      const availableShifts = vol.availability.filter(shiftId =>
+        !lockedShiftIds.has(shiftId) &&
+        !schedule[shiftId].includes(vol.fullName) &&
+        (!hardCap || shiftRoleCounts[shiftId][roleCategory] < hardCap)
+      );
+      if (availableShifts.length === 0) break;
+      availableShifts.sort((a, b) => schedule[a].length - schedule[b].length);
+      const bestShift = availableShifts[0];
+      schedule[bestShift].push(vol.fullName);
+      volunteerAssignments[vol.fullName].push(bestShift);
+      shiftRoleCounts[bestShift][roleCategory]++;
+    }
+  }
+
+  const stillUnder = sortedVolunteers.filter(v =>
+    v.roleCategory === roleCategory && v.maxShifts >= minShifts &&
+    volunteerAssignments[v.fullName].length < minShifts
+  );
+  if (stillUnder.length > 0) {
+    Logger.log(`Warning: ${stillUnder.length} ${roleCategory}s could not reach ${minShifts} shifts`);
+    stillUnder.forEach(v => Logger.log(`  ${v.fullName}: ${volunteerAssignments[v.fullName].length}/${minShifts}`));
+  }
+}
+
+/**
  * Gets a spreadsheet by ID (for schedule automation, may be different from main CATBUS spreadsheet)
  * @param {string} spreadsheetId - Spreadsheet ID
  * @returns {Spreadsheet} The spreadsheet object
@@ -95,9 +134,7 @@ function readAvailabilityResponses(spreadsheetId, sheetName) {
     throw new Error('Spreadsheet ID and sheet name are required');
   }
 
-  Logger.log('Reading availability from spreadsheet: ' + spreadsheetId + ', sheet: ' + sheetName);
-
-  // OPTIMIZED: Cache spreadsheet to avoid multiple opens
+  // Cache spreadsheet to avoid multiple opens
   const ss = getScheduleSpreadsheet(spreadsheetId);
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
@@ -106,19 +143,14 @@ function readAvailabilityResponses(spreadsheetId, sheetName) {
   
   // OPTIMIZED: Get both last row and last column in single operation
   const lastRow = sheet.getLastRow();
-  const lastCol = Math.max(8, sheet.getLastColumn()); // Ensure we read at least 8 columns
-
-  Logger.log('Sheet has ' + lastRow + ' rows (including header)');
+  const lastCol = Math.max(10, sheet.getLastColumn()); // Ensure we read at least 10 columns
 
   if (lastRow <= 1) {
-    Logger.log('No data rows found');
     return [];
   }
 
-  Logger.log('Reading ' + (lastRow - 1) + ' data rows');
-
   const maxRows = Math.min(lastRow - 1, 1000);
-  const data = sheet.getRange(2, 1, maxRows, 8).getValues();
+  const data = sheet.getRange(2, 1, maxRows, 10).getValues();
   
 
   const volunteers = [];
@@ -171,7 +203,7 @@ function readAvailabilityResponses(spreadsheetId, sheetName) {
         preferConsecutive,
         availability,
         timestamp: row[0] instanceof Date ? row[0] : new Date(row[0]),
-        assignedShifts: [] // Will be populated during scheduling
+        lastModified: row[9] instanceof Date ? row[9] : (row[9] ? new Date(row[9]) : null)
       });
     }
   }
@@ -222,7 +254,8 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
   const {
     prioritizeConsecutive = true,
     lockedAssignments: lockedAssignmentsOpt = {},
-    lockedShiftIds: lockedShiftIdsOpt = []
+    lockedShiftIds: lockedShiftIdsOpt = [],
+    excludeVolunteers: excludeVolunteersOpt = new Set()
   } = options;
 
   const lockedShiftIds = new Set(lockedShiftIdsOpt);
@@ -230,12 +263,7 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
   const FILER_HARD_CAP = SCHEDULE_CONFIG.FILER_HARD_CAP;
   const ROLE_MIN_PER_SHIFT = SCHEDULE_CONFIG.ROLE_MIN_PER_SHIFT;
 
-  Logger.log('Reading availability from: ' + availabilitySheetName);
-
-  // Read availability - removed safeExecute wrapper to reduce call stack depth
   const volunteers = readAvailabilityResponses(spreadsheetId, availabilitySheetName);
-
-  Logger.log('Found ' + volunteers.length + ' volunteers with availability');
 
   if (volunteers.length === 0) {
     throw new Error('No volunteer availability data found. Please ensure volunteers have submitted the availability form.');
@@ -265,7 +293,6 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
     });
 
     // === PARTIAL UPDATE: Pre-populate locked assignments ===
-    const lockedVolunteerNames = new Set(Object.keys(lockedAssignmentsOpt));
     for (const [name, shifts] of Object.entries(lockedAssignmentsOpt)) {
       const volData = volunteers.find(v => v.fullName === name);
       const roleCategory = volData ? volData.roleCategory : 'filer';
@@ -279,10 +306,12 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
         }
       }
     }
-    // Only run the algorithm for volunteers who are not locked
-    const activeVolunteers = volunteers.filter(v => !lockedVolunteerNames.has(v.fullName));
-    if (lockedVolunteerNames.size > 0 || lockedShiftIds.size > 0) {
-      Logger.log('Partial update: ' + lockedVolunteerNames.size + ' locked volunteers, ' + lockedShiftIds.size + ' locked shifts');
+    // Only run the algorithm for volunteers who are explicitly excluded (unchanged in partial update)
+    // Note: volunteers in lockedAssignments but NOT in excludeVolunteers still participate
+    // in future shift scheduling — their pre-populated past shifts count toward maxShifts
+    const activeVolunteers = volunteers.filter(v => !excludeVolunteersOpt.has(v.fullName));
+    if (excludeVolunteersOpt.size > 0 || lockedShiftIds.size > 0) {
+      Logger.log('Partial update: ' + excludeVolunteersOpt.size + ' excluded volunteers, ' + lockedShiftIds.size + ' locked shifts');
     }
 
     // Sort volunteers by availability count (fewer available = higher priority to assign)
@@ -310,12 +339,6 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
                       volunteerAssignments, shiftRoleCounts, 999, null);
     }
 
-    // Log role target results
-    for (const shiftId of SHIFT_IDS) {
-      const counts = shiftRoleCounts[shiftId];
-      Logger.log(`${shiftId} after role minimums: filers=${counts.filer}, mentors=${counts.mentor}, frontline=${counts.frontline}`);
-    }
-
     // PHASE 1.5: Assign Internal Services volunteers to ALL their available shifts (guaranteed)
     const internalServicesVols = sortedVolunteers.filter(v => v.roleCategory === 'internalServices');
     for (const volunteer of internalServicesVols) {
@@ -327,7 +350,6 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
           shiftRoleCounts[shiftId].internalServices++;
         }
       }
-      Logger.log(`Internal Services: ${volunteer.fullName} assigned to ${volunteerAssignments[volunteer.fullName].length} shifts`);
     }
 
     // PHASE 2: Assign volunteers who prefer consecutive shifts
@@ -349,13 +371,26 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
           if (chainEnd > i) { // Chain of 2+ shifts found
             let chain = volunteer.availability.slice(i, chainEnd + 1);
 
-            // Filter out already-assigned and locked shifts
-            chain = chain.filter(id => !schedule[id].includes(volunteer.fullName) && !lockedShiftIds.has(id));
+            // Filter out already-assigned, locked, and hard-capped shifts
+            chain = chain.filter(id =>
+              !schedule[id].includes(volunteer.fullName) &&
+              !lockedShiftIds.has(id) &&
+              (volunteer.roleCategory !== 'filer' || shiftRoleCounts[id].filer < FILER_HARD_CAP)
+            );
 
-            // Enforce filer hard cap on each shift
-            if (volunteer.roleCategory === 'filer') {
-              chain = chain.filter(id => shiftRoleCounts[id].filer < FILER_HARD_CAP);
+            // Re-extract longest consecutive sub-chain (filtering may have created gaps)
+            let bestSub = [];
+            let currentSub = chain.length > 0 ? [chain[0]] : [];
+            for (let j = 1; j < chain.length; j++) {
+              if (areShiftsConsecutive(chain[j - 1], chain[j])) {
+                currentSub.push(chain[j]);
+              } else {
+                if (currentSub.length > bestSub.length) bestSub = currentSub;
+                currentSub = [chain[j]];
+              }
             }
+            if (currentSub.length > bestSub.length) bestSub = currentSub;
+            chain = bestSub;
 
             // Trim to remaining capacity
             const remaining = volunteer.maxShifts - volunteerAssignments[volunteer.fullName].length;
@@ -378,94 +413,15 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
       }
     }
     
-    // PHASE 3: Ensure every filer has a minimum of 3 shift assignments
-    const FILER_MIN_SHIFTS = SCHEDULE_CONFIG.FILER_MIN_SHIFTS;
-    Logger.log('Ensuring filer minimum of ' + FILER_MIN_SHIFTS + ' shifts...');
-    {
-      // Get filers who are under the minimum and whose maxShifts allows it
-      const underAssignedFilers = sortedVolunteers
-        .filter(v => v.roleCategory === 'filer' &&
-                     volunteerAssignments[v.fullName].length < FILER_MIN_SHIFTS &&
-                     v.maxShifts >= FILER_MIN_SHIFTS)
-        .sort((a, b) => volunteerAssignments[a.fullName].length - volunteerAssignments[b.fullName].length);
+    // PHASE 3: Ensure every filer has a minimum number of shift assignments
+    Logger.log('Ensuring filer minimum of ' + SCHEDULE_CONFIG.FILER_MIN_SHIFTS + ' shifts...');
+    ensureRoleMinShifts('filer', SCHEDULE_CONFIG.FILER_MIN_SHIFTS, sortedVolunteers, schedule,
+                        volunteerAssignments, shiftRoleCounts, lockedShiftIds, FILER_HARD_CAP);
 
-      for (const filer of underAssignedFilers) {
-        while (volunteerAssignments[filer.fullName].length < FILER_MIN_SHIFTS &&
-               volunteerAssignments[filer.fullName].length < filer.maxShifts) {
-          // Find available shifts for this filer, preferring shifts with lowest headcount
-          const availableShifts = filer.availability.filter(shiftId =>
-            !lockedShiftIds.has(shiftId) &&
-            !schedule[shiftId].includes(filer.fullName) &&
-            shiftRoleCounts[shiftId].filer < FILER_HARD_CAP
-          );
-
-          if (availableShifts.length === 0) break;
-
-          // Pick the shift with the fewest current volunteers
-          availableShifts.sort((a, b) => schedule[a].length - schedule[b].length);
-          const bestShift = availableShifts[0];
-
-          schedule[bestShift].push(filer.fullName);
-          volunteerAssignments[filer.fullName].push(bestShift);
-          shiftRoleCounts[bestShift].filer++;
-        }
-      }
-
-      // Log results
-      const stillUnder = sortedVolunteers.filter(v =>
-        v.roleCategory === 'filer' &&
-        v.maxShifts >= FILER_MIN_SHIFTS &&
-        volunteerAssignments[v.fullName].length < FILER_MIN_SHIFTS
-      );
-      if (stillUnder.length > 0) {
-        Logger.log(`Warning: ${stillUnder.length} filers could not reach ${FILER_MIN_SHIFTS} shifts (limited availability)`);
-        stillUnder.forEach(v => Logger.log(`  ${v.fullName}: ${volunteerAssignments[v.fullName].length}/${FILER_MIN_SHIFTS} shifts`));
-      } else {
-        Logger.log('All eligible filers have at least ' + FILER_MIN_SHIFTS + ' shifts');
-      }
-    }
-
-    // PHASE 3.5: Ensure every frontline volunteer has a minimum of 3 shift assignments
-    const FRONTLINE_MIN_SHIFTS = SCHEDULE_CONFIG.FRONTLINE_MIN_SHIFTS;
-    Logger.log('Ensuring frontline minimum of ' + FRONTLINE_MIN_SHIFTS + ' shifts...');
-    {
-      const underAssignedFrontline = sortedVolunteers
-        .filter(v => v.roleCategory === 'frontline' &&
-                     volunteerAssignments[v.fullName].length < FRONTLINE_MIN_SHIFTS &&
-                     v.maxShifts >= FRONTLINE_MIN_SHIFTS)
-        .sort((a, b) => volunteerAssignments[a.fullName].length - volunteerAssignments[b.fullName].length);
-
-      for (const vol of underAssignedFrontline) {
-        while (volunteerAssignments[vol.fullName].length < FRONTLINE_MIN_SHIFTS &&
-               volunteerAssignments[vol.fullName].length < vol.maxShifts) {
-          const availableShifts = vol.availability.filter(shiftId =>
-            !lockedShiftIds.has(shiftId) &&
-            !schedule[shiftId].includes(vol.fullName)
-          );
-
-          if (availableShifts.length === 0) break;
-
-          availableShifts.sort((a, b) => schedule[a].length - schedule[b].length);
-          const bestShift = availableShifts[0];
-
-          schedule[bestShift].push(vol.fullName);
-          volunteerAssignments[vol.fullName].push(bestShift);
-          shiftRoleCounts[bestShift].frontline++;
-        }
-      }
-
-      const stillUnder = sortedVolunteers.filter(v =>
-        v.roleCategory === 'frontline' &&
-        v.maxShifts >= FRONTLINE_MIN_SHIFTS &&
-        volunteerAssignments[v.fullName].length < FRONTLINE_MIN_SHIFTS
-      );
-      if (stillUnder.length > 0) {
-        Logger.log(`Warning: ${stillUnder.length} frontline volunteers could not reach ${FRONTLINE_MIN_SHIFTS} shifts (limited availability)`);
-        stillUnder.forEach(v => Logger.log(`  ${v.fullName}: ${volunteerAssignments[v.fullName].length}/${FRONTLINE_MIN_SHIFTS} shifts`));
-      } else {
-        Logger.log('All eligible frontline volunteers have at least ' + FRONTLINE_MIN_SHIFTS + ' shifts');
-      }
-    }
+    // PHASE 3.5: Ensure every frontline volunteer has a minimum number of shift assignments
+    Logger.log('Ensuring frontline minimum of ' + SCHEDULE_CONFIG.FRONTLINE_MIN_SHIFTS + ' shifts...');
+    ensureRoleMinShifts('frontline', SCHEDULE_CONFIG.FRONTLINE_MIN_SHIFTS, sortedVolunteers, schedule,
+                        volunteerAssignments, shiftRoleCounts, lockedShiftIds, null);
 
     // PHASE 4: Fill remaining shifts, balancing role distribution across shifts
     // OPTIMIZED: Build availability index once instead of filtering repeatedly
@@ -486,22 +442,21 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
     // Round-robin: repeatedly assign one volunteer to the (shift, role) pair with the
     // largest deficit vs. the cross-shift average, ensuring even role distribution
     const roles = ['filer', 'mentor', 'frontline', 'internalServices'];
+    const numShifts = SHIFT_IDS.length;
+
+    // Compute role totals once, then update incrementally after each assignment
+    const roleTotals = {};
+    for (const role of roles) {
+      roleTotals[role] = SHIFT_IDS.reduce((sum, id) => sum + shiftRoleCounts[id][role], 0);
+    }
+
     let madeAssignment = true;
     while (madeAssignment) {
       madeAssignment = false;
 
-      // For each (shift, role) pair, compute deficit = avgRoleCount - thisShiftRoleCount
-      // Pick the pair with the largest deficit that has assignable candidates
       let bestShift = null;
       let bestRole = null;
       let bestDeficit = -Infinity;
-
-      // Compute average role counts across all shifts
-      const avgRoleCounts = {};
-      for (const role of roles) {
-        const total = SHIFT_IDS.reduce((sum, id) => sum + shiftRoleCounts[id][role], 0);
-        avgRoleCounts[role] = total / SHIFT_IDS.length;
-      }
 
       for (const shiftId of SHIFT_IDS) {
         if (lockedShiftIds.has(shiftId)) continue;
@@ -509,7 +464,7 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
           // Hard cap: skip filer assignments for shifts at the filer limit
           if (role === 'filer' && shiftRoleCounts[shiftId].filer >= FILER_HARD_CAP) continue;
 
-          const deficit = avgRoleCounts[role] - shiftRoleCounts[shiftId][role];
+          const deficit = (roleTotals[role] / numShifts) - shiftRoleCounts[shiftId][role];
           if (deficit <= bestDeficit) continue;
 
           // Check if any volunteer of this role can be assigned here
@@ -549,14 +504,19 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
 
       // Pick the best volunteer for this shift, preferring the target role
       // Enforce filer hard cap: exclude filers if shift is at the cap
-      let candidates = shiftToVolunteers[bestShift].filter(v =>
+      const baseCandidates = shiftToVolunteers[bestShift].filter(v =>
         v.roleCategory !== 'internalServices' && // Already fully assigned in Phase 1.5
         volunteerAssignments[v.fullName].length < v.maxShifts &&
         !schedule[bestShift].includes(v.fullName) &&
-        (v.roleCategory !== 'filer' || shiftRoleCounts[bestShift].filer < FILER_HARD_CAP) &&
-        // Avoid creating consecutive shifts for volunteers who don't want them
-        (v.preferConsecutive || !wouldCreateConsecutive(bestShift, volunteerAssignments[v.fullName]))
+        (v.roleCategory !== 'filer' || shiftRoleCounts[bestShift].filer < FILER_HARD_CAP)
       );
+
+      // Prefer non-consecutive assignments for volunteers who don't want consecutive shifts.
+      // Fall back to all candidates if no non-consecutive option exists, so maxShifts is reachable.
+      const nonConsecutiveCandidates = baseCandidates.filter(v =>
+        v.preferConsecutive || !wouldCreateConsecutive(bestShift, volunteerAssignments[v.fullName])
+      );
+      let candidates = nonConsecutiveCandidates.length > 0 ? nonConsecutiveCandidates : baseCandidates;
 
       // Prefer candidates matching the target role
       if (bestRole) {
@@ -585,31 +545,46 @@ function generateSchedule(spreadsheetId, availabilitySheetName, options = {}) {
         schedule[bestShift].push(volunteer.fullName);
         volunteerAssignments[volunteer.fullName].push(bestShift);
         shiftRoleCounts[bestShift][volunteer.roleCategory]++;
+        roleTotals[volunteer.roleCategory]++;
         madeAssignment = true;
       }
     }
 
-    // Log final counts
-    for (const shiftId of SHIFT_IDS) {
-      Logger.log(`Shift ${shiftId}: ${schedule[shiftId].length} volunteers`);
+    // PHASE 6: Volunteer satisfaction — fill remaining capacity volunteer-centrically
+    const satisfactionVols = sortedVolunteers
+      .filter(v => v.roleCategory !== 'internalServices' &&
+                   volunteerAssignments[v.fullName].length < v.maxShifts)
+      .sort((a, b) => {
+        const aRemaining = a.maxShifts - volunteerAssignments[a.fullName].length;
+        const bRemaining = b.maxShifts - volunteerAssignments[b.fullName].length;
+        return aRemaining - bRemaining;
+      });
+
+    for (const vol of satisfactionVols) {
+      while (volunteerAssignments[vol.fullName].length < vol.maxShifts) {
+        const validShifts = vol.availability.filter(shiftId =>
+          !lockedShiftIds.has(shiftId) &&
+          !schedule[shiftId].includes(vol.fullName) &&
+          (vol.roleCategory !== 'filer' || shiftRoleCounts[shiftId].filer < FILER_HARD_CAP)
+        );
+        if (validShifts.length === 0) break;
+        validShifts.sort((a, b) => schedule[a].length - schedule[b].length);
+        const bestShift = validShifts[0];
+        schedule[bestShift].push(vol.fullName);
+        volunteerAssignments[vol.fullName].push(bestShift);
+        shiftRoleCounts[bestShift][vol.roleCategory]++;
+        roleTotals[vol.roleCategory]++;
+      }
     }
-    
+
     // Calculate shortfalls (shifts where role minimums weren't met)
     const shortfalls = [];
+    const roleLabels = { filer: 'Filer', mentor: 'Mentor', frontline: 'Frontline', internalServices: 'Internal Services' };
     for (const shiftId of SHIFT_IDS) {
-      const counts = shiftRoleCounts[shiftId];
-
-      if (counts.filer < ROLE_MIN_PER_SHIFT) {
-        shortfalls.push({ shiftId, role: 'Filer', target: ROLE_MIN_PER_SHIFT, actual: counts.filer });
-      }
-      if (counts.mentor < ROLE_MIN_PER_SHIFT) {
-        shortfalls.push({ shiftId, role: 'Mentor', target: ROLE_MIN_PER_SHIFT, actual: counts.mentor });
-      }
-      if (counts.frontline < ROLE_MIN_PER_SHIFT) {
-        shortfalls.push({ shiftId, role: 'Frontline', target: ROLE_MIN_PER_SHIFT, actual: counts.frontline });
-      }
-      if (counts.internalServices < ROLE_MIN_PER_SHIFT) {
-        shortfalls.push({ shiftId, role: 'Internal Services', target: ROLE_MIN_PER_SHIFT, actual: counts.internalServices });
+      for (const [role, label] of Object.entries(roleLabels)) {
+        if (shiftRoleCounts[shiftId][role] < ROLE_MIN_PER_SHIFT) {
+          shortfalls.push({ shiftId, role: label, target: ROLE_MIN_PER_SHIFT, actual: shiftRoleCounts[shiftId][role] });
+        }
       }
     }
 
@@ -673,30 +648,18 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
         throw new Error('Invalid schedule result data - schedule property missing');
       }
       
-      Logger.log(`Creating schedule sheet: ${outputSheetName}`);
-      Logger.log(`Schedule result has ${Object.keys(scheduleResult.schedule || {}).length} shifts`);
-      Logger.log(`Schedule result has ${(scheduleResult.volunteers || []).length} volunteers`);
-      
       const ss = getScheduleSpreadsheet(spreadsheetId);
-      
-      // Delete existing sheet if it exists
-      let sheet = ss.getSheetByName(outputSheetName);
-      if (sheet) {
-        Logger.log(`Deleting existing sheet: ${outputSheetName}`);
-        ss.deleteSheet(sheet);
-      }
 
-      // Create new sheet
-      Logger.log(`Creating new sheet: ${outputSheetName}`);
+      // Delete existing sheet if it exists, then create fresh
+      let sheet = ss.getSheetByName(outputSheetName);
+      if (sheet) ss.deleteSheet(sheet);
       sheet = ss.insertSheet(outputSheetName);
-      SpreadsheetApp.flush(); // Ensure sheet creation is committed before writing
+      SpreadsheetApp.flush();
 
       if (!sheet) {
         throw new Error(`Failed to create sheet: ${outputSheetName}`);
       }
-      
-      Logger.log(`Sheet created successfully: ${outputSheetName}`);
-      
+
       // Default day labels if not provided
       const days = dayLabels || ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
       
@@ -784,22 +747,7 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
       
       formatRanges.push({ row: statsStartRow, type: 'statsHeader' });
       
-      // Validate all rows have correct column count
-      for (let i = 0; i < allData.length; i++) {
-        if (!allData[i] || !Array.isArray(allData[i])) {
-          Logger.log(`Warning: Row ${i + 1} is not an array, fixing...`);
-          allData[i] = new Array(headers.length).fill('');
-        } else if (allData[i].length !== headers.length) {
-          Logger.log(`Warning: Row ${i + 1} has ${allData[i].length} columns, expected ${headers.length}, fixing...`);
-          while (allData[i].length < headers.length) {
-            allData[i].push('');
-          }
-          allData[i] = allData[i].slice(0, headers.length);
-        }
-      }
-      
-      // OPTIMIZED: Write all data in one batch operation
-      Logger.log(`Writing ${allData.length} rows, ${headers.length} columns in batch...`);
+      // Write all data in one batch operation
       try {
         const dataRange = sheet.getRange(1, 1, allData.length, headers.length);
         dataRange.setValues(allData);
@@ -871,15 +819,10 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
         throw new Error(`Sheet verification failed: ${outputSheetName} appears to be empty`);
       }
       
-      Logger.log(`Schedule successfully output to sheet: ${outputSheetName} (${lastRow} rows)`);
       return true;
     } catch (error) {
       Logger.log('ERROR in outputScheduleToSheet: ' + error.message);
-      Logger.log('ERROR Stack: ' + (error.stack || 'No stack trace'));
-      Logger.log('Error type: ' + (error.name || 'Unknown'));
-      
-      // Re-throw with more context
-      throw new Error('outputScheduleToSheet failed: ' + error.message + (error.stack ? ' | Stack: ' + error.stack.substring(0, 200) : ''));
+      throw new Error('outputScheduleToSheet failed: ' + error.message);
     }
   }, 'outputScheduleToSheet');
 }
@@ -893,13 +836,9 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
  */
 function readExistingSchedule(spreadsheetId, outputSheetName) {
   try {
-    const ss = SpreadsheetApp.openById(spreadsheetId);
+    const ss = getScheduleSpreadsheet(spreadsheetId);
     const sheet = ss.getSheetByName(outputSheetName);
-
-    if (!sheet) {
-      Logger.log('No existing schedule sheet found: ' + outputSheetName);
-      return null;
-    }
+    if (!sheet) return null;
 
     // Schedule grid is rows 2-4 (Morning/Afternoon/Evening), columns B-E (Days 1-4)
     // Row 1 is header: ['Time / Day', Day1, Day2, Day3, Day4]
@@ -1003,8 +942,10 @@ function getChangedVolunteerNames(volunteers, oldAssignments, lastGenTimestamp) 
   }
 
   // Volunteers with a form submission newer than last generation → changed
+  // Use lastModified (updated on resubmission) over timestamp (preserved on resubmission)
   for (const [name, v] of Object.entries(latestByName)) {
-    if (v.timestamp && v.timestamp > lastGenTimestamp) changedNames.add(name);
+    const lastActivity = v.lastModified || v.timestamp;
+    if (lastActivity && lastActivity > lastGenTimestamp) changedNames.add(name);
   }
 
   Logger.log('Changed volunteers (' + changedNames.size + '): ' + [...changedNames].join(', '));
@@ -1024,62 +965,51 @@ function getChangedVolunteerNames(volunteers, oldAssignments, lastGenTimestamp) 
  * @returns {Object} Schedule result object
  */
 function createSchedule(spreadsheetId, availabilitySheetName, outputSheetName, options = {}) {
-  Logger.log('Starting schedule generation...');
-
   const { partialUpdate, lockPastShifts, notifyChanges, dayLabels } = options;
   const usePartial = partialUpdate || lockPastShifts;
 
   // Read existing schedule if needed (for partial update or change notifications)
   let oldAssignments = null;
   if (usePartial || notifyChanges) {
-    Logger.log('Reading existing schedule...');
     oldAssignments = readExistingSchedule(spreadsheetId, outputSheetName) || {};
   }
 
-  // Build locked assignments and locked shift IDs for partial update
+  // Build locked assignments, locked shift IDs, and excluded volunteers
   let lockedAssignments = {};
   let lockedShiftIds = [];
+  let excludeVolunteers = new Set();
 
   if (lockPastShifts) {
     const pastShifts = getPastShiftIds(dayLabels);
     lockedShiftIds = pastShifts;
-    // Lock all current assignments in past shifts
     for (const [name, shifts] of Object.entries(oldAssignments)) {
       const pastAssigned = shifts.filter(s => pastShifts.includes(s));
       if (pastAssigned.length > 0) {
         lockedAssignments[name] = (lockedAssignments[name] || []).concat(pastAssigned);
       }
     }
-    Logger.log('lockPastShifts: locked ' + lockedShiftIds.length + ' past shifts');
   }
 
   if (partialUpdate) {
     const lastGenTimestamp = getLastGenerationTimestamp();
-    Logger.log('partialUpdate: last generation timestamp = ' + (lastGenTimestamp ? lastGenTimestamp.toISOString() : 'none'));
     const formVolunteers = readAvailabilityResponses(spreadsheetId, availabilitySheetName);
     const changedNames = getChangedVolunteerNames(formVolunteers, oldAssignments, lastGenTimestamp);
-    // Lock future-shift assignments for volunteers whose availability hasn't changed
     for (const [name, shifts] of Object.entries(oldAssignments)) {
       if (!changedNames.has(name)) {
+        excludeVolunteers.add(name);
         const futureAssigned = shifts.filter(s => !lockedShiftIds.includes(s));
         if (futureAssigned.length > 0) {
           lockedAssignments[name] = (lockedAssignments[name] || []).concat(futureAssigned);
         }
       }
     }
-    Logger.log('partialUpdate: ' + Object.keys(lockedAssignments).length + ' volunteers with locked assignments');
   }
 
   // Pass locked state into generateSchedule
-  const scheduleOptions = { ...options, lockedAssignments, lockedShiftIds };
-
-  // Generate schedule - this is the heavy computation
-  Logger.log('Calling generateSchedule...');
+  const scheduleOptions = { ...options, lockedAssignments, lockedShiftIds, excludeVolunteers };
   const scheduleResult = generateSchedule(spreadsheetId, availabilitySheetName, scheduleOptions);
-  Logger.log('Schedule generated with ' + scheduleResult.summary.totalAssignments + ' assignments');
 
-  // Output to sheet (same spreadsheet)
-  Logger.log('Writing schedule to sheet...');
+  // Output to sheet
   const outputResult = outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, options.dayLabels);
 
   if (!outputResult) {
@@ -1097,7 +1027,6 @@ function createSchedule(spreadsheetId, availabilitySheetName, outputSheetName, o
   let notificationsSent = 0;
   let notificationRecipients = [];
   if (options.notifyChanges && oldAssignments) {
-    Logger.log('Sending schedule change notifications...');
     const notifResult = sendScheduleChangeNotifications(
       oldAssignments,
       scheduleResult.volunteerAssignments,
@@ -1107,8 +1036,6 @@ function createSchedule(spreadsheetId, availabilitySheetName, outputSheetName, o
     notificationsSent = notifResult.count;
     notificationRecipients = notifResult.recipients;
   }
-
-  Logger.log('Schedule generation complete');
 
   // Record generation timestamp (used by "Preserve unchanged volunteers" partial update)
   setLastGenerationTimestamp();
@@ -1189,113 +1116,56 @@ function extractSpreadsheetIdAndGetSheets(url) {
  */
 function generateScheduleFromDashboard(outputSheetName, options = {}) {
   try {
-    Logger.log('=== SCHEDULE GENERATION START ===');
-    Logger.log('Output sheet: ' + outputSheetName);
-    Logger.log('Options: ' + JSON.stringify(options));
-
-    // Use main CATBUS spreadsheet
     const spreadsheetId = CONFIG.SPREADSHEET_ID;
     const availabilitySheetName = CONFIG.SHEETS.SCHEDULE_AVAILABILITY;
 
     // Don't nest safeExecute - just call directly to avoid deep call stack
-    Logger.log('Calling createSchedule...');
-    Logger.log('Spreadsheet ID: ' + spreadsheetId);
-    Logger.log('Availability sheet: ' + availabilitySheetName);
-    
     const result = createSchedule(spreadsheetId, availabilitySheetName, outputSheetName, options);
-
-    Logger.log('=== SCHEDULE GENERATION COMPLETE ===');
     return result;
   } catch (error) {
     Logger.log('ERROR in generateScheduleFromDashboard: ' + error.message);
-    Logger.log('Error type: ' + (error.name || 'Unknown'));
-    Logger.log('Stack: ' + (error.stack || 'No stack trace'));
-    Logger.log('Full error: ' + JSON.stringify(error));
-    
-    // Preserve original error message if it's informative
-    const errorMsg = error.message || error.toString();
-    throw new Error('Schedule generation failed: ' + errorMsg);
+    throw new Error('Schedule generation failed: ' + (error.message || error.toString()));
   }
 }
 
 /**
- * Diagnostic function to check availability sheet data
- * Returns raw data from the first few rows to help debug issues
+ * Diagnostic function to check availability sheet data.
+ * Called from schedule_dashboard.html to verify data before generation.
  * @returns {Object} Debug information
  */
 function debugAvailabilitySheet() {
   return safeExecute(() => {
-    const spreadsheetId = CONFIG.SPREADSHEET_ID;
     const sheetName = CONFIG.SHEETS.SCHEDULE_AVAILABILITY;
-
-    // First, check if spreadsheet and sheet exist
-    const ss = SpreadsheetApp.openById(spreadsheetId);
-    const allSheets = ss.getSheets().map(s => s.getName());
-
+    const ss = getScheduleSpreadsheet(CONFIG.SPREADSHEET_ID);
     const sheet = ss.getSheetByName(sheetName);
+
     if (!sheet) {
       return {
         error: `Sheet "${sheetName}" not found in spreadsheet`,
-        requestedSheetName: sheetName,
-        availableSheets: allSheets,
-        spreadsheetId: spreadsheetId,
-        note: 'The Schedule Availability sheet does not exist. Please check the sheet name or create it using the availability form.'
+        availableSheets: ss.getSheets().map(s => s.getName()),
+        note: 'The Schedule Availability sheet does not exist. Please create it using the availability form.'
       };
     }
 
     const lastRow = sheet.getLastRow();
-    const lastCol = sheet.getLastColumn();
-
     if (lastRow <= 1) {
       return {
         error: 'No data found in Schedule Availability sheet',
-        sheetName: sheetName,
-        lastRow: lastRow,
-        lastCol: lastCol,
         note: 'Sheet exists but has no data. Please submit the availability form to populate data.'
       };
     }
 
-    // Read headers
+    const lastCol = sheet.getLastColumn();
     const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-
-    // Read first 3 data rows (or all if less than 3)
     const numSampleRows = Math.min(3, lastRow - 1);
-    const sampleData = sheet.getRange(2, 1, numSampleRows, lastCol).getValues();
-
-    // DON'T call readAvailabilityResponses - it causes nested safeExecute and "system busy"
-    // Instead do a quick inline check
-    let quickTest = { success: true, volunteers: 0 };
-    try {
-      const testData = sheet.getRange(2, 1, Math.min(10, lastRow - 1), 8).getValues();
-      let count = 0;
-      for (let i = 0; i < testData.length; i++) {
-        const firstName = testData[i][1]?.toString().trim();
-        const lastName = testData[i][2]?.toString().trim();
-        const availability = testData[i][7]?.toString().trim();
-        if (firstName && lastName && availability) {
-          count++;
-        }
-      }
-      quickTest.volunteers = count;
-    } catch (e) {
-      quickTest.success = false;
-      quickTest.error = e.message;
-    }
-
-    // Convert Date objects to strings for JSON serialization
-    const serializedSampleData = sampleData.map(row =>
-      row.map(cell => cell instanceof Date ? cell.toISOString() : cell)
-    );
+    const sampleData = sheet.getRange(2, 1, numSampleRows, lastCol).getValues()
+      .map(row => row.map(cell => cell instanceof Date ? cell.toISOString() : cell));
 
     return {
       sheetName: sheetName,
       totalRows: lastRow - 1,
-      totalColumns: lastCol,
       headers: headers,
-      sampleData: serializedSampleData,
-      quickTest: quickTest,
-      expectedFormat: 'Columns: Timestamp, First Name, Last Name, Email, Role, Number of Shifts, Consecutive Preference, Availability',
+      sampleData: sampleData,
       note: 'Data format looks good! Your availability data is properly formatted.',
       recommendation: 'Click "Generate Schedule" to create the shift schedule. The data is ready!'
     };

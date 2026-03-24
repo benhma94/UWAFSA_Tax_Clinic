@@ -300,12 +300,18 @@
 
       <div class="form-group">
         <label for="firstName" class="required">First Name:</label>
-        <input type="text" id="firstName" required>
+        <input type="text" id="firstName" required oninput="clearDuplicateNameWarning()">
       </div>
 
       <div class="form-group">
         <label for="lastName" class="required">Last Name:</label>
-        <input type="text" id="lastName" required>
+        <input type="text" id="lastName" required onblur="checkForDuplicateName()" oninput="clearDuplicateNameWarning()">
+      </div>
+
+      <div id="duplicateNameWarning" style="display:none; margin-top:8px; padding:10px 12px; background:#fde8e8; border:1px solid #e53935; border-radius:4px; color:#b71c1c; font-size:0.9em;">
+        <strong>Name already on file.</strong> A submission with this name was made using <strong id="duplicateEmail"></strong>.
+        If you previously signed up, enter that email address above — your previous answers will be pre-filled automatically.<br><br>
+        <span style="font-size:0.85em;">If you are a <em>different person</em> with the same name, <a href="#" style="color:#b71c1c;" onclick="ignoreDuplicateName(); return false;">click here to proceed anyway</a>.</span>
       </div>
 
       <div class="form-group">
@@ -386,6 +392,7 @@
   let TIME_SLOTS = [];
 
   let isUpdatingExisting = false;
+  let duplicateNameBlocked = false;
   let checkTimeout = null;
 
   function showMessage(message, type = 'info') {
@@ -467,6 +474,7 @@
     // Hide update notice when user starts typing
     showUpdateNotice(false);
     showLoadingNotice(false);
+    clearDuplicateNameWarning();
   }
 
   function checkForExistingVolunteer() {
@@ -493,6 +501,8 @@
           prefillForm(result.data);
           showUpdateNotice(true);
           isUpdatingExisting = true;
+          // Email matched — name warning is no longer relevant
+          clearDuplicateNameWarning();
         } else {
           showUpdateNotice(false);
           isUpdatingExisting = false;
@@ -505,6 +515,37 @@
         showMessage('Error checking for existing submission: ' + error.message, 'error');
       })
       .checkExistingVolunteer(email);
+  }
+
+  function checkForDuplicateName() {
+    // Skip if email-based check already identified this person
+    if (isUpdatingExisting) return;
+
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    if (!firstName || !lastName) return;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.exists && !isUpdatingExisting) {
+          document.getElementById('duplicateEmail').textContent = result.maskedEmail;
+          document.getElementById('duplicateNameWarning').style.display = 'block';
+          document.getElementById('duplicateNameWarning').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          duplicateNameBlocked = true;
+        }
+      })
+      .withFailureHandler(function() { /* fail silently — never block on lookup error */ })
+      .checkAvailabilityNameExists(firstName, lastName);
+  }
+
+  function clearDuplicateNameWarning() {
+    duplicateNameBlocked = false;
+    document.getElementById('duplicateNameWarning').style.display = 'none';
+  }
+
+  function ignoreDuplicateName() {
+    duplicateNameBlocked = false;
+    document.getElementById('duplicateNameWarning').style.display = 'none';
   }
 
   function showUpdateNotice(show) {
@@ -641,6 +682,13 @@
 
   function handleSubmit(event) {
     event.preventDefault();
+
+    // Block if a duplicate name was detected and not dismissed
+    if (duplicateNameBlocked) {
+      showMessage('This name is already on file. Please use the email address shown in the warning above, or click "proceed anyway" if you are a different person.', 'error');
+      document.getElementById('duplicateNameWarning').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
 
     // Validate shifts based on role
     if (!validateShifts()) {
