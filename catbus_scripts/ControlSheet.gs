@@ -63,15 +63,16 @@ function getVolunteersAndClients() {
         const breakStatus = {};
 
         for (const row of volData) {
-          const signInDate = new Date(row[CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP]).toDateString();
-          if (signInDate !== today) continue;
-
           const name      = row[CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
           const station   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.STATION]?.toString().trim().toLowerCase();
           const sessionId = row[CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
           const onBreak   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.ON_BREAK]?.toString().trim().toLowerCase();
 
           if (!name || !station || !sessionId) continue;
+
+          const signInDate = new Date(row[CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP]).toDateString();
+          if (signInDate !== today && station !== 'quiz') continue;
+
           if (nonFilerStations.some(r => station === r)) continue;
           if (signedOutSessions.has(sessionId)) continue;
 
@@ -228,6 +229,7 @@ function getMentorList() {
           }
         }
 
+        mentorsToday.add('Yuzhen Quiz Mentor');
         const allReviewers = new Set([...mentorsToday, ...seniorMentorsToday]);
         return {
           reviewers: [...allReviewers].sort(),
