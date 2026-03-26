@@ -265,6 +265,56 @@
       color: #999;
     }
 
+    .stats-box {
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    body.light .stats-box {
+      background-color: #f9f9f9;
+      border: 1px solid var(--border-light);
+    }
+
+    body.dark .stats-box {
+      background-color: #2a2a2a;
+      border: 1px solid var(--border-dark);
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-label { font-weight: 500; }
+    .stat-value { font-weight: 700; color: var(--accent-color); }
+
+    .btn-distribution {
+      display: inline-block;
+      width: auto;
+      padding: 12px 24px;
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.1s;
+    }
+
+    .btn-distribution:hover:not(:disabled) {
+      background-color: #357ae8;
+      transform: translateY(-1px);
+    }
+
+    .btn-distribution:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     /* Mobile */
     @media (max-width: 768px) {
       body {
@@ -370,12 +420,26 @@
     </div>
   </div>
 
+  <div class="form-section">
+    <h2>Volunteer Distribution</h2>
+    <p class="help-text" style="margin-top: 0;">View summary stats and shift distribution across all days.</p>
+    <button class="btn-distribution" onclick="viewDistribution()" id="distributionBtn">
+      View Distribution
+    </button>
+  </div>
+
+  <div id="distributionBox" class="stats-box" style="display: none;">
+    <h2>Volunteer Distribution Analysis</h2>
+    <div id="distributionContent"></div>
+  </div>
+
 <?!= include('shared_scripts') ?>
 <script>
   // Schedule configuration - loaded from backend Config.gs
   const SHIFT_CONFIG = {
     TIME_SLOTS: {}
   };
+  let DAY_LABELS = ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
 
   window.addEventListener('load', () => {
     loadScheduleConfig();
@@ -389,6 +453,7 @@
 
         // Update dropdown options with actual day labels
         const dayLabels = config.dayLabels;
+        DAY_LABELS = dayLabels;
         for (let i = 0; i < 4 && i < dayLabels.length; i++) {
           const option = document.getElementById(`dayOption${i + 1}`);
           if (option) {
@@ -524,6 +589,118 @@
     dayResultsContent.innerHTML = html;
   }
 
+  function viewDistribution() {
+    const btn = document.getElementById('distributionBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span> Loading...';
+
+    google.script.run
+      .withSuccessHandler(result => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+
+        if (!result) return;
+        if (result.error) {
+          document.getElementById('distributionContent').innerHTML =
+            '<div class="no-results">' + escapeHtml(result.error) + '</div>';
+          document.getElementById('distributionBox').style.display = 'block';
+          return;
+        }
+
+        displayDistribution(result);
+      })
+      .withFailureHandler(error => {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        document.getElementById('distributionContent').innerHTML =
+          '<div class="no-results">Error loading distribution: ' + escapeHtml(error.message || String(error)) + '</div>';
+        document.getElementById('distributionBox').style.display = 'block';
+      })
+      .getVolunteerDistribution();
+  }
+
+  function displayDistribution(result) {
+    const box = document.getElementById('distributionBox');
+    const content = document.getElementById('distributionContent');
+    const dayLabels = DAY_LABELS;
+
+    let html = '';
+
+    // Summary stats
+    html += '<div class="stat-item"><span class="stat-label">Total Volunteers:</span><span class="stat-value">' + result.totalVolunteers + '</span></div>';
+    html += '<div class="stat-item"><span class="stat-label">Total Assignments:</span><span class="stat-value">' + result.totalAssignments + '</span></div>';
+
+    // Role counts
+    const rc = result.roleCounts || {};
+    html += '<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-light);">';
+    html += '<h4 style="margin: 0 0 10px 0;">Volunteers by Role</h4>';
+    html += '<div class="stat-item"><span class="stat-label">Filers:</span><span class="stat-value">' + (rc.filer || 0) + '</span></div>';
+    html += '<div class="stat-item"><span class="stat-label">Mentors:</span><span class="stat-value">' + (rc.mentor || 0) + '</span></div>';
+    html += '<div class="stat-item"><span class="stat-label">Frontline:</span><span class="stat-value">' + (rc.frontline || 0) + '</span></div>';
+    html += '<div class="stat-item"><span class="stat-label">Internal Services:</span><span class="stat-value">' + (rc.internalServices || 0) + '</span></div>';
+    html += '</div>';
+
+    // Shift distribution stacked bars
+    if (result.shiftRoleCounts) {
+      const slotKeys = ['A', 'B', 'C'];
+      const slotLabels = ['Morning', 'Afternoon', 'Evening'];
+      const roleColors = { filer: '#9b59b6', mentor: '#3498db', frontline: '#2ecc71', internalServices: '#e74c3c' };
+
+      html += '<div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-light);"><h3>Shift Distribution</h3>';
+      html += '<div style="display: flex; gap: 8px; margin-bottom: 15px; font-size: 13px;">';
+      html += '<span><span style="display:inline-block;width:12px;height:12px;background:#9b59b6;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Filer</span>';
+      html += '<span><span style="display:inline-block;width:12px;height:12px;background:#3498db;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Mentor</span>';
+      html += '<span><span style="display:inline-block;width:12px;height:12px;background:#2ecc71;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Frontline</span>';
+      html += '<span><span style="display:inline-block;width:12px;height:12px;background:#e74c3c;border-radius:2px;vertical-align:middle;margin-right:3px;"></span>Internal Services</span>';
+      html += '</div>';
+      html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">';
+
+      for (let dayIdx = 0; dayIdx < 4; dayIdx++) {
+        let maxTotal = 0;
+        for (const sk of slotKeys) {
+          const shiftId = 'D' + (dayIdx + 1) + sk;
+          const c = result.shiftRoleCounts[shiftId] || { filer: 0, mentor: 0, frontline: 0, internalServices: 0 };
+          const total = c.filer + c.mentor + c.frontline + c.internalServices;
+          if (total > maxTotal) maxTotal = total;
+        }
+        if (maxTotal === 0) maxTotal = 1;
+
+        html += '<div style="background: rgba(0,0,0,0.03); border-radius: 8px; padding: 12px;">';
+        html += '<div style="font-weight: 600; margin-bottom: 10px; font-size: 14px;">' + escapeHtml(dayLabels[dayIdx] || ('Day ' + (dayIdx + 1))) + '</div>';
+
+        for (let si = 0; si < 3; si++) {
+          const shiftId = 'D' + (dayIdx + 1) + slotKeys[si];
+          const c = result.shiftRoleCounts[shiftId] || { filer: 0, mentor: 0, frontline: 0, internalServices: 0 };
+          const total = c.filer + c.mentor + c.frontline + c.internalServices;
+
+          html += '<div style="margin-bottom: 8px;">';
+          html += '<div style="font-size: 12px; color: #666; margin-bottom: 3px;">' + slotLabels[si] + ' (' + total + ')</div>';
+          html += '<div style="display: flex; height: 22px; border-radius: 4px; overflow: hidden; background: rgba(0,0,0,0.08);">';
+
+          if (total > 0) {
+            const pctFiler = (c.filer / maxTotal) * 100;
+            const pctMentor = (c.mentor / maxTotal) * 100;
+            const pctFrontline = (c.frontline / maxTotal) * 100;
+            const pctInternal = (c.internalServices / maxTotal) * 100;
+
+            if (c.filer > 0) html += '<div style="width:' + pctFiler + '%;background:' + roleColors.filer + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Filers: ' + c.filer + '">' + c.filer + '</div>';
+            if (c.mentor > 0) html += '<div style="width:' + pctMentor + '%;background:' + roleColors.mentor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Mentors: ' + c.mentor + '">' + c.mentor + '</div>';
+            if (c.frontline > 0) html += '<div style="width:' + pctFrontline + '%;background:' + roleColors.frontline + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Frontline: ' + c.frontline + '">' + c.frontline + '</div>';
+            if (c.internalServices > 0) html += '<div style="width:' + pctInternal + '%;background:' + roleColors.internalServices + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;" title="Internal Services: ' + c.internalServices + '">' + c.internalServices + '</div>';
+          }
+
+          html += '</div></div>';
+        }
+        html += '</div>';
+      }
+      html += '</div></div>';
+    }
+
+    content.innerHTML = html;
+    box.style.display = 'block';
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 
 </script>
 <div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2026 All rights reserved.</span></div>

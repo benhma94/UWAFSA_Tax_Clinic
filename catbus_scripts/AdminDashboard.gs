@@ -257,7 +257,9 @@ function getAdminDashboardData(selectedDateStr) {
       : getReturnSummaryCached(trackerData),
     performanceMetrics: getVolunteerPerformanceMetrics(trackerData, filterDate),
     reviewerLeaderboard: getReviewerLeaderboard(trackerData, filterDate),
-    clinicDays: ELIGIBILITY_CONFIG.CLINIC_DATES
+    concurrentTimeSeries: getConcurrentReturnTimeSeries(trackerData, filterDate),
+    clinicDays: ELIGIBILITY_CONFIG.CLINIC_DATES,
+    clientFeatureBreakdown: getClientFeatureBreakdown(trackerData)
   };
 }
 
@@ -354,6 +356,116 @@ function getReturnSummary(trackerData, filterDate) {
       hourlyCounts
     };
   }, 'getReturnSummary');
+}
+
+/**
+ * Gets concurrent active returns time-series for the target day.
+ * Builds a step-function showing how many returns are in progress at each point in time.
+ * Each client can have multiple tracker rows (one per tax year). Married rows count as 2.
+ * @param {Object} trackerData - Pre-read tracker data from readTrackerData_()
+ * @param {Date|null} filterDate - Optional date to filter; null = actual today
+ * @returns {Object} { timeSeries: [{time: "HH:MM", count}], currentActive: number }
+ */
+function getConcurrentReturnTimeSeries(trackerData, filterDate) {
+  return safeExecute(() => {
+    const targetDay = filterDate ? new Date(filterDate) : new Date();
+    targetDay.setHours(0, 0, 0, 0);
+
+    function sameDay(ts) {
+      return ts instanceof Date &&
+        ts.getFullYear() === targetDay.getFullYear() &&
+        ts.getMonth() === targetDay.getMonth() &&
+        ts.getDate() === targetDay.getDate();
+    }
+
+    function fmtTime(d) {
+      return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+    }
+
+    // 1. Read Client Assignment for the target day
+    const caSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+    const caLastRow = caSheet.getLastRow();
+    const stationMap = getVolunteerStationMap_();
+    // clientId → { assignTimestamp, volunteer, isCompleted }
+    const clientMap = {};
+
+    if (caLastRow > 1) {
+      const caData = caSheet.getRange(2, 1, caLastRow - 1, 4).getValues();
+      for (var i = 0; i < caData.length; i++) {
+        var ts = caData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP];
+        var clientId = (caData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID] || '').toString().trim();
+        var volunteer = (caData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER] || '').toString().trim();
+        var completed = (caData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED] || '').toString().trim();
+
+        if (!clientId || !volunteer || !sameDay(ts)) continue;
+
+        // Quiz station filter (same logic as getActiveReturns)
+        var baseName = volunteer.indexOf('–') !== -1 ? volunteer.split('–')[1].trim() : volunteer.trim();
+        var stationFromPrefix = volunteer.indexOf('–') !== -1
+          ? volunteer.split('–')[0].replace(/station/i, '').trim().toLowerCase()
+          : '';
+        if (stationFromPrefix === 'quiz' || (stationMap[baseName] || '').toLowerCase() === 'quiz') continue;
+
+        // Keep latest assignment per clientId (handles reassignments)
+        if (!clientMap[clientId] || ts > clientMap[clientId].assignTimestamp) {
+          clientMap[clientId] = {
+            assignTimestamp: ts,
+            volunteer: volunteer,
+            isCompleted: completed !== ''
+          };
+        }
+      }
+    }
+
+    // 2. Collect tracker rows per clientId for the target day
+    // trackerRows[clientId] = [{ timestamp, weight }]
+    var trackerRows = {};
+    var data = (trackerData && trackerData.data) ? trackerData.data : [];
+    for (var j = 0; j < data.length; j++) {
+      var tTs = data[j][CONFIG.COLUMNS.TAX_RETURN_TRACKER.TIMESTAMP];
+      var tClientId = (data[j][CONFIG.COLUMNS.TAX_RETURN_TRACKER.CLIENT_ID] || '').toString().trim();
+      var efile = (data[j][CONFIG.COLUMNS.TAX_RETURN_TRACKER.EFILE] || '').toString().toLowerCase() === 'yes';
+      var paper = (data[j][CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER] || '').toString().toLowerCase() === 'yes';
+      var married = (data[j][CONFIG.COLUMNS.TAX_RETURN_TRACKER.MARRIED] || '').toString().toLowerCase() === 'yes';
+
+      if (!tClientId || !sameDay(tTs) || !(efile || paper)) continue;
+      if (!trackerRows[tClientId]) trackerRows[tClientId] = [];
+      trackerRows[tClientId].push({ timestamp: tTs, weight: married ? 2 : 1 });
+    }
+
+    // 3. Build events for each clientId (count clients, not returns)
+    var events = [];
+    for (var cid in clientMap) {
+      var info = clientMap[cid];
+      var rows = trackerRows[cid] || [];
+
+      // +1 when client is assigned
+      events.push({ time: info.assignTimestamp, delta: 1 });
+
+      // -1 when client's last tracker row is filed (i.e. they're done)
+      if (info.isCompleted && rows.length > 0) {
+        // Find the latest tracker timestamp for this client
+        var latestTs = rows[0].timestamp;
+        for (var k = 1; k < rows.length; k++) {
+          if (rows[k].timestamp > latestTs) latestTs = rows[k].timestamp;
+        }
+        events.push({ time: latestTs, delta: -1 });
+      }
+    }
+
+    // 4. Sort by time, walk through to build time-series
+    events.sort(function(a, b) { return a.time.getTime() - b.time.getTime(); });
+
+    var timeSeries = [];
+    var running = 0;
+    for (var e = 0; e < events.length; e++) {
+      running += events[e].delta;
+      if (running < 0) running = 0; // safety clamp
+      timeSeries.push({ time: fmtTime(events[e].time), count: running });
+    }
+
+    return { timeSeries: timeSeries, currentActive: running };
+  }, 'getConcurrentReturnTimeSeries');
 }
 
 /**
@@ -600,4 +712,156 @@ function getReviewerLeaderboard(trackerData, filterDate) {
 
     return { topReviewers, todayReviewers };
   }, 'getReviewerLeaderboard');
+}
+
+/**
+ * Gets breakdown of completed clients by feature (all-time).
+ * Counts unique clients, not individual returns.
+ * @param {Object} trackerData - Pre-read tracker data from readTrackerData_()
+ * @returns {Object} { total, features: [{ label, count }] }
+ */
+function getClientFeatureBreakdown(trackerData) {
+  return safeExecute(() => {
+    const data = (trackerData && trackerData.data) ? trackerData.data : [];
+    const cols = CONFIG.COLUMNS.TAX_RETURN_TRACKER;
+
+    // Collect unique completed client IDs and their latest tracker timestamp
+    const completedClientIds = new Set();
+    const clientCompletionTime = new Map(); // clientId → latest tracker timestamp
+    for (let i = 0; i < data.length; i++) {
+      const efile = data[i][cols.EFILE]?.toString().toLowerCase() === 'yes';
+      const paper = data[i][cols.PAPER]?.toString().toLowerCase() === 'yes';
+      if (efile || paper) {
+        const clientId = data[i][cols.CLIENT_ID]?.toString().trim();
+        if (clientId) {
+          completedClientIds.add(clientId);
+          const ts = data[i][cols.TIMESTAMP];
+          if (ts instanceof Date) {
+            const prev = clientCompletionTime.get(clientId);
+            if (!prev || ts.getTime() > prev.getTime()) {
+              clientCompletionTime.set(clientId, ts);
+            }
+          }
+        }
+      }
+    }
+
+    if (completedClientIds.size === 0) {
+      return { total: 0, avgMinutes: null, features: [] };
+    }
+
+    // Bulk-read Client Assignment sheet for start timestamps
+    const assignSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+    const assignLastRow = assignSheet.getLastRow();
+    const assignCols = CONFIG.COLUMNS.CLIENT_ASSIGNMENT;
+    const clientAssignTime = new Map(); // clientId → earliest assign timestamp
+    if (assignLastRow > 1) {
+      const assignData = assignSheet.getRange(2, 1, assignLastRow - 1, assignCols.VOLUNTEER + 1).getValues();
+      for (let i = 0; i < assignData.length; i++) {
+        const clientId = assignData[i][assignCols.CLIENT_ID]?.toString().trim();
+        if (clientId && completedClientIds.has(clientId)) {
+          const ts = assignData[i][assignCols.TIMESTAMP];
+          if (ts instanceof Date) {
+            const prev = clientAssignTime.get(clientId);
+            if (!prev || ts.getTime() < prev.getTime()) {
+              clientAssignTime.set(clientId, ts);
+            }
+          }
+        }
+      }
+    }
+
+    // Bulk-read Client Intake sheet
+    const intakeSheet = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
+    const intakeLastRow = intakeSheet.getLastRow();
+    if (intakeLastRow <= 1) return { total: 0, avgMinutes: null, features: [] };
+
+    const intakeCols = CONFIG.COLUMNS.CLIENT_INTAKE;
+    const intakeData = intakeSheet.getRange(2, 1, intakeLastRow - 1, intakeCols.NEEDS_SENIOR_REVIEW + 1).getValues();
+
+    // Build lookup: clientId -> { situations, needsSeniorReview, filingYears, completionMinutes }
+    // Scan backwards so most-recent record wins for duplicate client IDs
+    const clientMap = new Map();
+    for (let i = intakeData.length - 1; i >= 0; i--) {
+      const clientId = intakeData[i][intakeCols.CLIENT_ID]?.toString().trim();
+      if (clientId && completedClientIds.has(clientId) && !clientMap.has(clientId)) {
+        const filingYearsStr = intakeData[i][intakeCols.FILING_YEARS]?.toString() || '';
+        const filingYears = filingYearsStr.split(',').map(y => y.trim()).filter(y => y);
+
+        // Calculate completion time in minutes
+        let completionMinutes = null;
+        const assignTs = clientAssignTime.get(clientId);
+        const completeTs = clientCompletionTime.get(clientId);
+        if (assignTs && completeTs) {
+          const diffMs = completeTs.getTime() - assignTs.getTime();
+          if (diffMs > 0) completionMinutes = Math.round(diffMs / 60000);
+        }
+
+        clientMap.set(clientId, {
+          situations: intakeData[i][intakeCols.SITUATIONS]?.toString() || '',
+          needsSeniorReview: intakeData[i][intakeCols.NEEDS_SENIOR_REVIEW] === true ||
+            intakeData[i][intakeCols.NEEDS_SENIOR_REVIEW]?.toString().toLowerCase() === 'true',
+          filingYears: filingYears,
+          completionMinutes: completionMinutes
+        });
+      }
+    }
+
+    // Count features and track per-feature completion times
+    const featureLabels = ['Student', 'International Student', 'Married/Common-Law', 'Employed', 'First-Time Filer'];
+    const allFeatureLabels = [...featureLabels, 'Senior Review', 'Multi-Year'];
+    const counts = {};
+    const timeSums = {};
+    const timeCounts = {};
+    allFeatureLabels.forEach(f => { counts[f] = 0; timeSums[f] = 0; timeCounts[f] = 0; });
+
+    let totalTimeSum = 0;
+    let totalTimeCount = 0;
+
+    for (const [, info] of clientMap) {
+      const situations = info.situations.split(',').map(s => s.trim()).filter(s => s);
+      const hasTime = info.completionMinutes !== null;
+
+      if (hasTime) {
+        totalTimeSum += info.completionMinutes;
+        totalTimeCount++;
+      }
+
+      // Track which features this client matches
+      const matchedFeatures = [];
+
+      for (const label of featureLabels) {
+        if (situations.includes(label)) {
+          counts[label]++;
+          matchedFeatures.push(label);
+        }
+      }
+      if (info.needsSeniorReview) {
+        counts['Senior Review']++;
+        matchedFeatures.push('Senior Review');
+      }
+      if (info.filingYears.length > 1) {
+        counts['Multi-Year']++;
+        matchedFeatures.push('Multi-Year');
+      }
+
+      // Accumulate time for matched features
+      if (hasTime) {
+        for (const label of matchedFeatures) {
+          timeSums[label] += info.completionMinutes;
+          timeCounts[label]++;
+        }
+      }
+    }
+
+    const features = allFeatureLabels.map(label => ({
+      label: label,
+      count: counts[label],
+      avgMinutes: timeCounts[label] > 0 ? Math.round(timeSums[label] / timeCounts[label]) : null
+    }));
+
+    const overallAvg = totalTimeCount > 0 ? Math.round(totalTimeSum / totalTimeCount) : null;
+
+    return { total: clientMap.size, avgMinutes: overallAvg, features: features };
+  }, 'getClientFeatureBreakdown');
 }

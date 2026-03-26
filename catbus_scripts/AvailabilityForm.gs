@@ -50,8 +50,8 @@ function checkExistingVolunteer(email) {
       const rowEmail = normalizeEmail(row[emailColIndex]);
 
       if (rowEmail === normalizedEmail) {
-        const timestamp = row[0];
-        const lastModified = row[9] || null;
+        const timestamp = row[0] instanceof Date ? row[0].toISOString() : row[0];
+        const lastModified = row[9] instanceof Date ? row[9].toISOString() : (row[9] || null);
 
         return {
           exists: true,
