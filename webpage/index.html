@@ -10,7 +10,7 @@
     <meta property="og:title" content="Tax Clinic &mdash; Accounting &amp; Finance Student Association"/>
     <meta property="og:url" content="https://taxclinic.uwaterloo.ca"/>
     <meta property="og:type" content="website"/>
-    <meta name="description" content="" />
+    <meta name="description" content="Free tax filing clinic for students and low-income individuals at the University of Waterloo. Walk-ins welcome — check eligibility and clinic dates." />
     <script>(function(){var t=localStorage.getItem('theme');if(t==='dark'||(t===null&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark-mode');})();</script>
     <link rel="stylesheet" href="shared.css?v=2">
     <style>
@@ -118,9 +118,6 @@
     </tbody>
 </table>
 </div>
-<div id="clinic-ended-msg" class="callout-box" style="display:none">
-  <p>The AFSA Tax Clinic has ended its services for the year. We will return in March 2027.</p>
-</div>
 <div id="appointment-booking" class="callout-box">
   <p id="booking-walkin-p" style="margin-bottom: 4px;">It is not required to book an appointment for the Tax Clinic, we generally work on a walk-in basis. However, if you believe your situation is slightly complex and may take more time, please use our <a href="appointment_screening.html"><strong>screening tool</strong></a> to determine if you need to book an appointment.</p>
   <p style="margin-top: 4px; margin-bottom: 4px;"><strong>To assist you in preparing your tax return, we have provided a checklist for you to use.</strong></p>
@@ -181,7 +178,10 @@
       if (new Date() >= cutoff) {
         document.getElementById('clinic-schedule').style.display = 'none';
         document.getElementById('booking-walkin-p').style.display = 'none';
-        document.getElementById('clinic-ended-msg').style.display = 'block';
+        var msg = document.createElement('div');
+        msg.className = 'callout-box';
+        msg.innerHTML = '<p>The AFSA Tax Clinic has ended its services for the year. We will return in March 2027.</p>';
+        document.getElementById('appointment-booking').insertAdjacentElement('beforebegin', msg);
       }
     })();
   </script>

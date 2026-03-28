@@ -116,6 +116,7 @@ function createCatbusSheets() {
     'Name',       // 1
     'Station',    // 2
     'Session ID', // 3
+    'On Break',   // 4
   ]);
 
   // ── 7. SignOut ───────────────────────────────────────────────────────────────
@@ -222,6 +223,9 @@ function createCatbusSheets() {
     'Q4 - Refund/Payable ($)',
     'Q5 - Ontario Trillium Benefit ($)',
     'Q6 - Canada Essentials Benefit ($)',
+    'Email 1',   // 8  - volunteer email for quiz result delivery
+    'Email 2',   // 9  - partner email for quiz result delivery
+    'Status',    // 10 - Pass/Fail verdict set by sendQuizResult()
   ], function(sheet) {
     // Format dollar columns (Q4, Q5, Q6 = cols 6, 7, 8) with accounting format
     const maxRows = sheet.getMaxRows();

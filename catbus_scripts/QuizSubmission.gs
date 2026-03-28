@@ -195,7 +195,7 @@ function getOrCreateQuizSubmissionsSheet() {
 
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
-    const headers = ['Timestamp', 'Volunteer', 'Partner', 'Q1 - Missing Information', 'Q2 - Additional Form', 'Q4 - Refund/Payable ($)', 'Q5 - Ontario Trillium Benefit ($)', 'Q6 - Canada Essentials Benefit ($)'];
+    const headers = ['Timestamp', 'Volunteer', 'Partner', 'Q1 - Missing Information', 'Q2 - Additional Form', 'Q4 - Refund/Payable ($)', 'Q5 - Ontario Trillium Benefit ($)', 'Q6 - Canada Essentials Benefit ($)', 'Email 1', 'Email 2', 'Status'];
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     // Format dollar columns (F, G, H) with accounting format
     sheet.getRange(2, 6, sheet.getMaxRows() - 1, 3).setNumberFormat('"$"#,##0;"-$"#,##0');

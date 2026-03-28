@@ -189,6 +189,28 @@
       border-color: var(--border-dark);
     }
 
+    .idle-filer-card {
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 2px solid #e67e22;
+      box-shadow: var(--shadow-light);
+      transition: transform 0.2s, box-shadow 0.2s, background 0.3s, border 0.3s;
+    }
+
+    .idle-filer-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    body.light .idle-filer-card {
+      background: var(--input-bg-light);
+    }
+
+    body.dark .idle-filer-card {
+      background: var(--input-bg-dark);
+      border-color: #d35400;
+    }
+
     .card-volunteer {
       font-size: 1.1em;
       font-weight: 700;
@@ -450,6 +472,9 @@
   <h3>🔄 Active Returns</h3>
   <div id="activeReturnsContainer">Loading active returns...</div>
 
+  <h3>⏸ Idle Filers</h3>
+  <div id="idleFilersContainer">Loading idle filers...</div>
+
   <div id="messageBox"></div>
   <div id="errorBox"></div>
 
@@ -533,6 +558,37 @@
         ${r.situations ? `<div class="card-detail">📋 ${escapeHtml(r.situations)}</div>` : ''}
         ${r.notes ? `<div class="card-detail">📝 ${escapeHtml(r.notes)}</div>` : ''}
         ${timingParts.length ? `<div class="card-timing">${timingParts.join(' &nbsp;•&nbsp; ')}</div>` : ''}
+      `;
+      grid.appendChild(card);
+    }
+
+    container.appendChild(grid);
+  }
+
+  let lastIdleFilersSerialized = null;
+
+  function renderIdleFilers(filers) {
+    const serialized = JSON.stringify(filers);
+    if (serialized === lastIdleFilersSerialized) return;
+    lastIdleFilersSerialized = serialized;
+
+    const container = document.getElementById("idleFilersContainer");
+    container.innerHTML = "";
+
+    if (!filers || filers.length === 0) {
+      container.innerHTML = '<p class="empty-state">All filers are currently active.</p>';
+      return;
+    }
+
+    const grid = document.createElement("div");
+    grid.className = "active-returns-grid";
+
+    for (const f of filers) {
+      const card = document.createElement("div");
+      card.className = "idle-filer-card";
+      card.innerHTML = `
+        <div class="card-volunteer">${escapeHtml(f.name)}</div>
+        <div class="card-timing">⏳ ${formatDuration(f.minutesIdle)} idle</div>
       `;
       grid.appendChild(card);
     }
@@ -894,6 +950,7 @@
       if (data.clinicDays) populateDaySelector(data.clinicDays);
       updateDayLabels(selectedDate, data.clinicDays);
       renderActiveReturns(data.activeReturns);
+      renderIdleFilers(data.idleFilers || []);
       renderSummary(data.returnSummary);
       renderPerformanceMetrics(data.performanceMetrics, selectedDate, data.clinicDays);
       renderReviewerLeaderboard(data.reviewerLeaderboard, selectedDate, data.clinicDays);

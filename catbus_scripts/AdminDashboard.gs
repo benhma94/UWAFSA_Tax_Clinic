@@ -43,9 +43,9 @@ function shiftTimeToMins_(t) {
  */
 function getTodayClinicDayIndex_() {
   const today = new Date();
-  const clinicDates = CONFIG.CLINIC_DATES || [];
+  const clinicDates = ELIGIBILITY_CONFIG.CLINIC_DATES || [];
   for (let i = 0; i < clinicDates.length; i++) {
-    const d = new Date(clinicDates[i]);
+    const d = new Date(clinicDates[i].replace(/^\w+,\s*/, '') + ' 12:00');
     if (d.getFullYear() === today.getFullYear() &&
         d.getMonth() === today.getMonth() &&
         d.getDate() === today.getDate()) {
@@ -236,6 +236,101 @@ function getActiveReturns() {
 }
 
 /**
+ * Gets signed-in filers with no active client assignment (idle filers).
+ * Excludes quiz-station volunteers and non-filer stations.
+ * @param {Object} trackerData - Pre-read tracker data from readTrackerData_()
+ * @returns {Array} Array of { name, minutesIdle } sorted longest idle first
+ */
+function getIdleFilers(trackerData) {
+  return safeExecute(() => {
+    const now = Date.now();
+    const today = new Date().toDateString();
+    const nonFilerStations = CONFIG.SIGN_IN_OUT.NON_FILER_STATIONS;
+    const stationMap = getVolunteerStationMap_();
+
+    // 1. Build set of base names with an active client assignment (excluding quiz)
+    const activeBaseNames = new Set();
+    const caSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+    const caLastRow = caSheet.getLastRow();
+    if (caLastRow > 1) {
+      const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, caLastRow - 1);
+      const startRow = Math.max(2, caLastRow - checkRows + 1);
+      const caData = caSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1,
+                                      checkRows, 4).getValues();
+      for (const row of caData) {
+        const volunteer = row[CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
+        const clientId  = row[CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
+        const completed = row[CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
+        if (!volunteer || !clientId || completed) continue;
+        const baseName = volunteer.includes('–') ? volunteer.split('–')[1].trim() : volunteer;
+        const prefixStation = volunteer.includes('–')
+          ? volunteer.split('–')[0].replace(/station/i, '').trim().toLowerCase()
+          : '';
+        if (prefixStation === 'quiz' || (stationMap[baseName] || '').toLowerCase() === 'quiz') continue;
+        activeBaseNames.add(baseName);
+      }
+    }
+
+    // 2. Read signed-in filers today (not signed out, not quiz, not non-filer)
+    const volSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
+    const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
+    const volLastRow = volSheet.getLastRow();
+    const signOutLastRow = signOutSheet.getLastRow();
+
+    const volData = volLastRow > 1 ? volSheet.getRange(2, 1, volLastRow - 1, 5).getValues() : [];
+    const signOutData = signOutLastRow > 1
+      ? signOutSheet.getRange(2, 1, signOutLastRow - 1, 3).getValues()
+      : [];
+    const signedOutSessions = new Set(
+      signOutData.map(r => r[CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim())
+    );
+
+    // name → most recent sign-in Date
+    const signinTimes = {};
+    for (const row of volData) {
+      const ts        = row[CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP];
+      const name      = row[CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
+      const station   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.STATION]?.toString().trim().toLowerCase();
+      const sessionId = row[CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
+      if (!name || !station || !sessionId) continue;
+      if (new Date(ts).toDateString() !== today) continue;
+      if (signedOutSessions.has(sessionId)) continue;
+      if (nonFilerStations.some(s => station === s)) continue;
+      if (station === 'quiz') continue;
+      const tsDate = ts instanceof Date ? ts : new Date(ts);
+      if (!signinTimes[name] || tsDate > signinTimes[name]) signinTimes[name] = tsDate;
+    }
+
+    // 3. Build volunteer → latest filing timestamp for today from tracker
+    const latestTrackerTime = {};
+    if (trackerData && trackerData.data) {
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      for (const row of trackerData.data) {
+        const ts           = row[CONFIG.COLUMNS.TAX_RETURN_TRACKER.TIMESTAMP];
+        const volunteerRaw = row[CONFIG.COLUMNS.TAX_RETURN_TRACKER.VOLUNTEER]?.toString().trim();
+        if (!volunteerRaw || !(ts instanceof Date)) continue;
+        if (ts < todayStart) continue;
+        if (!latestTrackerTime[volunteerRaw] || ts > latestTrackerTime[volunteerRaw]) {
+          latestTrackerTime[volunteerRaw] = ts;
+        }
+      }
+    }
+
+    // 4. Build idle filers list
+    const idleFilers = [];
+    for (const [name, signinTime] of Object.entries(signinTimes)) {
+      if (activeBaseNames.has(name)) continue;
+      const trackerTime = latestTrackerTime[name];
+      const idleSince = (trackerTime && trackerTime > signinTime) ? trackerTime : signinTime;
+      idleFilers.push({ name, minutesIdle: Math.floor((now - idleSince.getTime()) / 60000) });
+    }
+
+    idleFilers.sort((a, b) => b.minutesIdle - a.minutesIdle);
+    return idleFilers;
+  }, 'getIdleFilers');
+}
+
+/**
  * Gets admin dashboard data (stats + active returns, no alerts)
  * @param {string} [selectedDateStr] - Optional clinic date string to filter "today" data (e.g. "Saturday, March 21, 2026"). Omit for actual today.
  * @returns {Object} Dashboard datasets
@@ -252,6 +347,7 @@ function getAdminDashboardData(selectedDateStr) {
   const trackerData = readTrackerData_();
   return {
     activeReturns: getActiveReturns(),
+    idleFilers: getIdleFilers(trackerData),
     returnSummary: filterDate
       ? getReturnSummary(trackerData, filterDate)
       : getReturnSummaryCached(trackerData),

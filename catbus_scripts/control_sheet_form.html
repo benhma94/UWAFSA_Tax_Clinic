@@ -2296,8 +2296,13 @@
       }
 
       google.script.run
-        .withSuccessHandler(() => {
-          showMessage('Reviewer is now helping. Request hidden from alert dashboard.');
+        .withSuccessHandler((result) => {
+          if (result === false) {
+            if (btn) { btn.disabled = false; btn.textContent = '⏳ In Progress'; }
+            showError('Could not find the active review request. It may have already been handled or cancelled.');
+          } else {
+            showMessage('Reviewer is now helping. Request hidden from alert dashboard.');
+          }
         })
         .withFailureHandler(error => {
           if (btn) {

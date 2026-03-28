@@ -56,8 +56,8 @@ function sendRequest(volunteer, requestType, extraData) {
         const v = data[i][0]?.toString().trim();
         const status = data[i][1]?.toString().trim();
 
-        if (v === volunteer && status === config.primaryStatus) {
-          // Already has active request
+        if (v === volunteer && config.activeStatuses.some(as => as.toLowerCase() === status.toLowerCase())) {
+          // Already has active request (any active status, e.g. Requested or In Progress)
           return true;
         }
       }
@@ -124,7 +124,7 @@ function updateRequestStatus(volunteer, requestType, fromStatus, toStatus) {
       }
     }
 
-    return true; // Already updated or doesn't exist
+    return false; // No matching row found
   }, `update${requestType}RequestStatus`);
 }
 
