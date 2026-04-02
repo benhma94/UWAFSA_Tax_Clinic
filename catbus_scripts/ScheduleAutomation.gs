@@ -1044,10 +1044,6 @@ function createSchedule(spreadsheetId, availabilitySheetName, outputSheetName, o
   scheduleResult.notificationsSent = notificationsSent;
   scheduleResult.notificationRecipients = notificationRecipients;
 
-  // Add previous mentor designations for dashboard pre-selection
-  scheduleResult.previousSeniorMentors = getSeniorMentorDesignations();
-  scheduleResult.previousFirstTimeMentors = getFirstTimeMentorDesignations();
-
   return scheduleResult;
 }
 

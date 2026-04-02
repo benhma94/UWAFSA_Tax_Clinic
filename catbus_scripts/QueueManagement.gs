@@ -538,9 +538,10 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
         }
       }
 
-      // Update the existing assignment row in-place
+      // Update only the VOLUNTEER column in-place, preserving the original assignment
+      // timestamp. This keeps the graph's time-series accurate (the client has been
+      // "in progress" since the original assignment, regardless of which volunteer has them).
       const rowNumber = activeRowIndex + 2; // +2: skip header (row 1) + 0-indexed
-      assignmentSheet.getRange(rowNumber, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1).setValue(new Date());
       assignmentSheet.getRange(rowNumber, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER + 1).setValue(newVolunteerName);
     } finally {
       lock.releaseLock();

@@ -34,8 +34,7 @@ const CONFIG = {
     PRODUCT_CODES: 'UFILE Keys', // Product codes for distribution
     PRODUCT_CODE_DISTRIBUTION_LOG: 'Product Code Distribution Log', // Distribution tracking
     VOLUNTEER_TAGS: 'Volunteer Tags', // Custom display tags for volunteers
-    MESSAGES: 'Messages', // Internal messaging between managers and volunteers
-    MENTOR_TEAMS: 'Mentor Teams' // Mentor team assignments
+    MESSAGES: 'Messages' // Internal messaging between managers and volunteers
   },
 
   // Clinic contact info (used in emails and public pages)
@@ -97,7 +96,8 @@ const CONFIG = {
     SIGNOUT: {
       TIMESTAMP: 0,
       VOLUNTEER_INFO: 1,
-      SESSION_ID: 2
+      SESSION_ID: 2,
+      DURATION: 3
     }
   },
   

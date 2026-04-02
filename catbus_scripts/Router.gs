@@ -44,6 +44,16 @@ function doGet(e) {
     }
   }
 
+  if (action === 'volunteerFeedback') {
+    try {
+      submitVolunteerFeedback(e.parameter);
+      return ContentService.createTextOutput('OK');
+    } catch (err) {
+      Logger.log('volunteerFeedback error: ' + err.message);
+      return ContentService.createTextOutput('Error: ' + err.message);
+    }
+  }
+
   if (action === 'getEligibilityConfig') {
     return ContentService.createTextOutput(JSON.stringify(ELIGIBILITY_CONFIG))
       .setMimeType(ContentService.MimeType.JSON);

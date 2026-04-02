@@ -249,20 +249,6 @@ function getVolunteerScheduleByName(searchTerm) {
       Logger.log('Warning: Could not read volunteer role: ' + e.message);
     }
 
-    // If volunteer is a mentor, get their senior mentor assignments by day
-    let seniorsByDay = null;
-    const isMentor = volunteerRole.toLowerCase().includes('mentor');
-    if (isMentor && volunteerName) {
-      seniorsByDay = getMentorTeamInfo(volunteerName);
-    }
-
-    // Check if volunteer is a senior mentor and get their team members
-    let teamMembersByDay = null;
-    const isSeniorMentor = checkIfSeniorMentor(volunteerName);
-    if (isSeniorMentor) {
-      teamMembersByDay = getSeniorTeamMembers(volunteerName);
-    }
-
     // Get volunteer's display tag
     let volunteerTag = null;
     if (volunteerName) {
@@ -270,120 +256,8 @@ function getVolunteerScheduleByName(searchTerm) {
       volunteerTag = tagData.displayTags[volunteerName] || tagData.displayTags[volunteerName.toLowerCase()] || null;
     }
 
-    return { volunteerName, shifts, volunteerRole, seniorsByDay, teamMembersByDay, isSeniorMentor, volunteerTag };
+    return { volunteerName, shifts, volunteerRole, volunteerTag };
   }, 'getVolunteerScheduleByName');
-}
-
-/**
- * Gets the senior mentor assignments for a given mentor by day
- * @param {string} mentorName - Name of the mentor
- * @returns {Object|null} Map of day label -> senior mentor name, or null if not found
- */
-function getMentorTeamInfo(mentorName) {
-  try {
-    const ss = getSpreadsheet();
-    const sheet = ss.getSheetByName(CONFIG.SHEETS.MENTOR_TEAMS);
-
-    if (!sheet || sheet.getLastRow() < 3) {
-      Logger.log('No Mentor Teams sheet found or empty');
-      return null;
-    }
-
-    // Data starts at row 3 (row 1 = header + seniors, row 2 = first-time mentors)
-    const data = sheet.getRange(3, 1, sheet.getLastRow() - 2, 3).getValues();
-    const seniorsByDay = {};
-
-    for (const row of data) {
-      let day = row[0];
-      // Format date cleanly if it's a Date object
-      if (day instanceof Date) {
-        day = formatDateToScheduleLabel(day);
-      } else {
-        // Strip time/timezone info if present in string
-        day = day?.toString().replace(/\s+\d{1,2}:\d{2}:\d{2}.*$/, '').trim() || '';
-      }
-      const mentor = row[1]?.toString().trim();
-      const senior = row[2]?.toString().trim();
-
-      if (mentor.toLowerCase() === mentorName.toLowerCase() && day) {
-        seniorsByDay[day] = senior || null;
-      }
-    }
-
-    // Return null if no assignments found
-    if (Object.keys(seniorsByDay).length === 0) {
-      return null;
-    }
-
-    return seniorsByDay;
-  } catch (e) {
-    Logger.log('Error reading mentor team info: ' + e.message);
-    return null;
-  }
-}
-
-/**
- * Checks if a volunteer is designated as a senior mentor
- * @param {string} name - Volunteer name to check
- * @returns {boolean} True if volunteer is a senior mentor
- */
-function checkIfSeniorMentor(name) {
-  try {
-    const ss = getSpreadsheet();
-    const sheet = ss.getSheetByName(CONFIG.SHEETS.MENTOR_TEAMS);
-    if (!sheet) return false;
-
-    const lastCol = sheet.getLastColumn();
-    if (lastCol < 7) return false;
-
-    // Senior names are stored in header row starting at column G (index 7)
-    const headerRow = sheet.getRange(1, 7, 1, lastCol - 6).getValues()[0];
-    return headerRow.some(n => n?.toString().trim().toLowerCase() === name.toLowerCase());
-  } catch (e) {
-    Logger.log('Error checking senior mentor status: ' + e.message);
-    return false;
-  }
-}
-
-/**
- * Gets all mentors who report to a given senior mentor, grouped by day
- * @param {string} seniorName - Name of the senior mentor
- * @returns {Object|null} Map of day label -> array of mentor names, or null if not found
- */
-function getSeniorTeamMembers(seniorName) {
-  try {
-    const ss = getSpreadsheet();
-    const sheet = ss.getSheetByName(CONFIG.SHEETS.MENTOR_TEAMS);
-    if (!sheet || sheet.getLastRow() < 3) return null;
-
-    // Data starts at row 3 (row 1 = header + seniors, row 2 = first-time mentors)
-    const data = sheet.getRange(3, 1, sheet.getLastRow() - 2, 3).getValues();
-    const teamByDay = {};
-
-    for (const row of data) {
-      let day = row[0];
-      // Format date cleanly if it's a Date object
-      if (day instanceof Date) {
-        day = formatDateToScheduleLabel(day);
-      } else {
-        day = day?.toString().replace(/\s+\d{1,2}:\d{2}:\d{2}.*$/, '').trim() || '';
-      }
-
-      const mentor = row[1]?.toString().trim();
-      const senior = row[2]?.toString().trim();
-
-      // If this mentor reports to the given senior, add to team
-      if (senior?.toLowerCase() === seniorName.toLowerCase() && day && mentor) {
-        if (!teamByDay[day]) teamByDay[day] = [];
-        teamByDay[day].push(mentor);
-      }
-    }
-
-    return Object.keys(teamByDay).length > 0 ? teamByDay : null;
-  } catch (e) {
-    Logger.log('Error reading senior team members: ' + e.message);
-    return null;
-  }
 }
 
 /**
@@ -391,16 +265,23 @@ function getSeniorTeamMembers(seniorName) {
  * @param {string} volunteerName - Exact volunteer name (case-insensitive match)
  * @param {string} filterDateStr - Optional clinic day label string (e.g. "Saturday March 21 2026")
  *   to filter stats to a specific day. If omitted, only all-time count is returned.
- * @returns {Object} { returnsAllTime, returnsFiltered } — returnsFiltered is null if no filterDateStr
+ * @returns {Object} Personal stats + clinic benchmark averages
  */
 function getVolunteerPersonalStats(volunteerName, filterDateStr) {
+  const emptyResult = {
+    returnsAllTime: 0, returnsFiltered: null, totalVolunteerMinutes: 0,
+    reviewedAllTime: 0, reviewedFiltered: null,
+    avgMinutesPerReturn: null, overallAvgMinutesPerReturn: null,
+    overallAvgReturnsPerFiler: null, overallAvgReviewsPerReviewer: null
+  };
+
   try {
     const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
     const lastRow = sheet.getLastRow();
-    if (lastRow <= 1) return { returnsAllTime: 0, returnsFiltered: null };
+    if (lastRow <= 1) return emptyResult;
 
     const cols = CONFIG.COLUMNS.TAX_RETURN_TRACKER;
-    const numCols = cols.INCOMPLETE + 1;
+    const numCols = cols.INCOMPLETE + 1; // = 10; covers REVIEWER(4) and SECONDARY_REVIEWER(5)
     const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
 
     const nameLower = volunteerName.toLowerCase();
@@ -411,11 +292,20 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
 
     let returnsAllTime = 0;
     let returnsFiltered = filterDate ? 0 : null;
+    let reviewedAllTime = 0;
+    let reviewedFiltered = filterDate ? 0 : null;
+
+    // For overall benchmarks (all volunteers)
+    let overallTotalReturns = 0;
+    const overallFilersSet = new Set();
+    let overallTotalReviewed = 0;
+    const overallReviewersSet = new Set();
+
+    // Collect filing events for per-return timing calculation
+    const volunteerFilings = []; // { clientId, filedAt } for this volunteer
+    const allFilings = [];       // { clientId, filedAt, volunteer } for all volunteers
 
     for (const row of data) {
-      const rowVolunteer = (row[cols.VOLUNTEER] || '').toString().trim().toLowerCase();
-      if (rowVolunteer !== nameLower) continue;
-
       const efile = (row[cols.EFILE] || '').toString().toLowerCase() === 'yes';
       const paper = (row[cols.PAPER] || '').toString().toLowerCase() === 'yes';
       const incomplete = (row[cols.INCOMPLETE] || '').toString().toLowerCase() === 'yes';
@@ -423,21 +313,147 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
 
       const married = (row[cols.MARRIED] || '').toString().toLowerCase() === 'yes';
       const increment = married ? 2 : 1;
+      const rowVolunteer = (row[cols.VOLUNTEER] || '').toString().trim().toLowerCase();
+      const reviewer = (row[cols.REVIEWER] || '').toString().trim().toLowerCase();
+      const secondaryReviewer = (row[cols.SECONDARY_REVIEWER] || '').toString().trim().toLowerCase();
+      const clientId = (row[cols.CLIENT_ID] || '').toString().trim();
+      const filedTimestamp = row[cols.TIMESTAMP];
 
-      returnsAllTime += increment;
-
-      if (filterDate) {
-        const timestamp = row[cols.TIMESTAMP];
-        if (timestamp && new Date(timestamp).toDateString() === filterDate.toDateString()) {
+      // Personal: returns filed
+      if (rowVolunteer === nameLower) {
+        returnsAllTime += increment;
+        if (filterDate && filedTimestamp && new Date(filedTimestamp).toDateString() === filterDate.toDateString()) {
           returnsFiltered += increment;
         }
+        if (clientId && filedTimestamp) {
+          volunteerFilings.push({ clientId, filedAt: new Date(filedTimestamp) });
+        }
+      }
+
+      // Personal: returns reviewed
+      if (reviewer === nameLower || secondaryReviewer === nameLower) {
+        reviewedAllTime += increment;
+        if (filterDate && filedTimestamp && new Date(filedTimestamp).toDateString() === filterDate.toDateString()) {
+          reviewedFiltered += increment;
+        }
+      }
+
+      // Overall benchmarks
+      overallTotalReturns += increment;
+      if (rowVolunteer) overallFilersSet.add(rowVolunteer);
+      if (reviewer || secondaryReviewer) {
+        overallTotalReviewed += increment;
+        if (reviewer) overallReviewersSet.add(reviewer);
+        if (secondaryReviewer) overallReviewersSet.add(secondaryReviewer);
+      }
+      if (clientId && filedTimestamp && rowVolunteer) {
+        allFilings.push({ clientId, filedAt: new Date(filedTimestamp), volunteer: rowVolunteer });
       }
     }
 
-    return { returnsAllTime, returnsFiltered };
+    // Volunteer time (existing)
+    let totalVolunteerMinutes = 0;
+    try {
+      const signoutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
+      const signoutLastRow = signoutSheet.getLastRow();
+      if (signoutLastRow > 1) {
+        const signoutCols = CONFIG.COLUMNS.SIGNOUT;
+        const signoutData = signoutSheet.getRange(2, 1, signoutLastRow - 1, signoutCols.DURATION + 1).getDisplayValues();
+        for (const row of signoutData) {
+          const rowName = (row[signoutCols.VOLUNTEER_INFO] || '').trim().toLowerCase();
+          if (rowName !== nameLower) continue;
+          const parts = (row[signoutCols.DURATION] || '').trim().split(':');
+          if (parts.length >= 2) {
+            const h = parseInt(parts[0], 10) || 0;
+            const m = parseInt(parts[1], 10) || 0;
+            const s = parts.length >= 3 ? (parseInt(parts[2], 10) || 0) : 0;
+            totalVolunteerMinutes += h * 60 + m + s / 60;
+          }
+        }
+      }
+    } catch (e) {
+      Logger.log('Error reading volunteer time: ' + e.message);
+    }
+
+    // Per-return timing: assignment timestamp → filing timestamp
+    let avgMinutesPerReturn = null;
+    let overallAvgMinutesPerReturn = null;
+    try {
+      const assignSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+      const assignLastRow = assignSheet.getLastRow();
+      if (assignLastRow > 1) {
+        const aCols = CONFIG.COLUMNS.CLIENT_ASSIGNMENT;
+        const assignData = assignSheet.getRange(2, 1, assignLastRow - 1, aCols.VOLUNTEER + 1).getValues();
+
+        // Build map: clientId → [ {timestamp, volunteer} ]
+        const assignmentMap = {};
+        for (const aRow of assignData) {
+          const ts = aRow[aCols.TIMESTAMP];
+          const cid = (aRow[aCols.CLIENT_ID] || '').toString().trim();
+          const vol = (aRow[aCols.VOLUNTEER] || '').toString().trim().toLowerCase();
+          if (!cid || !ts || !vol) continue;
+          if (!assignmentMap[cid]) assignmentMap[cid] = [];
+          assignmentMap[cid].push({ timestamp: new Date(ts), volunteer: vol });
+        }
+
+        // Find best matching assignment for a filing event:
+        // most-recent assignment by same volunteer that is at or before the filing timestamp
+        function findBestAssignment(clientId, volunteer, filedAt) {
+          const entries = assignmentMap[clientId];
+          if (!entries) return null;
+          let best = null;
+          for (const entry of entries) {
+            if (entry.volunteer !== volunteer) continue;
+            if (entry.timestamp > filedAt) continue;
+            if (!best || entry.timestamp > best.timestamp) best = entry;
+          }
+          return best;
+        }
+
+        // This volunteer's avg time per return
+        const volunteerMinutes = [];
+        for (const { clientId, filedAt } of volunteerFilings) {
+          const assignment = findBestAssignment(clientId, nameLower, filedAt);
+          if (assignment) {
+            const mins = (filedAt - assignment.timestamp) / 60000;
+            if (mins > 0 && mins < 480) volunteerMinutes.push(mins); // sanity: < 8 hrs
+          }
+        }
+        if (volunteerMinutes.length > 0) {
+          avgMinutesPerReturn = Math.round(volunteerMinutes.reduce((a, b) => a + b, 0) / volunteerMinutes.length);
+        }
+
+        // Overall avg time per return (clinic benchmark)
+        const allMinutes = [];
+        for (const { clientId, filedAt, volunteer } of allFilings) {
+          const assignment = findBestAssignment(clientId, volunteer, filedAt);
+          if (assignment) {
+            const mins = (filedAt - assignment.timestamp) / 60000;
+            if (mins > 0 && mins < 480) allMinutes.push(mins);
+          }
+        }
+        if (allMinutes.length > 0) {
+          overallAvgMinutesPerReturn = Math.round(allMinutes.reduce((a, b) => a + b, 0) / allMinutes.length);
+        }
+      }
+    } catch (e) {
+      Logger.log('Error computing per-return timing: ' + e.message);
+    }
+
+    return {
+      returnsAllTime,
+      returnsFiltered,
+      totalVolunteerMinutes,
+      reviewedAllTime,
+      reviewedFiltered,
+      avgMinutesPerReturn,
+      overallAvgMinutesPerReturn,
+      overallAvgReturnsPerFiler: overallFilersSet.size > 0 ? Math.round(overallTotalReturns / overallFilersSet.size) : null,
+      overallAvgReviewsPerReviewer: overallReviewersSet.size > 0 ? Math.round(overallTotalReviewed / overallReviewersSet.size) : null
+    };
   } catch (e) {
     Logger.log('Error in getVolunteerPersonalStats: ' + e.message);
-    return { returnsAllTime: 0, returnsFiltered: null };
+    return emptyResult;
   }
 }
 

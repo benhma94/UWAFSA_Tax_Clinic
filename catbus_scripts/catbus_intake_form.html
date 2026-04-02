@@ -626,16 +626,26 @@
       const appointmentId = document.getElementById('appointmentId').value.trim().toUpperCase();
       const hasAppointment = appointmentId && /^P\d+$/.test(appointmentId);
 
-      const formData = {
-        householdsize: document.getElementById('householdsize').value,
-        filingYears: [...filingYearCheckboxes].map(cb => cb.value),
-        situations: [...document.querySelectorAll('input[name="situations"]:checked')].map(cb => cb.value),
-        notes: (document.getElementById('newcomerEntryDate').value ? `Date of entry: ${document.getElementById('newcomerEntryDate').value}\n` : '') + document.getElementById('notes').value + (hasAppointment ? ' [Pre-booked appointment]' : ''),
-        needsSeniorReview: document.getElementById('needsSeniorReview').checked,
-        isHighPriority: document.getElementById('isHighPriority').checked || hasAppointment,
-        appointmentId: hasAppointment ? appointmentId : null,
-        documents: getSelectedDocuments()
-      };
+      let formData;
+      try {
+        formData = {
+          householdsize: document.getElementById('householdsize').value,
+          filingYears: [...filingYearCheckboxes].map(cb => cb.value),
+          situations: [...document.querySelectorAll('input[name="situations"]:checked')].map(cb => cb.value),
+          notes: (document.getElementById('newcomerEntryDate').value ? `Date of entry: ${document.getElementById('newcomerEntryDate').value}\n` : '') + document.getElementById('notes').value + (hasAppointment ? ' [Pre-booked appointment]' : ''),
+          needsSeniorReview: document.getElementById('needsSeniorReview').checked,
+          isHighPriority: document.getElementById('isHighPriority').checked || hasAppointment,
+          appointmentId: hasAppointment ? appointmentId : null,
+          documents: getSelectedDocuments()
+        };
+      } catch (e) {
+        alert('Error preparing form data: ' + e.message);
+        return;
+      }
+
+      const submitBtn = document.querySelector('#mainForm button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting…';
 
       google.script.run
         .withSuccessHandler(clientID => {
@@ -643,6 +653,8 @@
           showModal();
         })
         .withFailureHandler(error => {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit';
           alert('Error submitting form: ' + (error.message || error));
         })
         .storeMainFormData(formData);

@@ -192,24 +192,7 @@ function getMentorList() {
           Logger.log('Warning: Could not read sign-out data: ' + e.message);
         }
 
-        // Get designated senior mentors from Mentor Teams sheet
-        const designatedSeniors = new Set();
-        try {
-          const ss = getSpreadsheet();
-          const teamsSheet = ss.getSheetByName(CONFIG.SHEETS.MENTOR_TEAMS);
-          if (teamsSheet && teamsSheet.getLastColumn() >= 7) {
-            const headerRow = teamsSheet.getRange(1, 7, 1, teamsSheet.getLastColumn() - 6).getValues()[0];
-            headerRow.forEach(name => {
-              const trimmed = name?.toString().trim();
-              if (trimmed) designatedSeniors.add(trimmed);
-            });
-          }
-        } catch (e) {
-          Logger.log('Warning: Could not read senior designations: ' + e.message);
-        }
-
         const mentorsToday = new Set();
-        const seniorMentorsToday = new Set();
 
         for (let i = 0; i < data.length; i++) {
           const timestamp = data[i][0];
@@ -220,20 +203,15 @@ function getMentorList() {
           if (name && timestamp instanceof Date) {
             // Include any mentor currently signed in (not yet signed out), regardless of sign-in date
             if ((role === 'mentor' || role === 'senior mentor') && !signedOutIds.has(sessionId)) {
-              if (designatedSeniors.has(name)) {
-                seniorMentorsToday.add(name);
-              } else {
-                mentorsToday.add(name);
-              }
+              mentorsToday.add(name);
             }
           }
         }
 
         mentorsToday.add('Yuzhen Quiz Mentor');
-        const allReviewers = new Set([...mentorsToday, ...seniorMentorsToday]);
         return {
-          reviewers: [...allReviewers].sort(),
-          seniors: [...seniorMentorsToday].sort()
+          reviewers: [...mentorsToday].sort(),
+          seniors: []
         };
       },
       CACHE_CONFIG.TTL.MENTOR_LIST

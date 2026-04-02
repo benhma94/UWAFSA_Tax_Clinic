@@ -433,34 +433,7 @@ function getConsolidatedVolunteerData() {
         }
       }
 
-      // Get designated senior mentors from Mentor Teams sheet (new source of truth)
-      const designatedSeniors = new Set();
-      try {
-        const teamsSheet = getSpreadsheet().getSheetByName(CONFIG.SHEETS.MENTOR_TEAMS);
-        if (teamsSheet && teamsSheet.getLastColumn() >= 7) {
-          // Senior designations stored in row 1, columns G+ (after "Senior Mentors:" label in F)
-          const headerRow = teamsSheet.getRange(1, 7, 1, teamsSheet.getLastColumn() - 6).getValues()[0];
-          headerRow.forEach(name => {
-            const trimmed = name?.toString().trim();
-            if (trimmed) {
-              designatedSeniors.add(trimmed);
-              designatedSeniors.add(trimmed.toLowerCase());
-            }
-          });
-        }
-      } catch (e) {
-        Logger.log('Warning: Could not read senior designations from Mentor Teams: ' + e.message);
-      }
-
-      // Apply senior mentor role from schedule dashboard designation
-      for (const volunteer of volunteers) {
-        if (volunteer.role.toLowerCase().includes('mentor') &&
-            (designatedSeniors.has(volunteer.name) || designatedSeniors.has(volunteer.name.toLowerCase()))) {
-          volunteer.role = 'Senior Mentor';
-        }
-      }
-
-      // Apply other role overrides from Volunteer Tags sheet (excluding senior mentor)
+      // Apply other role overrides from Volunteer Tags sheet
       const tagData = getVolunteerTagsFromSheet();
       const roleOverrides = tagData.roleOverrides || {};
 

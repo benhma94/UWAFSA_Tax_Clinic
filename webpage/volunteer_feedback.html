@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tax Clinic &mdash; Volunteer Feedback</title>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico"/>
+    <link rel="canonical" href="https://taxclinic.uwaterloo.ca"/>
+    <meta property="og:site_name" content="Accounting &amp; Finance Student Association"/>
+    <meta property="og:title" content="Tax Clinic &mdash; Volunteer Feedback"/>
+    <meta property="og:url" content="https://taxclinic.uwaterloo.ca"/>
+    <meta property="og:type" content="website"/>
+    <meta name="description" content="" />
+    <script>(function(){var t=localStorage.getItem('theme');if(t==='dark'||(t===null&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark-mode');})();</script>
+    <link rel="stylesheet" href="shared.css?v=2">
+    <style>
+      /* Number scale widget (1–10) */
+      .scale-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+        margin-bottom: 4px;
+      }
+      .scale-group input[type="radio"] {
+        display: none;
+      }
+      .scale-group label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        border: 2px solid #ccc;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: bold;
+        color: #555;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
+        user-select: none;
+      }
+      .scale-group input[type="radio"]:checked + label {
+        background: #8e0000;
+        border-color: #8e0000;
+        color: #fff;
+      }
+      .scale-group label:hover {
+        border-color: #8e0000;
+        color: #8e0000;
+      }
+      .scale-group input[type="radio"]:checked + label:hover {
+        background: #8e0000;
+        color: #fff;
+      }
+      .scale-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8em;
+        color: #888;
+        margin-bottom: 6px;
+      }
+
+      /* Radio group (single-select options) */
+      .radio-group {
+        margin-top: 8px;
+      }
+      .radio-group label {
+        display: block;
+        font-weight: normal !important;
+        margin-top: 0 !important;
+        margin-bottom: 8px;
+        cursor: pointer;
+      }
+      .radio-group input[type="radio"] {
+        margin-right: 8px;
+      }
+
+      /* Form field styles */
+      .app-form label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 4px;
+        margin-top: 24px;
+      }
+      .app-form .optional {
+        font-weight: normal;
+        color: #888;
+        font-size: 0.9em;
+        margin-left: 4px;
+      }
+      .app-form select,
+      .app-form textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-family: inherit;
+        box-sizing: border-box;
+      }
+      .app-form select {
+        height: 38px;
+      }
+      .app-form textarea {
+        min-height: 90px;
+        resize: vertical;
+      }
+      .app-form button[type="submit"] {
+        margin-top: 24px;
+        padding: 10px 28px;
+        background: #8e0000;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      .app-form button[type="submit"]:hover:not(:disabled) {
+        opacity: 0.85;
+      }
+      .app-form button[type="submit"]:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .status-msg {
+        margin-top: 14px;
+        padding: 10px 14px;
+        border-radius: 4px;
+        display: none;
+      }
+      .status-msg.success {
+        background: #d5f5e3;
+        color: #1e8449;
+        display: block;
+      }
+      .status-msg.error {
+        background: #fadbd8;
+        color: #922b21;
+        display: block;
+      }
+      .status-msg.loading {
+        background: #d6eaf8;
+        color: #21618c;
+        display: block;
+      }
+    </style>
+    <script src="config.js"></script>
+  </head>
+  <body>
+
+  <div id="site-header"></div>
+  <div id="site-nav"></div>
+
+  <div id="content">
+    <div class="sqs-html-content">
+      <h2><strong>2026 Tax Clinic &mdash; Volunteer Feedback</strong></h2>
+      <div id="feedback-root"></div>
+    </div>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="shared.js?v=2"></script>
+  <script>
+    // Toggle this to open or close the feedback form
+    var FEEDBACK_OPEN = true;
+
+    var APPS_SCRIPT_URL = CATBUS_CONFIG.WEBAPP_URL;
+
+    var root = document.getElementById('feedback-root');
+
+    if (!FEEDBACK_OPEN) {
+      root.innerHTML = '<p><strong>The volunteer feedback form is currently closed. Thank you for volunteering at the AFSA Tax Clinic!</strong></p>';
+    } else {
+      root.innerHTML = buildFormHTML();
+    }
+
+    function buildScaleWidget(name) {
+      var html = '<div class="scale-labels"><span>No knowledge</span><span>Expert</span></div>';
+      html += '<div class="scale-group" role="radiogroup" aria-label="' + name + ' rating">';
+      for (var i = 1; i <= 10; i++) {
+        html += '<input type="radio" name="' + name + '" id="' + name + '_' + i + '" value="' + i + '">';
+        html += '<label for="' + name + '_' + i + '">' + i + '</label>';
+      }
+      html += '</div>';
+      return html;
+    }
+
+    function buildFormHTML() {
+      return (
+        '<p>Thank you for volunteering at the AFSA Tax Clinic! Please take a moment to share your experience. Your feedback helps us improve for next year.</p>' +
+        '<form id="volunteerFeedbackForm" class="app-form" onsubmit="handleSubmit(event)" novalidate>' +
+
+        '<label for="role">1. What was your role at Tax Clinic?</label>' +
+        '<select id="role">' +
+          '<option value="">-- Select your role --</option>' +
+          '<option>Filer</option>' +
+          '<option>Mentor</option>' +
+          '<option>Frontline</option>' +
+          '<option>Internal Services</option>' +
+        '</select>' +
+
+        '<label for="enjoyed">2. What did you enjoy the most about Tax Clinic?</label>' +
+        '<textarea id="enjoyed" placeholder="What was the highlight of your experience?"></textarea>' +
+
+        '<label for="disliked">3. What did you dislike the most about Tax Clinic?</label>' +
+        '<textarea id="disliked" placeholder="What could have gone better?"></textarea>' +
+
+        '<label for="improvement">4. What do you think we can improve the most at Tax Clinic?</label>' +
+        '<textarea id="improvement" placeholder="Suggestions for improvement..."></textarea>' +
+
+        '<label for="catbus2">5. What features would you like to see in CATBUS 2.0?</label>' +
+        '<textarea id="catbus2" placeholder="Whathat would make CATBUS even better?"></textarea>' +
+
+        '<label for="recommendation">6. Would you recommend this experience to first years next year? What would you say to them?</label>' +
+        '<textarea id="recommendation" placeholder="What advice would you give to future volunteers?"></textarea>' +
+
+        '<label>7. On a scale of 1 to 10, how was your tax knowledge <strong>before</strong> doing any Tax Clinic activities?</label>' +
+        buildScaleWidget('knowledgeBefore') +
+
+        '<label>8. On a scale of 1 to 10, how was your tax knowledge <strong>after Tax Clinic Training</strong>?</label>' +
+        buildScaleWidget('knowledgeAfterTraining') +
+
+        '<label>9. On a scale of 1 to 10, how was your tax knowledge <strong>after Tax Clinic</strong>?</label>' +
+        buildScaleWidget('knowledgeAfterClinic') +
+
+        '<label>10. Would you do Tax Clinic again?</label>' +
+        '<div class="radio-group">' +
+          '<label><input type="radio" name="doAgain" value="Yes"> Yes</label>' +
+          '<label><input type="radio" name="doAgain" value="No"> No</label>' +
+          '<label><input type="radio" name="doAgain" value="Maybe"> Maybe</label>' +
+        '</div>' +
+
+        '<label>11. Did your experience at Tax Clinic make you want to go into a tax career?</label>' +
+        '<div class="radio-group">' +
+          '<label><input type="radio" name="taxCareer" value="GET ME AWAY FROM TAX. NEVER AGAIN."> GET ME AWAY FROM TAX. NEVER AGAIN.</label>' +
+          '<label><input type="radio" name="taxCareer" value="I choose to willingly join the Tax Cult"> I choose to willingly join the Tax Cult</label>' +
+          '<label><input type="radio" name="taxCareer" value="Undecided still."> Undecided still.</label>' +
+        '</div>' +
+
+        '<label for="otherComments">12. Are there any other comments you\'d like to make? <span class="optional">(optional)</span></label>' +
+        '<textarea id="otherComments" placeholder="Anything else on your mind..."></textarea>' +
+
+        '<button type="submit" id="submitBtn">Submit Feedback</button>' +
+        '</form>' +
+        '<div id="statusMsg" class="status-msg"></div>'
+      );
+    }
+
+    function showStatus(msg, type) {
+      var el = document.getElementById('statusMsg');
+      if (!el) return;
+      el.textContent = msg;
+      el.className = 'status-msg ' + type;
+    }
+
+    function getRadioValue(name) {
+      var checked = document.querySelector('input[name="' + name + '"]:checked');
+      return checked ? checked.value : '';
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+
+      var role                 = document.getElementById('role').value;
+      var enjoyed              = document.getElementById('enjoyed').value.trim();
+      var disliked             = document.getElementById('disliked').value.trim();
+      var improvement          = document.getElementById('improvement').value.trim();
+      var catbus2              = document.getElementById('catbus2').value.trim();
+      var recommendation       = document.getElementById('recommendation').value.trim();
+      var knowledgeBefore      = getRadioValue('knowledgeBefore');
+      var knowledgeAfterTraining = getRadioValue('knowledgeAfterTraining');
+      var knowledgeAfterClinic = getRadioValue('knowledgeAfterClinic');
+      var doAgain              = getRadioValue('doAgain');
+      var taxCareer            = getRadioValue('taxCareer');
+      var otherComments        = document.getElementById('otherComments').value.trim();
+
+      var missing = [];
+      if (!role)                   missing.push('your role (Q1)');
+      if (!enjoyed)                missing.push('what you enjoyed most (Q2)');
+      if (!disliked)               missing.push('what you disliked most (Q3)');
+      if (!improvement)            missing.push('what we can improve (Q4)');
+      if (!catbus2)                missing.push('CATBUS 2.0 features (Q5)');
+      if (!recommendation)         missing.push('your recommendation to first years (Q6)');
+      if (!knowledgeBefore)        missing.push('knowledge before Tax Clinic (Q7)');
+      if (!knowledgeAfterTraining) missing.push('knowledge after training (Q8)');
+      if (!knowledgeAfterClinic)   missing.push('knowledge after Tax Clinic (Q9)');
+      if (!doAgain)                missing.push('whether you\'d do Tax Clinic again (Q10)');
+      if (!taxCareer)              missing.push('tax career outlook (Q11)');
+
+      if (missing.length > 0) {
+        showStatus('Please complete the following before submitting: ' + missing.join(', ') + '.', 'error');
+        return;
+      }
+
+      var btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      showStatus('Submitting...', 'loading');
+
+      var params = new URLSearchParams({
+        action: 'volunteerFeedback',
+        role: role,
+        enjoyed: enjoyed,
+        disliked: disliked,
+        improvement: improvement,
+        catbus2: catbus2,
+        recommendation: recommendation,
+        knowledgeBefore: knowledgeBefore,
+        knowledgeAfterTraining: knowledgeAfterTraining,
+        knowledgeAfterClinic: knowledgeAfterClinic,
+        doAgain: doAgain,
+        taxCareer: taxCareer,
+        otherComments: otherComments
+      });
+
+      fetch(APPS_SCRIPT_URL + '?' + params.toString(), { method: 'GET', mode: 'no-cors' })
+        .then(function() {
+          document.getElementById('volunteerFeedbackForm').style.display = 'none';
+          showStatus('Thank you for your feedback! We really appreciate your input.', 'success');
+        })
+        .catch(function() {
+          showStatus('Submission failed. Please try again or email us directly.', 'error');
+          btn.disabled = false;
+        });
+    }
+  </script>
+  </body>
+</html>

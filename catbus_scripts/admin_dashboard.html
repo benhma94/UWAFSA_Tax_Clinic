@@ -251,6 +251,11 @@
       color: white;
     }
 
+    .badge.on-break {
+      background: #f39c12;
+      color: white;
+    }
+
     .card-detail {
       font-size: 0.87em;
       margin-top: 4px;
@@ -545,6 +550,7 @@
       const badges = [];
       if (r.isHighPriority) badges.push('<span class="badge priority">Priority</span>');
       if (r.needsSeniorReview) badges.push('<span class="badge senior-review">Senior Review</span>');
+      if (r.isOnBreak) badges.push('<span class="badge on-break">☕ On Break</span>');
 
       const timingParts = [];
       if (r.minutesOnClient !== null) timingParts.push(`⏱️ ${formatDuration(r.minutesOnClient)} on client`);
@@ -588,6 +594,7 @@
       card.className = "idle-filer-card";
       card.innerHTML = `
         <div class="card-volunteer">${escapeHtml(f.name)}</div>
+        ${f.isOnBreak ? '<div class="card-badges"><span class="badge on-break">☕ On Break</span></div>' : ''}
         <div class="card-timing">⏳ ${formatDuration(f.minutesIdle)} idle</div>
       `;
       grid.appendChild(card);
@@ -909,7 +916,7 @@
 
     var avgEl = document.getElementById('featureOverallAvg');
     if (data.avgMinutes != null) {
-      avgEl.textContent = ' · Avg completion: ' + formatMinutes(data.avgMinutes);
+      avgEl.textContent = ' · Avg time/return: ' + formatMinutes(data.avgMinutes);
     } else {
       avgEl.textContent = '';
     }
@@ -924,11 +931,17 @@
 
     for (const f of data.features) {
       const pct = Math.round((f.count / data.total) * 100);
-      const avgTime = f.avgMinutes != null ? '<span class="feature-avg-time">· avg ' + formatMinutes(f.avgMinutes) + '</span>' : '';
+      const avgTime = f.avgMinutes != null ? '<span class="feature-avg-time">· avg ' + formatMinutes(f.avgMinutes) + '/return</span>' : '';
+      var deltaText = '';
+      if (f.deltaMinutes != null) {
+        var sign = f.deltaMinutes >= 0 ? '+' : '';
+        var deltaColor = f.deltaMinutes >= 0 ? '#e74c3c' : '#27ae60';
+        deltaText = ' <span style="color:' + deltaColor + ';font-weight:600;">(' + sign + f.deltaMinutes + ' min)</span>';
+      }
       const row = document.createElement('div');
       row.className = 'feature-bar-row';
       row.innerHTML =
-        '<div class="feature-bar-label">' + f.label + ': ' + f.count + ' (' + pct + '%) ' + avgTime + '</div>' +
+        '<div class="feature-bar-label">' + f.label + ': ' + f.count + ' (' + pct + '%) ' + avgTime + deltaText + '</div>' +
         '<div class="feature-bar-track">' +
           '<div class="feature-bar-fill" style="width: ' + pct + '%"></div>' +
         '</div>';
@@ -965,7 +978,7 @@
   function startAutoRefresh() {
     if (refreshInterval) clearInterval(refreshInterval);
     var jitter = Math.floor(Math.random() * 2000);
-    refreshInterval = setInterval(refresh, 30000 + jitter);
+    refreshInterval = setInterval(refresh, 10000 + jitter);
   }
 
   // Pause refresh when page is not visible

@@ -9,10 +9,12 @@
  */
 function getAlertDashboardData() {
   const stationMap = getVolunteerStationMap_();
-  const reviewRequests = getLiveReviewRequestsCached().map(req => {
-    const intake = req.clientId ? getClientIntakeInfo(req.clientId) : null;
+  const liveReviewRequests = getLiveReviewRequestsCached();
+  const hasClientIds = liveReviewRequests.some(req => req.clientId);
+  const intakeMap = hasClientIds ? buildClientIntakeMap_() : {};
+  const reviewRequests = liveReviewRequests.map(req => {
     return Object.assign({}, req, {
-      needsSeniorReview: intake?.needsSeniorReview || false,
+      needsSeniorReview: req.clientId ? (intakeMap[req.clientId]?.needsSeniorReview || false) : false,
       station: stationMap[req.volunteer] || ''
     });
   });
@@ -115,17 +117,89 @@ function buildVolunteerScheduleMap_() {
 }
 
 /**
+ * Reads the entire Client Intake sheet once and returns a map of clientId → intake info.
+ * Use this to avoid per-client sheet reads inside loops.
+ * @returns {Object} { clientId: { filingYears, situations, notes, needsSeniorReview, documents } }
+ */
+function buildClientIntakeMap_() {
+  const map = {};
+  try {
+    const sheet = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return map;
+    const numCols = CONFIG.COLUMNS.CLIENT_INTAKE.DOCUMENTS + 1;
+    const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+    for (const row of data) {
+      const clientId = row[CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID]?.toString().trim();
+      if (!clientId) continue;
+      const needsSeniorReview = row[CONFIG.COLUMNS.CLIENT_INTAKE.NEEDS_SENIOR_REVIEW] === true ||
+        row[CONFIG.COLUMNS.CLIENT_INTAKE.NEEDS_SENIOR_REVIEW]?.toString().toLowerCase() === 'true';
+      let documents = [];
+      try { documents = JSON.parse(row[CONFIG.COLUMNS.CLIENT_INTAKE.DOCUMENTS]?.toString().trim() || '[]'); } catch (e) {}
+      map[clientId] = {
+        filingYears: row[CONFIG.COLUMNS.CLIENT_INTAKE.FILING_YEARS]?.toString().split(',').map(y => y.trim()) || [],
+        situations:  row[CONFIG.COLUMNS.CLIENT_INTAKE.SITUATIONS]?.toString().split(',').map(s => s.trim()) || [],
+        notes:       row[CONFIG.COLUMNS.CLIENT_INTAKE.NOTES]?.toString().trim() || '',
+        needsSeniorReview,
+        documents
+      };
+    }
+  } catch (e) {
+    Logger.log('buildClientIntakeMap_: ' + e.message);
+  }
+  return map;
+}
+
+/**
+ * Returns a map of { volunteerName: true } for volunteers currently on break.
+ * Reads the Volunteer List sheet and excludes signed-out sessions.
+ */
+function getVolunteerBreakMap_() {
+  try {
+    const today = new Date().toDateString();
+    const volSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
+    const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
+    const volLastRow = volSheet.getLastRow();
+    const signOutLastRow = signOutSheet.getLastRow();
+
+    const volData = volLastRow > 1 ? volSheet.getRange(2, 1, volLastRow - 1, 5).getValues() : [];
+    const signOutData = signOutLastRow > 1
+      ? signOutSheet.getRange(2, 1, signOutLastRow - 1, 3).getValues()
+      : [];
+    const signedOutSessions = new Set(
+      signOutData.map(r => r[CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim())
+    );
+
+    const breakMap = {};
+    for (const row of volData) {
+      const ts        = row[CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP];
+      const name      = row[CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
+      const sessionId = row[CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
+      const onBreak   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.ON_BREAK]?.toString().trim().toLowerCase();
+      if (!name || !sessionId) continue;
+      if (new Date(ts).toDateString() !== today) continue;
+      if (signedOutSessions.has(sessionId)) continue;
+      breakMap[name] = (onBreak === 'yes');
+    }
+    return breakMap;
+  } catch (e) {
+    Logger.log('getVolunteerBreakMap_: ' + e.message);
+    return {};
+  }
+}
+
+/**
  * Gets all currently active returns (volunteers working on a client right now)
  * Joins CLIENT_ASSIGNMENT timestamps and client intake info
  * @returns {Array} Array of active return objects with timing and client details
  */
-function getActiveReturns() {
+function getActiveReturns(stationMap_) {
   return safeExecute(() => {
     // Compute shared context once before iterating volunteers
     const todayDayNum = getTodayClinicDayIndex_() + 1; // 1–4, or 0 if not a clinic day
     const currentSlotKey = getCurrentSlotKey_();        // 'A'|'B'|'C'|null
     const scheduleMap = buildVolunteerScheduleMap_();   // name → Set<shiftId>
-    const stationMap = getVolunteerStationMap_();       // name → station string
+    const stationMap = stationMap_ || getVolunteerStationMap_(); // name → station string
     const slotOrder = ['A', 'B', 'C'];
 
     // Read CLIENT_ASSIGNMENT sheet for active (non-complete) assignments
@@ -134,37 +208,40 @@ function getActiveReturns() {
     if (lastRow <= 1) return [];
 
     const now = Date.now();
-    const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, lastRow - 1);
-    const startRow = Math.max(2, lastRow - checkRows + 1);
-    const data = sheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1,
-                                checkRows, 4).getValues();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // Build map: volunteerName → { clientId, assignedTimestamp }
-    const activeMap = {};
+    const data = sheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1,
+                                lastRow - 1, 4).getValues();
+
+    // Find each volunteer's uncompleted assignment today.
+    // Using completion status (not timestamp) as the active/done discriminator avoids issues
+    // with reassignClientToVolunteer, which only updates the VOLUNTEER column in-place and
+    // preserves the original assignment timestamp.
+    const activeByBaseName = {}; // baseName → { volunteer, clientId, timestamp }
     for (let i = 0; i < data.length; i++) {
       const timestamp = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP];
       const clientId = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
       const volunteer = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
       const completed = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
-      if (volunteer && clientId && !completed) {
-        activeMap[volunteer] = { clientId, assignedTimestamp: timestamp };
+
+      if (!volunteer || !clientId || completed) continue; // skip completed rows
+      const isToday = timestamp instanceof Date &&
+        timestamp.getFullYear() === today.getFullYear() &&
+        timestamp.getMonth() === today.getMonth() &&
+        timestamp.getDate() === today.getDate();
+      if (!isToday) continue;
+
+      const baseName = volunteer.includes('–') ? volunteer.split('–')[1].trim() : volunteer.trim();
+      // Each volunteer should have at most one uncompleted row; timestamp as tiebreaker
+      if (!activeByBaseName[baseName] || timestamp > activeByBaseName[baseName].timestamp) {
+        activeByBaseName[baseName] = { volunteer, clientId, timestamp };
       }
     }
 
-    // Also check older rows if some volunteers aren't in the recent window
-    if (lastRow > CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK) {
-      const olderRows = lastRow - CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK;
-      const olderData = sheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1,
-                                       olderRows, 4).getValues();
-      for (let i = 0; i < olderData.length; i++) {
-        const timestamp = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP];
-        const clientId = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
-        const volunteer = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim();
-        const completed = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
-        if (volunteer && clientId && !completed && !activeMap[volunteer]) {
-          activeMap[volunteer] = { clientId, assignedTimestamp: timestamp };
-        }
-      }
+    const activeMap = {};
+    for (const row of Object.values(activeByBaseName)) {
+      activeMap[row.volunteer] = { clientId: row.clientId, assignedTimestamp: row.timestamp };
     }
 
     // Remove quiz-station volunteers (practice returns, not real)
@@ -180,9 +257,11 @@ function getActiveReturns() {
     }
 
     // Build result cards by enriching with client intake info and elapsed times
+    const intakeMap = buildClientIntakeMap_();
+    const breakMap = getVolunteerBreakMap_();
     const activeReturns = [];
     for (const [volunteer, { clientId, assignedTimestamp }] of Object.entries(activeMap)) {
-      const intakeInfo = getClientIntakeInfo(clientId) || {};
+      const intakeInfo = intakeMap[clientId] || {};
 
       const minutesOnClient = assignedTimestamp instanceof Date
         ? Math.floor((now - assignedTimestamp.getTime()) / 60000)
@@ -216,6 +295,7 @@ function getActiveReturns() {
         }
       }
 
+      const baseName = volunteer.includes('–') ? volunteer.split('–')[1].trim() : volunteer.trim();
       activeReturns.push({
         volunteer,
         clientId,
@@ -224,6 +304,7 @@ function getActiveReturns() {
         notes: intakeInfo.notes || '',
         isHighPriority: clientId.startsWith('P'),
         needsSeniorReview: intakeInfo.needsSeniorReview || false,
+        isOnBreak: breakMap[baseName] || false,
         minutesOnClient,
         minutesUntilShiftEnd
       });
@@ -241,12 +322,12 @@ function getActiveReturns() {
  * @param {Object} trackerData - Pre-read tracker data from readTrackerData_()
  * @returns {Array} Array of { name, minutesIdle } sorted longest idle first
  */
-function getIdleFilers(trackerData) {
+function getIdleFilers(trackerData, stationMap_) {
   return safeExecute(() => {
     const now = Date.now();
     const today = new Date().toDateString();
     const nonFilerStations = CONFIG.SIGN_IN_OUT.NON_FILER_STATIONS;
-    const stationMap = getVolunteerStationMap_();
+    const stationMap = stationMap_ || getVolunteerStationMap_();
 
     // 1. Build set of base names with an active client assignment (excluding quiz)
     const activeBaseNames = new Set();
@@ -285,20 +366,25 @@ function getIdleFilers(trackerData) {
       signOutData.map(r => r[CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim())
     );
 
-    // name → most recent sign-in Date
+    // name → most recent sign-in Date; also track break status (last row wins)
     const signinTimes = {};
+    const breakStatus = {};
     for (const row of volData) {
       const ts        = row[CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP];
       const name      = row[CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
       const station   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.STATION]?.toString().trim().toLowerCase();
       const sessionId = row[CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
+      const onBreak   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.ON_BREAK]?.toString().trim().toLowerCase();
       if (!name || !station || !sessionId) continue;
       if (new Date(ts).toDateString() !== today) continue;
       if (signedOutSessions.has(sessionId)) continue;
       if (nonFilerStations.some(s => station === s)) continue;
       if (station === 'quiz') continue;
       const tsDate = ts instanceof Date ? ts : new Date(ts);
-      if (!signinTimes[name] || tsDate > signinTimes[name]) signinTimes[name] = tsDate;
+      if (!signinTimes[name] || tsDate > signinTimes[name]) {
+        signinTimes[name] = tsDate;
+        breakStatus[name] = (onBreak === 'yes');
+      }
     }
 
     // 3. Build volunteer → latest filing timestamp for today from tracker
@@ -322,7 +408,7 @@ function getIdleFilers(trackerData) {
       if (activeBaseNames.has(name)) continue;
       const trackerTime = latestTrackerTime[name];
       const idleSince = (trackerTime && trackerTime > signinTime) ? trackerTime : signinTime;
-      idleFilers.push({ name, minutesIdle: Math.floor((now - idleSince.getTime()) / 60000) });
+      idleFilers.push({ name, minutesIdle: Math.floor((now - idleSince.getTime()) / 60000), isOnBreak: breakStatus[name] || false });
     }
 
     idleFilers.sort((a, b) => b.minutesIdle - a.minutesIdle);
@@ -343,17 +429,18 @@ function getAdminDashboardData(selectedDateStr) {
     filterDate.setHours(0, 0, 0, 0);
   }
 
-  // Read tracker data once and pass to all three functions that need it
+  // Read shared data once and pass to all functions that need it
   const trackerData = readTrackerData_();
+  const stationMap = getVolunteerStationMap_();
   return {
-    activeReturns: getActiveReturns(),
-    idleFilers: getIdleFilers(trackerData),
+    activeReturns: getActiveReturns(stationMap),
+    idleFilers: getIdleFilers(trackerData, stationMap),
     returnSummary: filterDate
       ? getReturnSummary(trackerData, filterDate)
       : getReturnSummaryCached(trackerData),
     performanceMetrics: getVolunteerPerformanceMetrics(trackerData, filterDate),
     reviewerLeaderboard: getReviewerLeaderboard(trackerData, filterDate),
-    concurrentTimeSeries: getConcurrentReturnTimeSeries(trackerData, filterDate),
+    concurrentTimeSeries: getConcurrentReturnTimeSeries(trackerData, filterDate, stationMap),
     clinicDays: ELIGIBILITY_CONFIG.CLINIC_DATES,
     clientFeatureBreakdown: getClientFeatureBreakdown(trackerData)
   };
@@ -462,7 +549,7 @@ function getReturnSummary(trackerData, filterDate) {
  * @param {Date|null} filterDate - Optional date to filter; null = actual today
  * @returns {Object} { timeSeries: [{time: "HH:MM", count}], currentActive: number }
  */
-function getConcurrentReturnTimeSeries(trackerData, filterDate) {
+function getConcurrentReturnTimeSeries(trackerData, filterDate, stationMap_) {
   return safeExecute(() => {
     const targetDay = filterDate ? new Date(filterDate) : new Date();
     targetDay.setHours(0, 0, 0, 0);
@@ -481,7 +568,7 @@ function getConcurrentReturnTimeSeries(trackerData, filterDate) {
     // 1. Read Client Assignment for the target day
     const caSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
     const caLastRow = caSheet.getLastRow();
-    const stationMap = getVolunteerStationMap_();
+    const stationMap = stationMap_ || getVolunteerStationMap_();
     // clientId → { assignTimestamp, volunteer, isCompleted }
     const clientMap = {};
 
@@ -535,17 +622,22 @@ function getConcurrentReturnTimeSeries(trackerData, filterDate) {
       var info = clientMap[cid];
       var rows = trackerRows[cid] || [];
 
-      // +1 when client is assigned
+      // +1 per client when assigned (count clients, not returns)
       events.push({ time: info.assignTimestamp, delta: 1 });
 
-      // -1 when client's last tracker row is filed (i.e. they're done)
-      if (info.isCompleted && rows.length > 0) {
-        // Find the latest tracker timestamp for this client
-        var latestTs = rows[0].timestamp;
-        for (var k = 1; k < rows.length; k++) {
-          if (rows[k].timestamp > latestTs) latestTs = rows[k].timestamp;
+      // -1 when client is done
+      if (info.isCompleted) {
+        if (rows.length > 0) {
+          // Find the latest tracker timestamp for this client
+          var latestTs = rows[0].timestamp;
+          for (var k = 1; k < rows.length; k++) {
+            if (rows[k].timestamp > latestTs) latestTs = rows[k].timestamp;
+          }
+          events.push({ time: latestTs, delta: -1 });
+        } else {
+          // Completed but no tracker rows (no return filed) — cancel the +1
+          events.push({ time: info.assignTimestamp, delta: -1 });
         }
-        events.push({ time: latestTs, delta: -1 });
       }
     }
 
@@ -560,7 +652,13 @@ function getConcurrentReturnTimeSeries(trackerData, filterDate) {
       timeSeries.push({ time: fmtTime(events[e].time), count: running });
     }
 
-    return { timeSeries: timeSeries, currentActive: running };
+    // currentActive: count clients whose most recent assignment today is not yet completed.
+    // Derived from clientMap directly rather than from `running` (which can overcount when
+    // completed assignments have no tracker rows, e.g. after volunteer sign-out cleanup).
+    var currentActive = Object.keys(clientMap).filter(function(cid) {
+      return !clientMap[cid].isCompleted;
+    }).length;
+    return { timeSeries: timeSeries, currentActive: currentActive };
   }, 'getConcurrentReturnTimeSeries');
 }
 
@@ -821,9 +919,10 @@ function getClientFeatureBreakdown(trackerData) {
     const data = (trackerData && trackerData.data) ? trackerData.data : [];
     const cols = CONFIG.COLUMNS.TAX_RETURN_TRACKER;
 
-    // Collect unique completed client IDs and their latest tracker timestamp
+    // Collect unique completed client IDs, latest tracker timestamp, and return counts
     const completedClientIds = new Set();
     const clientCompletionTime = new Map(); // clientId → latest tracker timestamp
+    const clientReturnCount = new Map(); // clientId → number of completed returns (married = 2)
     for (let i = 0; i < data.length; i++) {
       const efile = data[i][cols.EFILE]?.toString().toLowerCase() === 'yes';
       const paper = data[i][cols.PAPER]?.toString().toLowerCase() === 'yes';
@@ -831,6 +930,9 @@ function getClientFeatureBreakdown(trackerData) {
         const clientId = data[i][cols.CLIENT_ID]?.toString().trim();
         if (clientId) {
           completedClientIds.add(clientId);
+          const married = data[i][cols.MARRIED]?.toString().toLowerCase() === 'yes';
+          const returnIncrement = married ? 2 : 1;
+          clientReturnCount.set(clientId, (clientReturnCount.get(clientId) || 0) + returnIncrement);
           const ts = data[i][cols.TIMESTAMP];
           if (ts instanceof Date) {
             const prev = clientCompletionTime.get(clientId);
@@ -884,13 +986,17 @@ function getClientFeatureBreakdown(trackerData) {
         const filingYearsStr = intakeData[i][intakeCols.FILING_YEARS]?.toString() || '';
         const filingYears = filingYearsStr.split(',').map(y => y.trim()).filter(y => y);
 
-        // Calculate completion time in minutes
+        // Calculate completion time in minutes, normalized per return
         let completionMinutes = null;
         const assignTs = clientAssignTime.get(clientId);
         const completeTs = clientCompletionTime.get(clientId);
         if (assignTs && completeTs) {
           const diffMs = completeTs.getTime() - assignTs.getTime();
-          if (diffMs > 0) completionMinutes = Math.round(diffMs / 60000);
+          if (diffMs > 0) {
+            const totalMinutes = diffMs / 60000;
+            const returnCount = clientReturnCount.get(clientId) || 1;
+            completionMinutes = Math.round(totalMinutes / returnCount);
+          }
         }
 
         clientMap.set(clientId, {
@@ -913,6 +1019,7 @@ function getClientFeatureBreakdown(trackerData) {
 
     let totalTimeSum = 0;
     let totalTimeCount = 0;
+    const clientFeatureData = []; // for baseline calculation
 
     for (const [, info] of clientMap) {
       const situations = info.situations.split(',').map(s => s.trim()).filter(s => s);
@@ -948,16 +1055,33 @@ function getClientFeatureBreakdown(trackerData) {
           timeCounts[label]++;
         }
       }
+
+      clientFeatureData.push({ matchedFeatures: matchedFeatures, completionMinutes: info.completionMinutes });
     }
 
-    const features = allFeatureLabels.map(label => ({
-      label: label,
-      count: counts[label],
-      avgMinutes: timeCounts[label] > 0 ? Math.round(timeSums[label] / timeCounts[label]) : null
-    }));
+    // Compute Student-only baseline: avg normalized time for clients whose only feature is Student
+    let baselineSum = 0, baselineCount = 0;
+    for (const entry of clientFeatureData) {
+      if (entry.matchedFeatures.length === 1 && entry.matchedFeatures[0] === 'Student' && entry.completionMinutes !== null) {
+        baselineSum += entry.completionMinutes;
+        baselineCount++;
+      }
+    }
+    const baselineAvg = baselineCount > 0 ? Math.round(baselineSum / baselineCount) : null;
+
+    const features = allFeatureLabels.map(label => {
+      const avgMinutes = timeCounts[label] > 0 ? Math.round(timeSums[label] / timeCounts[label]) : null;
+      let deltaMinutes = null;
+      if (label !== 'Student' && avgMinutes !== null && baselineAvg !== null) {
+        deltaMinutes = avgMinutes - baselineAvg;
+      }
+      // For Student, show the Student-only baseline as the avg so deltas align visually
+      const displayAvg = (label === 'Student' && baselineAvg !== null) ? baselineAvg : avgMinutes;
+      return { label: label, count: counts[label], avgMinutes: displayAvg, deltaMinutes: deltaMinutes };
+    });
 
     const overallAvg = totalTimeCount > 0 ? Math.round(totalTimeSum / totalTimeCount) : null;
 
-    return { total: clientMap.size, avgMinutes: overallAvg, features: features };
+    return { total: clientMap.size, avgMinutes: overallAvg, baselineAvg: baselineAvg, features: features };
   }, 'getClientFeatureBreakdown');
 }
