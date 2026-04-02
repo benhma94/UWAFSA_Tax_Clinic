@@ -528,6 +528,7 @@
 
   let allVolunteerNames = [];
   let currentVolunteerName = '';
+  let currentVolunteerRole = '';
 
   window.addEventListener('load', () => {
     loadVolunteerNames();
@@ -595,6 +596,7 @@
     document.getElementById('nameResults').style.display = 'none';
     document.getElementById('statsSection').style.display = 'none';
     currentVolunteerName = '';
+    currentVolunteerRole = '';
   }
 
   function searchByName() {
@@ -632,6 +634,7 @@
     }
 
     currentVolunteerName = result.volunteerName || searchTerm;
+    currentVolunteerRole = result.volunteerRole || '';
 
     const tagHtml = result.volunteerTag
       ? `<span class="volunteer-tag">${escapeHtml(result.volunteerTag)}</span>`
@@ -700,6 +703,9 @@
   function renderStats(stats, filterDateStr) {
     const statsContent = document.getElementById('statsContent');
 
+    const roleLower = (currentVolunteerRole || '').toLowerCase();
+    const showReviewed = roleLower.includes('mentor') || roleLower.includes('senior');
+
     // --- Personal stats ---
     let filedLabel, filedValue, reviewedValue;
     if (filterDateStr) {
@@ -715,44 +721,47 @@
     }
 
     const totalMin = Math.round(stats.totalVolunteerMinutes || 0);
-    const days = Math.floor(totalMin / (60 * 24));
-    const hours = Math.floor((totalMin % (60 * 24)) / 60);
+    const totalHours = Math.floor(totalMin / 60);
     const mins = totalMin % 60;
     let timeStr;
-    if (days > 0) {
+    if (totalHours > 100) {
+      const days = Math.floor(totalMin / (60 * 24));
+      const hours = Math.floor((totalMin % (60 * 24)) / 60);
       timeStr = `${days} day${days > 1 ? 's' : ''} ${hours} hr ${mins} min`;
-    } else if (hours > 0) {
-      timeStr = `${hours} hr ${mins} min`;
+    } else if (totalHours > 0) {
+      timeStr = `${totalHours} hr ${mins} min`;
     } else {
       timeStr = `${mins} min`;
     }
 
     let html = '<div class="stats-numbers">';
     html += `<span class="stat-item">📄 Returns filed (${filedLabel}): ${filedValue}</span>`;
-    html += `<span class="stat-item">✅ Returns reviewed: ${reviewedValue}</span>`;
-    if (stats.avgMinutesPerReturn !== null) {
-      html += `<span class="stat-item">⏱️ Avg time/return: <strong>${formatMinutes(stats.avgMinutesPerReturn)}</strong></span>`;
+    if (showReviewed) {
+      html += `<span class="stat-item">✅ Returns reviewed: ${reviewedValue}</span>`;
+    }
+    if (stats.medianMinutesPerReturn !== null) {
+      html += `<span class="stat-item">⏱️ Median time/return: <strong>${formatMinutes(stats.medianMinutesPerReturn)}</strong></span>`;
     }
     html += `<span class="stat-item">🕐 Total volunteer time: <strong>${timeStr}</strong></span>`;
     html += '</div>';
 
     // --- Clinic benchmarks ---
-    const hasAnyBenchmark = stats.overallAvgReturnsPerFiler !== null
-      || stats.overallAvgReviewsPerReviewer !== null
-      || stats.overallAvgMinutesPerReturn !== null;
+    const hasAnyBenchmark = stats.overallMedianReturnsPerFiler !== null
+      || stats.overallMedianReviewsPerReviewer !== null
+      || stats.overallMedianMinutesPerReturn !== null;
 
     if (hasAnyBenchmark) {
       html += '<div class="stats-benchmarks">';
-      html += '<div class="stats-benchmarks-title">Clinic Averages</div>';
+      html += '<div class="stats-benchmarks-title">Clinic Medians</div>';
       html += '<div class="stats-numbers">';
-      if (stats.overallAvgReturnsPerFiler !== null) {
-        html += `<span class="stat-item stat-benchmark">📊 Returns filed / filer: <strong>${stats.overallAvgReturnsPerFiler}</strong></span>`;
+      if (stats.overallMedianReturnsPerFiler !== null) {
+        html += `<span class="stat-item stat-benchmark">📊 Returns filed / filer: <strong>${stats.overallMedianReturnsPerFiler}</strong></span>`;
       }
-      if (stats.overallAvgReviewsPerReviewer !== null) {
-        html += `<span class="stat-item stat-benchmark">📊 Reviews / reviewer: <strong>${stats.overallAvgReviewsPerReviewer}</strong></span>`;
+      if (showReviewed && stats.overallMedianReviewsPerReviewer !== null) {
+        html += `<span class="stat-item stat-benchmark">📊 Reviews / reviewer: <strong>${stats.overallMedianReviewsPerReviewer}</strong></span>`;
       }
-      if (stats.overallAvgMinutesPerReturn !== null) {
-        html += `<span class="stat-item stat-benchmark">⏱️ Avg time / return: <strong>${formatMinutes(stats.overallAvgMinutesPerReturn)}</strong></span>`;
+      if (stats.overallMedianMinutesPerReturn !== null) {
+        html += `<span class="stat-item stat-benchmark">⏱️ Median time / return: <strong>${formatMinutes(stats.overallMedianMinutesPerReturn)}</strong></span>`;
       }
       html += '</div></div>';
     }

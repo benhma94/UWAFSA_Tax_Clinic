@@ -271,8 +271,8 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
   const emptyResult = {
     returnsAllTime: 0, returnsFiltered: null, totalVolunteerMinutes: 0,
     reviewedAllTime: 0, reviewedFiltered: null,
-    avgMinutesPerReturn: null, overallAvgMinutesPerReturn: null,
-    overallAvgReturnsPerFiler: null, overallAvgReviewsPerReviewer: null
+    medianMinutesPerReturn: null, overallMedianMinutesPerReturn: null,
+    overallMedianReturnsPerFiler: null, overallMedianReviewsPerReviewer: null
   };
 
   try {
@@ -295,11 +295,9 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
     let reviewedAllTime = 0;
     let reviewedFiltered = filterDate ? 0 : null;
 
-    // For overall benchmarks (all volunteers)
-    let overallTotalReturns = 0;
-    const overallFilersSet = new Set();
-    let overallTotalReviewed = 0;
-    const overallReviewersSet = new Set();
+    // For overall benchmarks (all volunteers) — per-volunteer counts for median calculation
+    const filerCounts = {};    // volunteerName → total returns
+    const reviewerCounts = {}; // reviewerName → total reviews
 
     // Collect filing events for per-return timing calculation
     const volunteerFilings = []; // { clientId, filedAt } for this volunteer
@@ -338,13 +336,15 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
         }
       }
 
-      // Overall benchmarks
-      overallTotalReturns += increment;
-      if (rowVolunteer) overallFilersSet.add(rowVolunteer);
-      if (reviewer || secondaryReviewer) {
-        overallTotalReviewed += increment;
-        if (reviewer) overallReviewersSet.add(reviewer);
-        if (secondaryReviewer) overallReviewersSet.add(secondaryReviewer);
+      // Overall benchmarks — accumulate per-volunteer counts
+      if (rowVolunteer) {
+        filerCounts[rowVolunteer] = (filerCounts[rowVolunteer] || 0) + increment;
+      }
+      if (reviewer) {
+        reviewerCounts[reviewer] = (reviewerCounts[reviewer] || 0) + increment;
+      }
+      if (secondaryReviewer) {
+        reviewerCounts[secondaryReviewer] = (reviewerCounts[secondaryReviewer] || 0) + increment;
       }
       if (clientId && filedTimestamp && rowVolunteer) {
         allFilings.push({ clientId, filedAt: new Date(filedTimestamp), volunteer: rowVolunteer });
@@ -375,9 +375,17 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
       Logger.log('Error reading volunteer time: ' + e.message);
     }
 
+    // Median helper
+    function calcMedian(arr) {
+      if (!arr.length) return null;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 !== 0 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+    }
+
     // Per-return timing: assignment timestamp → filing timestamp
-    let avgMinutesPerReturn = null;
-    let overallAvgMinutesPerReturn = null;
+    let medianMinutesPerReturn = null;
+    let overallMedianMinutesPerReturn = null;
     try {
       const assignSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
       const assignLastRow = assignSheet.getLastRow();
@@ -420,10 +428,10 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
           }
         }
         if (volunteerMinutes.length > 0) {
-          avgMinutesPerReturn = Math.round(volunteerMinutes.reduce((a, b) => a + b, 0) / volunteerMinutes.length);
+          medianMinutesPerReturn = calcMedian(volunteerMinutes);
         }
 
-        // Overall avg time per return (clinic benchmark)
+        // Overall median time per return (clinic benchmark)
         const allMinutes = [];
         for (const { clientId, filedAt, volunteer } of allFilings) {
           const assignment = findBestAssignment(clientId, volunteer, filedAt);
@@ -433,7 +441,7 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
           }
         }
         if (allMinutes.length > 0) {
-          overallAvgMinutesPerReturn = Math.round(allMinutes.reduce((a, b) => a + b, 0) / allMinutes.length);
+          overallMedianMinutesPerReturn = calcMedian(allMinutes);
         }
       }
     } catch (e) {
@@ -446,10 +454,10 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
       totalVolunteerMinutes,
       reviewedAllTime,
       reviewedFiltered,
-      avgMinutesPerReturn,
-      overallAvgMinutesPerReturn,
-      overallAvgReturnsPerFiler: overallFilersSet.size > 0 ? Math.round(overallTotalReturns / overallFilersSet.size) : null,
-      overallAvgReviewsPerReviewer: overallReviewersSet.size > 0 ? Math.round(overallTotalReviewed / overallReviewersSet.size) : null
+      medianMinutesPerReturn,
+      overallMedianMinutesPerReturn,
+      overallMedianReturnsPerFiler: calcMedian(Object.values(filerCounts)),
+      overallMedianReviewsPerReviewer: calcMedian(Object.values(reviewerCounts))
     };
   } catch (e) {
     Logger.log('Error in getVolunteerPersonalStats: ' + e.message);
