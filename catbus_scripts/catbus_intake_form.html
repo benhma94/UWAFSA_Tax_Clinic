@@ -681,6 +681,13 @@
       document.getElementById('ineligibleMsg').style.display = 'none';
       document.getElementById('incomeLimitGroup').style.display = 'none';
       document.getElementById('conditionalQuestions').style.display = 'none';
+
+      // Re-enable submit button for next client
+      const submitBtn = document.querySelector('#mainForm button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit';
+      }
     }
     // Close modals on Escape key
     document.addEventListener('keydown', function(e) {
