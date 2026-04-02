@@ -261,6 +261,18 @@ function getVolunteerScheduleByName(searchTerm) {
 }
 
 /**
+ * Returns the median of a numeric array, rounded to the nearest integer. Returns null for empty arrays.
+ */
+function calcMedian_(arr) {
+  if (!arr || !arr.length) return null;
+  const sorted = arr.slice().sort(function(a, b) { return a - b; });
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0
+    ? Math.round(sorted[mid])
+    : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
+/**
  * Gets personal tax return stats for a volunteer
  * @param {string} volunteerName - Exact volunteer name (case-insensitive match)
  * @param {string} filterDateStr - Optional clinic day label string (e.g. "Saturday March 21 2026")
@@ -375,14 +387,6 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
       Logger.log('Error reading volunteer time: ' + e.message);
     }
 
-    // Median helper
-    function calcMedian(arr) {
-      if (!arr.length) return null;
-      const sorted = [...arr].sort((a, b) => a - b);
-      const mid = Math.floor(sorted.length / 2);
-      return sorted.length % 2 !== 0 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
-    }
-
     // Per-return timing: assignment timestamp → filing timestamp
     let medianMinutesPerReturn = null;
     let overallMedianMinutesPerReturn = null;
@@ -428,7 +432,7 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
           }
         }
         if (volunteerMinutes.length > 0) {
-          medianMinutesPerReturn = calcMedian(volunteerMinutes);
+          medianMinutesPerReturn = calcMedian_(volunteerMinutes);
         }
 
         // Overall median time per return (clinic benchmark)
@@ -441,7 +445,7 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
           }
         }
         if (allMinutes.length > 0) {
-          overallMedianMinutesPerReturn = calcMedian(allMinutes);
+          overallMedianMinutesPerReturn = calcMedian_(allMinutes);
         }
       }
     } catch (e) {
@@ -456,8 +460,8 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
       reviewedFiltered,
       medianMinutesPerReturn,
       overallMedianMinutesPerReturn,
-      overallMedianReturnsPerFiler: calcMedian(Object.values(filerCounts)),
-      overallMedianReviewsPerReviewer: calcMedian(Object.values(reviewerCounts))
+      overallMedianReturnsPerFiler: calcMedian_(Object.values(filerCounts)),
+      overallMedianReviewsPerReviewer: calcMedian_(Object.values(reviewerCounts))
     };
   } catch (e) {
     Logger.log('Error in getVolunteerPersonalStats: ' + e.message);
