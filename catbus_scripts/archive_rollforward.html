@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --accent-color: rgb(142, 0, 0);
+      --bg-color: #ffffff;
+      --text-color: #1a1a1a;
+      --card-bg: #f2f2f2;
+      --border-color: #ccc;
+      --success-color: #27ae60;
+      --error-color: #c0392b;
+      --warning-color: #f39c12;
+    }
+
+    body {
+      margin: 0 auto;
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      padding: 20px;
+      max-width: 820px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      color: var(--accent-color);
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 0.95rem;
+      margin: 0 0 24px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 24px;
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      color: var(--accent-color);
+      font-size: 1.15em;
+      border-bottom: 2px solid var(--accent-color);
+      padding-bottom: 6px;
+    }
+
+    .card p {
+      margin: 0 0 14px;
+      line-height: 1.5;
+    }
+
+    .card-locked {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    button {
+      padding: 9px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: var(--accent-color);
+      color: white;
+      transition: background 0.15s;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button:hover:not(:disabled) {
+      background: #750000;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #565e64;
+    }
+
+    .status-msg {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 0.9em;
+      display: none;
+    }
+
+    .status-info    { background: #e8f4fd; color: #1a5276; border: 1px solid #aed6f1; display: block; }
+    .status-success { background: #eafaf1; color: #1e8449; border: 1px solid #a9dfbf; display: block; }
+    .status-error   { background: #fdedec; color: #922b21; border: 1px solid #f1948a; display: block; }
+
+    .archive-link {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 16px;
+      background: var(--accent-color);
+      color: #fff;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88em;
+    }
+
+    .archive-link:hover {
+      background: #750000;
+    }
+
+    /* Date form */
+    .dates-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .date-row {
+      display: grid;
+      grid-template-columns: 1fr 160px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .date-row label {
+      font-size: 0.82em;
+      color: #555;
+      margin-bottom: 3px;
+      display: block;
+    }
+
+    .date-row input[type="text"] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.9em;
+      box-sizing: border-box;
+      background: white;
+    }
+
+    .date-row input[type="text"]:focus {
+      outline: 2px solid var(--accent-color);
+      border-color: var(--accent-color);
+    }
+
+    .date-row-num {
+      font-weight: 700;
+      color: var(--accent-color);
+      font-size: 0.85em;
+      min-width: 48px;
+    }
+
+    .date-entry {
+      display: grid;
+      grid-template-columns: 40px 1fr 160px;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Checklist */
+    .checklist {
+      list-style: none;
+      padding: 0;
+      margin: 14px 0 0;
+    }
+
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid #ddd;
+      font-size: 0.9em;
+    }
+
+    .checklist li:last-child {
+      border-bottom: none;
+    }
+
+    .check-icon  { flex-shrink: 0; width: 20px; text-align: center; }
+    .check-sheet { font-weight: 600; min-width: 240px; }
+    .check-note  { color: #666; font-size: 0.9em; }
+
+    /* Manual tasks warning */
+    .manual-tasks {
+      background: #fffbe6;
+      border: 1px solid #f0c040;
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin-top: 18px;
+      font-size: 0.9em;
+    }
+
+    .manual-tasks strong {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .manual-tasks ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .manual-tasks li {
+      margin-bottom: 5px;
+    }
+
+    /* Confirmation modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: white;
+      padding: 28px;
+      border-radius: 10px;
+      max-width: 460px;
+      width: 90%;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-box h3 {
+      margin: 0 0 12px;
+      color: var(--accent-color);
+    }
+
+    .modal-box p {
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    .modal-warn {
+      color: var(--error-color);
+      font-weight: 600;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    .footer-copyright {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78em;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <?!= include('_PasswordGate') ?>
+
+  <h1>Archive &amp; Rollforward</h1>
+  <p class="subtitle">Run once per year after the final clinic day. Complete each phase in order.</p>
+
+  <!-- Phase 1: Archive -->
+  <div class="card" id="phase1Card">
+    <h2>Phase 1 — Archive Current Data</h2>
+    <p>Creates a copy of the entire CATBUS spreadsheet (all tabs) in the same Drive folder,
+       named <strong>CATBUS Archive <span id="archiveYear"></span></strong>. This preserves all
+       data before any clearing takes place.</p>
+    <button id="btnArchive" onclick="startArchive()">Create Archive Spreadsheet</button>
+    <div id="archiveStatus" class="status-msg"></div>
+    <div id="archiveLinkWrap" style="display:none;">
+      <a id="archiveLink" class="archive-link" href="#" target="_blank">Open Archive Spreadsheet ↗</a>
+    </div>
+  </div>
+
+  <!-- Phase 2: Configure new clinic dates -->
+  <div class="card card-locked" id="phase2Card">
+    <h2>Phase 2 — Set New Clinic Dates</h2>
+    <p>Enter the four clinic dates for the coming year. These will override the hardcoded
+       dates in Config.gs (appointment emails, schedule pages, eligibility checker) once saved.</p>
+    <div class="dates-grid">
+      <div class="date-entry">
+        <span class="date-row-num">Day 1</span>
+        <div class="field-group">
+          <label>Date (e.g. Saturday, March 20, 2027)</label>
+          <input type="text" id="date1" placeholder="Saturday, March 20, 2027">
+        </div>
+        <div class="field-group">
+          <label>Room</label>
+          <input type="text" id="room1" placeholder="STC 1012">
+        </div>
+      </div>
+      <div class="date-entry">
+        <span class="date-row-num">Day 2</span>
+        <div class="field-group">
+          <label>Date</label>
+          <input type="text" id="date2" placeholder="Sunday, March 21, 2027">
+        </div>
+        <div class="field-group">
+          <label>Room</label>
+          <input type="text" id="room2" placeholder="STC 1012">
+        </div>
+      </div>
+      <div class="date-entry">
+        <span class="date-row-num">Day 3</span>
+        <div class="field-group">
+          <label>Date</label>
+          <input type="text" id="date3" placeholder="Saturday, March 27, 2027">
+        </div>
+        <div class="field-group">
+          <label>Room</label>
+          <input type="text" id="room3" placeholder="RCH 301">
+        </div>
+      </div>
+      <div class="date-entry">
+        <span class="date-row-num">Day 4</span>
+        <div class="field-group">
+          <label>Date</label>
+          <input type="text" id="date4" placeholder="Sunday, March 28, 2027">
+        </div>
+        <div class="field-group">
+          <label>Room</label>
+          <input type="text" id="room4" placeholder="STC 1012">
+        </div>
+      </div>
+    </div>
+    <button id="btnSaveDates" onclick="saveDates()">Save Dates</button>
+    <div id="datesStatus" class="status-msg"></div>
+  </div>
+
+  <!-- Phase 3: Rollforward -->
+  <div class="card card-locked" id="phase3Card">
+    <h2>Phase 3 — Clear Operational Data</h2>
+    <p>Clears all data rows (header kept) from the year-specific operational sheets listed below.
+       UFILE Keys and the Distribution Log are <strong>not</strong> touched.</p>
+    <button id="btnRollforward" onclick="openModal()">Clear &amp; Roll Forward</button>
+    <div id="rollforwardStatus" class="status-msg"></div>
+    <ul id="rollforwardChecklist" class="checklist" style="display:none;"></ul>
+    <div class="manual-tasks" id="manualTasksBox" style="display:none;">
+      <strong>Manual tasks remaining:</strong>
+      <ul>
+        <li>Add the new year's UFILE product keys to the <em>UFILE Keys</em> sheet
+            (Year column = next year, Key column = code string, Times Used = 0).</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Confirmation modal -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+      <h3>Confirm Rollforward</h3>
+      <p>This will <strong>permanently delete all data rows</strong> from:</p>
+      <p style="font-size:0.88em; line-height:1.7;">
+        Client Intake &bull; Client Assignment &bull; Help Requests &bull; Review Requests
+        &bull; Tax Return Tracker &bull; Volunteer List &bull; SignOut
+        &bull; Schedule Availability &bull; Shift Schedule &bull; Messages
+        &bull; Appointment Bookings &bull; Mentor Teams
+      </p>
+      <p>UFILE Keys and the Distribution Log will <strong>not</strong> be cleared.</p>
+      <p class="modal-warn">This cannot be undone. Only proceed after confirming the archive is complete.</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button onclick="confirmRollforward()">Yes, Clear &amp; Roll Forward</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('archiveYear').textContent = new Date().getFullYear();
+
+    // ── Phase 1: Archive ──────────────────────────────────────────────────────
+
+    function startArchive() {
+      var btn = document.getElementById('btnArchive');
+      var status = document.getElementById('archiveStatus');
+      btn.disabled = true;
+      setStatus(status, 'info', 'Creating archive spreadsheet\u2026 this may take 30\u201360 seconds.');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          setStatus(status, 'success', 'Archive created: <strong>' + esc(result.name) + '</strong>');
+          var wrap = document.getElementById('archiveLinkWrap');
+          document.getElementById('archiveLink').href = result.url;
+          wrap.style.display = 'block';
+          unlock('phase2Card');
+        })
+        .withFailureHandler(function(err) {
+          setStatus(status, 'error', 'Archive failed: ' + esc(err.message || String(err)));
+          btn.disabled = false;
+        })
+        .archiveCurrentData();
+    }
+
+    // ── Phase 2: Save dates ───────────────────────────────────────────────────
+
+    function saveDates() {
+      var btn = document.getElementById('btnSaveDates');
+      var status = document.getElementById('datesStatus');
+
+      var dates = [];
+      for (var i = 1; i <= 4; i++) {
+        dates.push({
+          date: document.getElementById('date' + i).value.trim(),
+          room: document.getElementById('room' + i).value.trim(),
+          mapsUrl: ''
+        });
+      }
+
+      for (var j = 0; j < dates.length; j++) {
+        if (!dates[j].date) {
+          setStatus(status, 'error', 'Date ' + (j + 1) + ' is empty.');
+          return;
+        }
+        if (!dates[j].room) {
+          setStatus(status, 'error', 'Room for date ' + (j + 1) + ' is empty.');
+          return;
+        }
+      }
+
+      btn.disabled = true;
+      setStatus(status, 'info', 'Saving dates\u2026');
+
+      google.script.run
+        .withSuccessHandler(function() {
+          setStatus(status, 'success', 'Clinic dates saved. Config.gs will use these dates going forward.');
+          unlock('phase3Card');
+        })
+        .withFailureHandler(function(err) {
+          setStatus(status, 'error', 'Failed to save: ' + esc(err.message || String(err)));
+          btn.disabled = false;
+        })
+        .saveClinicDates({ dates: dates });
+    }
+
+    // ── Phase 3: Rollforward ─────────────────────────────────────────────────
+
+    function openModal() {
+      document.getElementById('confirmModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('confirmModal').classList.remove('open');
+    }
+
+    function confirmRollforward() {
+      closeModal();
+      var btn = document.getElementById('btnRollforward');
+      var status = document.getElementById('rollforwardStatus');
+      btn.disabled = true;
+      setStatus(status, 'info', 'Clearing operational sheets\u2026 please wait.');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          setStatus(status, 'success', 'Rollforward complete.');
+          renderChecklist(result.results);
+          document.getElementById('manualTasksBox').style.display = 'block';
+        })
+        .withFailureHandler(function(err) {
+          setStatus(status, 'error', 'Rollforward failed: ' + esc(err.message || String(err)));
+          btn.disabled = false;
+        })
+        .rollforwardData();
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    function unlock(cardId) {
+      document.getElementById(cardId).classList.remove('card-locked');
+    }
+
+    function setStatus(el, type, html) {
+      el.className = 'status-msg status-' + type;
+      el.innerHTML = html;
+    }
+
+    function renderChecklist(results) {
+      var iconMap = {
+        'cleared': '\u2705',
+        'already empty': '\u2705',
+        'preserved': '\uD83D\uDD12',
+        'skipped': '\u26A0\uFE0F',
+        'error': '\u274C'
+      };
+      var ul = document.getElementById('rollforwardChecklist');
+      ul.innerHTML = '';
+      for (var i = 0; i < results.length; i++) {
+        var r = results[i];
+        var icon = iconMap[r.status] || '\u2022';
+        var li = document.createElement('li');
+        li.innerHTML =
+          '<span class="check-icon">' + icon + '</span>' +
+          '<span class="check-sheet">' + esc(r.sheet) + '</span>' +
+          '<span class="check-note">' + esc(r.note) + '</span>';
+        ul.appendChild(li);
+      }
+      ul.style.display = 'block';
+    }
+
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+
+<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
+</body>
+</html>

@@ -412,12 +412,11 @@
   </header>
 
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-    <h3 style="margin: 0;">📊 Admin Dashboard</h3>
+    <h3 style="margin: 0;">📊 Stats Dashboard</h3>
     <div style="display: flex; align-items: center; gap: 12px;">
       <a class="nav-link" id="homeLink" href="#">🏠 Home</a>
       <a class="nav-link" id="alertLink" href="#">🚨 Alert Dashboard</a>
       <button onclick="removeDuplicates()" style="padding: 8px 16px; font-size: 0.9em; background-color: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer;">🗑️ Remove Duplicates</button>
-      <button onclick="clearStaleSessions()" style="padding: 8px 16px; font-size: 0.9em; background-color: #888; color: white; border: none; border-radius: 5px; cursor: pointer;">🧹 Clear Stale</button>
       <button onclick="refresh()" style="padding: 8px 16px; font-size: 0.9em; background-color: var(--accent-color); color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 Refresh</button>
     </div>
   </div>
@@ -779,21 +778,6 @@
     toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
   }
 
-  function clearStaleSessions() {
-    if (!confirm('Sign out all volunteers who have been signed in for more than 12 hours. Continue?')) return;
-    google.script.run
-      .withSuccessHandler(result => {
-        showAdminToast(
-          result.cleared === 0 ? 'No stale sessions found.' : `Cleared ${result.cleared} stale session(s).`,
-          result.cleared === 0 ? 'info' : 'success'
-        );
-        refresh();
-      })
-      .withFailureHandler(err => {
-        showAdminToast('Error: ' + (err.message || err), 'error');
-      })
-      .clearStaleSessions(12);
-  }
 
   let dupModalDidRemove = false;
 
@@ -1007,6 +991,6 @@
   </div>
 </div>
 <div id="adminToast" class="admin-toast"></div>
-<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2026 All rights reserved.</span></div>
+<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
 </body>
 </html>

@@ -61,6 +61,8 @@ function getVolunteersAndClients() {
 
         const allFilerNames = [];
         const breakStatus = {};
+        const trainingVolunteers = [];
+        const quizVolunteers = [];
 
         for (const row of volData) {
           const name      = row[CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
@@ -73,15 +75,27 @@ function getVolunteersAndClients() {
           const signInDate = new Date(row[CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP]).toDateString();
           if (signInDate !== today && station !== 'quiz') continue;
 
-          if (nonFilerStations.some(r => station === r)) continue;
           if (signedOutSessions.has(sessionId)) continue;
+
+          const isTrainingStation = station === 'training';
+          const isQuizStation     = station === 'quiz';
+
+          // Exclude non-filer stations except training and quiz (they get their own modes)
+          if (nonFilerStations.some(r => station === r) && !isTrainingStation && !isQuizStation) continue;
 
           if (!allFilerNames.includes(name)) allFilerNames.push(name);
           // Last row for this volunteer wins for break status
           breakStatus[name] = (onBreak === 'yes');
+
+          if (isTrainingStation && !trainingVolunteers.includes(name)) {
+            trainingVolunteers.push(name);
+          }
+          if (isQuizStation && !quizVolunteers.includes(name)) {
+            quizVolunteers.push(name);
+          }
         }
 
-        return { clientMap, allFilerNames, breakStatus };
+        return { clientMap, allFilerNames, breakStatus, trainingVolunteers, quizVolunteers };
       },
       CACHE_CONFIG.TTL.VOLUNTEERS_AND_CLIENTS
     );
@@ -305,28 +319,119 @@ function findTrackerRowByStatus(trackerSheet, clientID, taxYear, preferredStatus
 }
 
 /**
+ * Creates a new training client ID (T001, T002, ...) and logs it in the Training Log sheet.
+ * Called from the control sheet when a volunteer at the Training station needs a practice client.
+ * @param {string} volunteer - Volunteer name
+ * @returns {string} The new training client ID (e.g. 'T001')
+ */
+function createTrainingClient(volunteer) {
+  return safeExecute(() => {
+    volunteer = sanitizeInput(volunteer, 100);
+    if (!volunteer) throw new Error('Volunteer name is required');
+
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(CONFIG.PERFORMANCE.LOCK_TIMEOUT_MS)) {
+      throw new Error('System is busy, please try again');
+    }
+
+    try {
+      const sheet = getSheet(CONFIG.SHEETS.TRAINING_LOG);
+      const lastRow = sheet.getLastRow();
+
+      // Collect existing T-numbers
+      const existingNumbers = new Set();
+      if (lastRow > 1) {
+        const idCol = CONFIG.COLUMNS.TRAINING_LOG.CLIENT_ID + 1;
+        const data = sheet.getRange(2, idCol, lastRow - 1, 1).getValues();
+        for (const row of data) {
+          const id = row[0]?.toString().trim();
+          if (/^T\d{3}$/.test(id)) existingNumbers.add(parseInt(id.slice(1), 10));
+        }
+      }
+
+      // Find next available number
+      let num = 1;
+      while (existingNumbers.has(num)) num++;
+      if (num > 999) throw new Error('Training client IDs exhausted (T001–T999)');
+
+      const clientId = 'T' + String(num).padStart(3, '0');
+      sheet.appendRow([new Date(), sanitizeInput(volunteer, 100), clientId, 'Active']);
+      return clientId;
+    } finally {
+      lock.releaseLock();
+    }
+  }, 'createTrainingClient');
+}
+
+/**
  * Finalizes returns and stores per-tax-year data to the tracker
  * @param {string} volunteer - Volunteer name
  * @param {string} client - Client ID
  * @param {Array<Object>} rows - Array of tax year data objects
  * @returns {boolean} True if successful
  */
-function finalizeReturnsAndStore(volunteer, client, rows) {
+function finalizeReturnsAndStore(volunteer, client, rows, meta) {
   return safeExecute(() => {
     if (!volunteer || !client || !rows || rows.length === 0) {
       throw new Error('Volunteer, client, and at least one tax year are required');
     }
-    
+
     // Trim and validate client ID
     const trimmedClient = client.trim();
     if (!validateClientID(trimmedClient)) {
       Logger.log(`Invalid client ID format: "${client}" (trimmed: "${trimmedClient}")`);
       throw new Error(`Invalid client ID format: "${trimmedClient}". Expected format: A001 (one letter followed by 3 digits).`);
     }
-    
+
     // Use trimmed client ID for the rest of the function
     const clientID = trimmedClient;
-    
+
+    // --- Training mode: skip assignment + tracker, just mark Training Log complete ---
+    if (/^T\d{3}$/.test(clientID)) {
+      Logger.log(`Training client ${clientID} — skipping Tax Return Tracker`);
+      try {
+        const trainingSheet = getSheet(CONFIG.SHEETS.TRAINING_LOG);
+        const lastRow = trainingSheet.getLastRow();
+        if (lastRow > 1) {
+          const data = trainingSheet.getRange(2, CONFIG.COLUMNS.TRAINING_LOG.CLIENT_ID + 1,
+                                               lastRow - 1, 2).getValues();
+          for (let i = data.length - 1; i >= 0; i--) {
+            if (data[i][0]?.toString().trim() === clientID) {
+              trainingSheet.getRange(i + 2, CONFIG.COLUMNS.TRAINING_LOG.STATUS + 1).setValue('Completed');
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        Logger.log('Warning: could not update Training Log: ' + e.message);
+      }
+      return true;
+    }
+
+    // --- Quiz mode: skip tracker, write to Quiz Submissions, mark assignment complete ---
+    if (/^Q\d{3}$/.test(clientID)) {
+      Logger.log(`Quiz client ${clientID} — writing to Quiz Submissions`);
+
+      // Mark Client Assignment complete so the quiz client doesn't stay active in the queue
+      const assignSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+      const assignRowNum = findAssignmentRow(assignSheet, volunteer, clientID);
+      if (assignRowNum > 0) {
+        assignSheet.getRange(assignRowNum, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1).setValue('Complete');
+        Logger.log(`Marked quiz assignment complete at row ${assignRowNum}`);
+      }
+
+      const volunteerNameOnly = volunteer.includes('–') ? volunteer.split('–')[1].trim() : volunteer.trim();
+      const receiptData = {
+        refund:            (meta && meta.refund)            || '',
+        onben:             (meta && meta.onben)             || '',
+        gst:               (meta && meta.gst)               || '',
+        efileConfirmation: (meta && meta.efileConfirmation) || '',
+        notes:             (meta && meta.notes)             || ''
+      };
+      writeQuizSubmission(volunteerNameOnly, (meta && meta.partner) || '', clientID, receiptData, rows, []);
+      return true;
+    }
+
     // Batch validation: Collect all errors first, then fail with all errors at once
     const validationErrors = [];
     
@@ -455,15 +560,43 @@ function cancelClientAndStore(volunteer, client, rows) {
     if (!volunteer || !client || !rows || rows.length === 0) {
       throw new Error('Volunteer, client, and at least one tax year are required');
     }
-    
+
     // Trim and validate client ID
     const trimmedClient = client.trim();
     if (!validateClientID(trimmedClient)) {
       Logger.log(`Invalid client ID format: "${client}" (trimmed: "${trimmedClient}")`);
       throw new Error(`Invalid client ID format: "${trimmedClient}". Expected format: A001 (one letter followed by 3 digits).`);
     }
-    
+
     const clientID = trimmedClient;
+
+    // --- Quiz mode: nothing to clean up ---
+    if (/^Q\d{3}$/.test(clientID)) {
+      Logger.log(`Quiz client ${clientID} — skipping Tax Return Tracker (cancel)`);
+      return true;
+    }
+
+    // --- Training mode: skip assignment + tracker, mark Training Log cancelled ---
+    if (/^T\d{3}$/.test(clientID)) {
+      Logger.log(`Training client ${clientID} — skipping Tax Return Tracker (cancel)`);
+      try {
+        const trainingSheet = getSheet(CONFIG.SHEETS.TRAINING_LOG);
+        const lastRow = trainingSheet.getLastRow();
+        if (lastRow > 1) {
+          const data = trainingSheet.getRange(2, CONFIG.COLUMNS.TRAINING_LOG.CLIENT_ID + 1,
+                                               lastRow - 1, 2).getValues();
+          for (let i = data.length - 1; i >= 0; i--) {
+            if (data[i][0]?.toString().trim() === clientID) {
+              trainingSheet.getRange(i + 2, CONFIG.COLUMNS.TRAINING_LOG.STATUS + 1).setValue('Cancelled');
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        Logger.log('Warning: could not update Training Log: ' + e.message);
+      }
+      return true;
+    }
     
     // Validate rows
     const validationErrors = [];
