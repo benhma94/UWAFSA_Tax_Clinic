@@ -6,8 +6,10 @@
  */
 
 /**
- * Generates the next available Q-prefix quiz client ID (Q001, Q002, ...).
- * Scans the Quiz Submissions sheet for existing Q-numbers.
+ * Generates a Q-prefix quiz client ID (Q001, Q002, ...) for internal routing.
+ * The ID is not stored in Quiz Submissions; it is only used within the current
+ * session to route the control sheet to the quiz path in ControlSheet.gs.
+ * Uses the current row count of the Quiz Submissions sheet as a simple counter.
  * @returns {string} New client ID (e.g. 'Q001')
  */
 function createQuizClient() {
@@ -19,22 +21,10 @@ function createQuizClient() {
 
     try {
       const sheet = getSheet(CONFIG.SHEETS.QUIZ_SUBMISSIONS);
-      const lastRow = sheet.getLastRow();
-      const existingNumbers = new Set();
-
-      if (lastRow > 1) {
-        const idCol = CONFIG.COLUMNS.QUIZ_SUBMISSIONS.CLIENT_ID + 1;
-        const data = sheet.getRange(2, idCol, lastRow - 1, 1).getValues();
-        for (const row of data) {
-          const id = row[0]?.toString().trim();
-          if (/^Q\d{3}$/.test(id)) existingNumbers.add(parseInt(id.slice(1), 10));
-        }
-      }
-
-      let num = 1;
-      while (existingNumbers.has(num)) num++;
+      // lastRow includes the header row, so data rows = lastRow - 1.
+      // Next ID = data rows + 1 (i.e. lastRow), giving a monotonically increasing number.
+      const num = sheet.getLastRow(); // 1 when sheet has only headers → produces Q001
       if (num > 999) throw new Error('Quiz client IDs exhausted (Q001–Q999)');
-
       return 'Q' + String(num).padStart(3, '0');
     } finally {
       lock.releaseLock();

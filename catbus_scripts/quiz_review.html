@@ -257,10 +257,6 @@
           <div class="detail-value" id="dPartner">—</div>
         </div>
         <div class="detail-item">
-          <div class="detail-label">Client ID</div>
-          <div class="detail-value" id="dClientId">—</div>
-        </div>
-        <div class="detail-item">
           <div class="detail-label">Submitted</div>
           <div class="detail-value" id="dTimestamp">—</div>
         </div>
@@ -293,11 +289,6 @@
       <div id="dNotesBlock" style="display:none;" class="answer-block">
         <div class="answer-label">Notes</div>
         <div class="answer-text" id="dNotes"></div>
-      </div>
-
-      <div id="dRowsBlock" style="display:none;" class="answer-block">
-        <div class="answer-label">Tax Years Filed</div>
-        <div id="dRows"></div>
       </div>
 
       <div id="dFilesBlock" style="display:none;" class="answer-block">
@@ -394,7 +385,6 @@
 
     document.getElementById('dVolunteer').textContent  = s.volunteer  || '—';
     document.getElementById('dPartner').textContent    = s.partner    || '—';
-    document.getElementById('dClientId').textContent   = s.clientId   || '—';
     document.getElementById('dTimestamp').textContent  = s.timestamp  || '—';
     document.getElementById('dEmail1').textContent     = s.email1     || '—';
     document.getElementById('dEmail2').textContent     = s.email2     || '—';
@@ -410,23 +400,6 @@
       notesBlock.style.display = 'block';
     } else {
       notesBlock.style.display = 'none';
-    }
-
-    // Tax year rows
-    var rowsBlock = document.getElementById('dRowsBlock');
-    var rowsContainer = document.getElementById('dRows');
-    if (s.rows && s.rows.length > 0) {
-      rowsContainer.innerHTML = s.rows.map(function(r) {
-        var status = r.filingStatus || (r.efile ? 'efile' : r.paper ? 'paper' : r.incomplete ? 'incomplete' : '');
-        return '<div style="font-size:0.9rem; padding:4px 0;">' +
-          '<strong>' + (r.taxYear || '?') + '</strong>' +
-          (status ? ' — ' + status : '') +
-          (r.married ? ' &nbsp;<em>(married)</em>' : '') +
-          '</div>';
-      }).join('');
-      rowsBlock.style.display = 'block';
-    } else {
-      rowsBlock.style.display = 'none';
     }
 
     // Attachments

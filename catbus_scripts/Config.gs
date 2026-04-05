@@ -114,17 +114,14 @@ const CONFIG = {
       TIMESTAMP: 0,
       VOLUNTEER: 1,
       PARTNER: 2,
-      CLIENT_ID: 3,
-      EMAIL_1: 4,
-      EMAIL_2: 5,
-      STATUS: 6,
-      REFUND: 7,
-      ONBEN: 8,
-      GST: 9,
-      EFILE_CONFIRMATION: 10,
-      NOTES: 11,
-      ROWS: 12,
-      FILE_URLS: 13
+      EMAIL_1: 3,
+      EMAIL_2: 4,
+      STATUS: 5,
+      REFUND: 6,
+      ONBEN: 7,
+      GST: 8,
+      NOTES: 9,
+      FILE_URLS: 10
     }
   },
   

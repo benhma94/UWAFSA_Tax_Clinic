@@ -5,10 +5,10 @@
  * or directly via the quiz form (?app=quiz).
  * Markers review via quiz_review.html (?app=quizreview).
  *
- * Quiz Submissions sheet schema (14 columns):
- *   A=Timestamp, B=Volunteer, C=Partner, D=Client ID, E=Email 1, F=Email 2,
- *   G=Status, H=Refund/Balance, I=ON-BEN Credit, J=GST/HST Credit,
- *   K=E-file Confirmation, L=Notes, M=Tax Years (JSON), N=Files (JSON)
+ * Quiz Submissions sheet schema (11 columns):
+ *   A=Timestamp, B=Volunteer, C=Partner, D=Email 1, E=Email 2,
+ *   F=Status, G=Refund/Balance, H=ON-BEN Credit, I=GST/HST Credit,
+ *   J=Notes, K=Files (JSON)
  */
 
 /**
@@ -17,8 +17,8 @@
  * @param {string} volunteer - Volunteer name
  * @param {string} partner - Partner name (may be empty)
  * @param {string} clientId - Q-prefix client ID (e.g. 'Q001')
- * @param {Object} [receiptData] - { refund, onben, gst, efileConfirmation, notes }
- * @param {Array}  [rows]        - Array of row objects (tax years / filing status)
+ * @param {Object} [receiptData] - { refund, onben, gst, notes }
+ * @param {Array}  [rows]        - Unused (tax years not tracked)
  * @param {Array}  [fileUrls]    - Array of { name, url } for uploaded files
  */
 function writeQuizSubmission(volunteer, partner, clientId, receiptData, rows, fileUrls) {
@@ -27,20 +27,17 @@ function writeQuizSubmission(volunteer, partner, clientId, receiptData, rows, fi
   const cols = CONFIG.COLUMNS.QUIZ_SUBMISSIONS;
 
   const row = new Array(cols.FILE_URLS + 1).fill('');
-  row[cols.TIMESTAMP]         = new Date();
-  row[cols.VOLUNTEER]         = sanitizeInput(volunteer, 100);
-  row[cols.PARTNER]           = sanitizeInput(partner || '', 100);
-  row[cols.CLIENT_ID]         = sanitizeInput(clientId, 10);
-  row[cols.EMAIL_1]           = email1;
-  row[cols.EMAIL_2]           = email2;
-  row[cols.STATUS]            = '';
-  row[cols.REFUND]            = (receiptData && receiptData.refund)            || '';
-  row[cols.ONBEN]             = (receiptData && receiptData.onben)             || '';
-  row[cols.GST]               = (receiptData && receiptData.gst)               || '';
-  row[cols.EFILE_CONFIRMATION]= (receiptData && receiptData.efileConfirmation) || '';
-  row[cols.NOTES]             = (receiptData && receiptData.notes)             || '';
-  row[cols.ROWS]              = JSON.stringify(rows || []);
-  row[cols.FILE_URLS]         = JSON.stringify(fileUrls || []);
+  row[cols.TIMESTAMP] = new Date();
+  row[cols.VOLUNTEER] = sanitizeInput(volunteer, 100);
+  row[cols.PARTNER]   = sanitizeInput(partner || '', 100);
+  row[cols.EMAIL_1]   = email1;
+  row[cols.EMAIL_2]   = email2;
+  row[cols.STATUS]    = '';
+  row[cols.REFUND]    = (receiptData && receiptData.refund) || '';
+  row[cols.ONBEN]     = (receiptData && receiptData.onben)  || '';
+  row[cols.GST]       = (receiptData && receiptData.gst)    || '';
+  row[cols.NOTES]     = (receiptData && receiptData.notes)  || '';
+  row[cols.FILE_URLS] = JSON.stringify(fileUrls || []);
 
   sheet.appendRow(row);
   Logger.log(`Quiz submission written: volunteer=${volunteer}, client=${clientId}`);
@@ -101,9 +98,6 @@ function getQuizSubmissionsForReview() {
     const volunteer = row[cols.VOLUNTEER]?.toString().trim();
     if (!volunteer) continue;
 
-    let parsedRows = [];
-    try { parsedRows = JSON.parse(row[cols.ROWS]?.toString() || '[]'); } catch (e) {}
-
     let parsedFileUrls = [];
     try { parsedFileUrls = JSON.parse(row[cols.FILE_URLS]?.toString() || '[]'); } catch (e) {}
 
@@ -112,7 +106,6 @@ function getQuizSubmissionsForReview() {
       timestamp: row[cols.TIMESTAMP] ? new Date(row[cols.TIMESTAMP]).toLocaleString() : '',
       volunteer: volunteer,
       partner:   row[cols.PARTNER]?.toString().trim()   || '',
-      clientId:  row[cols.CLIENT_ID]?.toString().trim() || '',
       email1:    row[cols.EMAIL_1]?.toString().trim()   || '',
       email2:    row[cols.EMAIL_2]?.toString().trim()   || '',
       status:    row[cols.STATUS]?.toString().trim()    || '',
@@ -120,7 +113,6 @@ function getQuizSubmissionsForReview() {
       onben:     row[cols.ONBEN]?.toString().trim()     || '',
       gst:       row[cols.GST]?.toString().trim()       || '',
       notes:     row[cols.NOTES]?.toString().trim()     || '',
-      rows:      parsedRows,
       fileUrls:  parsedFileUrls
     });
   }
@@ -201,9 +193,8 @@ function getOrCreateQuizSubmissionsSheet() {
 
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
-    const headers = ['Timestamp', 'Volunteer', 'Partner', 'Client ID', 'Email 1', 'Email 2', 'Status',
-                     'Refund/Balance', 'ON-BEN Credit', 'GST/HST Credit', 'E-file Confirmation',
-                     'Notes', 'Tax Years (JSON)', 'Files'];
+    const headers = ['Timestamp', 'Volunteer', 'Partner', 'Email 1', 'Email 2', 'Status',
+                     'Refund/Balance', 'ON-BEN Credit', 'GST/HST Credit', 'Notes', 'Files'];
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
