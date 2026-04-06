@@ -426,7 +426,7 @@ function finalizeReturnsAndStore(volunteer, client, rows, meta) {
         gst:    (meta && meta.gst)    || '',
         notes:  (meta && meta.notes)  || ''
       };
-      writeQuizSubmission(volunteerNameOnly, (meta && meta.partner) || '', clientID, receiptData, rows, []);
+      writeQuizSubmission(volunteerNameOnly, (meta && meta.partner) || '', clientID, receiptData, rows, (meta && meta.fileUrls) || []);
       return true;
     }
 

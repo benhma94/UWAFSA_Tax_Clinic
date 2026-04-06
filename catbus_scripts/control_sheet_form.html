@@ -1462,8 +1462,8 @@
           </div>
           
           <div class="email-form-field" id="efileConfirmationField" style="display: none;">
-            <label for="efileConfirmationReceipt">E-File Confirmation Number</label>
-            <input type="text" id="efileConfirmationReceipt" placeholder="Enter E-File confirmation number">
+            <label for="efileConfirmationReceipt">E-File Confirmation Number <span style="color:#e74c3c;">*</span></label>
+            <input type="text" id="efileConfirmationReceipt" placeholder="Enter E-File confirmation number" required>
           </div>
         </form>
 
@@ -2630,11 +2630,12 @@
         })
         .finalizeReturnsAndStore(volunteer, client, rows,
           quizMode ? {
-            partner: document.getElementById('quizPartnerName').value.trim(),
-            refund:  quizReceiptData.refund || '',
-            onben:   quizReceiptData.onben  || '',
-            gst:     quizReceiptData.gst    || '',
-            notes:   quizReceiptData.notes  || ''
+            partner:  document.getElementById('quizPartnerName').value.trim(),
+            refund:   quizReceiptData.refund    || '',
+            onben:    quizReceiptData.onben     || '',
+            gst:      quizReceiptData.gst       || '',
+            notes:    quizReceiptData.notes     || '',
+            fileUrls: quizReceiptData.fileUrls  || []
           } : {});
     }
 
@@ -2812,6 +2813,15 @@
       // Close document checklist panel
       document.body.classList.remove('panel-open');
       document.getElementById('documentChecklist').setAttribute('aria-hidden', 'true');
+
+      // Reset quiz/training mode state and UI
+      quizMode = false;
+      quizReceiptData = {};
+      document.getElementById('quizModeBadge').style.display = 'none';
+      document.getElementById('quizClientContainer').style.display = 'none';
+      document.getElementById('trainingModeBadge').style.display = 'none';
+      document.getElementById('trainingClientContainer').style.display = 'none';
+      document.getElementById('clientSelectWrapper').style.display = '';
 
       // Update button states
       checkFormReady();
@@ -3353,6 +3363,15 @@
         secondaryReviewer: _emailReceiptRow?.querySelector('input[name="secondaryReviewer"]')?.value.trim() || ''
       };
 
+      // Validate E-File Confirmation Number is required for EFILE
+      if (filingStatus === 'efile') {
+        const efileConfirmation = document.getElementById('efileConfirmationReceipt').value.trim();
+        if (!efileConfirmation) {
+          showEmailStatus('E-File Confirmation Number is required for EFILE submissions.', 'error');
+          return;
+        }
+      }
+
       // Validate file attachments: require at least a .u file and a .pdf
       if (selectedFilesEmail.length < 2) {
         showEmailStatus('At least 2 attachments are required: one .u file and one .pdf file.', 'error');
@@ -3394,17 +3413,21 @@
     function sendEmailWithAttachmentsControlSheet(emailData, filingStatus, taxYear, fileDataArray, sendBtn, originalText) {
       google.script.run
         .withSuccessHandler(function(result) {
-          showEmailStatus('Email sent successfully to ' + result.recipient + (fileDataArray.length > 0 ? ' with ' + fileDataArray.length + ' attachment(s)' : ''), 'success');
+          const statusMsg = result.recipient
+            ? 'Email sent successfully to ' + result.recipient + (fileDataArray.length > 0 ? ' with ' + fileDataArray.length + ' attachment(s)' : '')
+            : (result.message || 'Done.');
+          showEmailStatus(statusMsg, 'success');
           sendBtn.textContent = originalText;
           sendBtn.disabled = false;
 
           // In quiz mode, capture receipt values for submission
           if (quizMode) {
             quizReceiptData = {
-              refund: document.getElementById('refundBalanceReceipt').value.trim(),
-              onben:  document.getElementById('onBenReceipt').value.trim(),
-              gst:    document.getElementById('gstHstReceipt').value.trim(),
-              notes:  document.getElementById('notesReceipt').value.trim()
+              refund:   document.getElementById('refundBalanceReceipt').value.trim(),
+              onben:    document.getElementById('onBenReceipt').value.trim(),
+              gst:      document.getElementById('gstHstReceipt').value.trim(),
+              notes:    document.getElementById('notesReceipt').value.trim(),
+              fileUrls: result.fileUrls || []
             };
           }
 

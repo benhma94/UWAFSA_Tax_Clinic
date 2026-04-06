@@ -23,10 +23,17 @@
  */
 function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
   try {
-    // Skip entirely for quiz clients (Q-prefix)
+    // For quiz clients (Q-prefix): skip email but upload files to Drive for review
     if (emailData.clientID && /^Q\d{3}$/.test(emailData.clientID.trim())) {
-      Logger.log(`Quiz client ${emailData.clientID} — skipping receipt email`);
-      return { success: true, message: 'Quiz mode — no email sent.', recipient: null, attachmentCount: 0 };
+      Logger.log(`Quiz client ${emailData.clientID} — skipping receipt email, uploading files to Drive`);
+      const fileUrls = uploadQuizFilesToDrive_(fileDataArray, emailData.clientID);
+      return { success: true, message: 'Quiz mode — no email sent.', recipient: null, attachmentCount: 0, fileUrls };
+    }
+
+    // For training clients (T-prefix): skip email entirely
+    if (emailData.clientID && /^T\d{3}$/.test(emailData.clientID.trim())) {
+      Logger.log(`Training client ${emailData.clientID} — skipping receipt email`);
+      return { success: true, message: 'Training mode — no email sent.', recipient: null, attachmentCount: 0 };
     }
 
     // Validate inputs
@@ -266,8 +273,8 @@ function buildPasswordEmailBody(ufilePassword, taxYear) {
  * @param {string} taxYear - Tax year string
  */
 function trackReturnOnEmailSent(emailData, filingStatus, taxYear) {
-  if (/^Q\d{3}$/.test((emailData.clientID || '').trim())) {
-    Logger.log(`Quiz client ${emailData.clientID} — skipping tracker write`);
+  if (/^[QT]\d{3}$/.test((emailData.clientID || '').trim())) {
+    Logger.log(`Simulated client ${emailData.clientID} — skipping tracker write`);
     return;
   }
 
@@ -338,5 +345,29 @@ function checkEmailQuota() {
     return {
       error: error.message
     };
+  }
+}
+
+/**
+ * Uploads quiz submission files to Drive and returns shareable URLs.
+ * @param {Array} fileDataArray - Array of {name, data (base64), mimeType}
+ * @param {string} clientId - Q-prefix client ID (for logging)
+ * @returns {Array} Array of {name, url}
+ */
+function uploadQuizFilesToDrive_(fileDataArray, clientId) {
+  if (!fileDataArray || fileDataArray.length === 0) return [];
+  try {
+    const folder = DriveApp.getFolderById(SECRETS.RESUME_FOLDER_ID);
+    return fileDataArray.map(fileData => {
+      const bytes = Utilities.base64Decode(fileData.data);
+      const blob = Utilities.newBlob(bytes, fileData.mimeType, fileData.name);
+      const file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      Logger.log(`Quiz file uploaded for ${clientId}: ${fileData.name}`);
+      return { name: fileData.name, url: file.getUrl() };
+    });
+  } catch (e) {
+    Logger.log('Error uploading quiz files to Drive: ' + e.message);
+    return [];
   }
 }
