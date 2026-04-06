@@ -115,10 +115,14 @@ function getVolunteerPollingStatus(volunteer) {
       ? volunteer.split('–')[1].trim()
       : volunteer.trim();
 
+    const volunteersData = getVolunteersAndClients();
+    const allFilerNames = (volunteersData && volunteersData.allFilerNames) ? volunteersData.allFilerNames : null;
+
     return {
       helpStatus: getHelpStatus(volunteer),
       reviewResult: getReviewApprovalResult(volunteerNameOnly),
-      mentors: getMentorList()
+      mentors: getMentorList(),
+      allFilerNames: allFilerNames
     };
   }, 'getVolunteerPollingStatus');
 }

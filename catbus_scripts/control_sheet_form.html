@@ -1289,7 +1289,7 @@
     <button onclick="dismissDraft()" style="background-color:#888;">Dismiss</button>
   </div>
 
-  <div id="trainingModeBadge" style="display:none; background:#e67e22; color:white; padding:6px 16px; border-radius:20px; font-size:0.85em; font-weight:700; margin-bottom:10px; width:fit-content;">Training Mode — returns will not be tracked</div>
+  <div id="trainingModeBadge" style="display:none; background:#e67e22; color:white; padding:6px 16px; border-radius:20px; font-size:0.85em; font-weight:700; margin-bottom:10px; width:fit-content;">Training Mode</div>
   <div id="quizModeBadge" style="display:none; background:#6c3483; color:white; padding:6px 16px; border-radius:20px; font-size:0.85em; font-weight:700; margin-bottom:10px; width:fit-content;">Quiz Mode</div>
 
   <div class="form-row">
@@ -1311,8 +1311,8 @@
       <div id="trainingClientContainer" style="display:none;">
         <label>Training Client:</label><br>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:4px;">
-          <input type="text" id="trainingClientId" readonly placeholder="(click New Training Client)" style="width:160px; background:#f5f5f5; cursor:default;" tabindex="-1">
-          <button type="button" onclick="createTrainingClientFn()" id="createTrainingClientBtn" style="background-color:#e67e22; color:white; font-weight:600; padding:8px 14px; border-radius:8px; border:none; cursor:pointer; font-size:0.9rem;">New Training Client</button>
+          <input type="text" id="trainingClientId" readonly placeholder="(generating...)" style="width:160px; background:#f5f5f5; cursor:default;" tabindex="-1">
+          <button type="button" onclick="createTrainingClientFn()" id="createTrainingClientBtn" style="display:none; background-color:#e67e22; color:white; font-weight:600; padding:8px 14px; border-radius:8px; border:none; cursor:pointer; font-size:0.9rem;">New Training Client</button>
         </div>
       </div>
       <div id="quizClientContainer" style="display:none;">
@@ -1535,6 +1535,7 @@
     let lastClientRefreshTime = 0;
     const CLIENT_REFRESH_COOLDOWN = 10000; // ms — max one background refresh per 10 s
     let currentMentorListJson = null;
+    let currentFilerNamesJson = null;
 
     // Draft persistence (sessionStorage — survives same-tab refresh in private browsing)
     const DRAFT_KEY = 'catbus_draft_control';
@@ -1856,7 +1857,6 @@
       document.getElementById('clientSelectWrapper').style.display = (isTraining || isQuiz) ? 'none' : '';
 
       if (isTraining) {
-        // Reset training client display — volunteer must click "New Training Client"
         document.getElementById('trainingClientId').value = '';
         checkFormReady();
         // Break button still works for training volunteers
@@ -1871,6 +1871,24 @@
         while (table.rows.length > 1) table.deleteRow(1);
         rowCount = 1;
         currentClientData = null;
+
+        const volunteerNameOnly = volunteer.includes('–') ? volunteer.split('–')[1].trim() : volunteer;
+        google.script.run
+          .withSuccessHandler(clientId => {
+            const clientSelect = document.getElementById('client');
+            clientSelect.innerHTML = '<option value="">Select Client</option>';
+            const opt = document.createElement('option');
+            opt.value = clientId;
+            opt.textContent = clientId;
+            clientSelect.appendChild(opt);
+            clientSelect.value = clientId;
+            clientSelect.dispatchEvent(new Event('change'));
+            document.getElementById('trainingClientId').value = clientId;
+            showMessage('Training client ' + clientId + ' created.');
+            addTaxYearRow();
+          })
+          .withFailureHandler(err => showError('Could not create training client: ' + (err.message || err)))
+          .createTrainingClient(volunteerNameOnly);
         return;
       }
 
@@ -2154,7 +2172,22 @@
             updateMentorDatalists(data.mentors);
           }
         }
+        // Keep volunteer autocomplete fresh when new filers sign in
+        if (data.allFilerNames) {
+          const newJson = JSON.stringify(data.allFilerNames);
+          if (newJson !== currentFilerNamesJson) {
+            currentFilerNamesJson = newJson;
+            updateVolunteerAutocomplete(data.allFilerNames);
+          }
+        }
       }).getVolunteerPollingStatus(volunteer);
+    }
+
+    function updateVolunteerAutocomplete(newNames) {
+      if (!newNames || !Array.isArray(newNames)) return;
+      allVolunteerNames = newNames.slice().sort();
+      // The autocomplete closure calls getItems() = () => allVolunteerNames on each keystroke,
+      // so updating the array is sufficient — no need to re-call setupVolunteerAutocomplete().
     }
 
     function updateMentorDatalists(mentors) {
