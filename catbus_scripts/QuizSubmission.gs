@@ -98,6 +98,9 @@ function getQuizSubmissionsForReview() {
     const volunteer = row[cols.VOLUNTEER]?.toString().trim();
     if (!volunteer) continue;
 
+    const status = row[cols.STATUS]?.toString().trim() || '';
+    if (status) continue;  // skip already-graded rows
+
     let parsedFileUrls = [];
     try { parsedFileUrls = JSON.parse(row[cols.FILE_URLS]?.toString() || '[]'); } catch (e) {}
 

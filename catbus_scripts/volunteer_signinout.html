@@ -508,14 +508,14 @@
     const messageBox = document.getElementById('messageBox');
     messageBox.textContent = message;
     messageBox.className = type;
+    messageBox.style.display = '';
     messageBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    
-    // Auto-hide success messages after 5 seconds
-    if (type === 'success') {
-      setTimeout(() => {
-        messageBox.style.display = 'none';
-      }, 5000);
-    }
+
+    // Auto-hide all messages: success after 5s, errors after 6s
+    const delay = type === 'error' ? 6000 : 5000;
+    setTimeout(() => {
+      messageBox.style.display = 'none';
+    }, delay);
   }
 
   function hideMessage() {
@@ -647,7 +647,19 @@
         // Clear form
         document.getElementById('signInForm').reset();
 
-        // Refresh all data immediately
+        // Optimistically add new volunteer to the displayed list immediately
+        const container = document.getElementById('activeSessionsContainer');
+        const list = document.getElementById('activeSessionsList');
+        container.style.display = 'block';
+        const div = document.createElement('div');
+        div.className = 'session-item';
+        const signInTime = new Date(result.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        div.innerHTML = `<strong>${result.volunteerName}</strong> <span style="opacity: 0.7;">• Station: ${result.station} • Signed in at ${signInTime}</span>`;
+        list.appendChild(div);
+        const activeEl = document.getElementById('activeVolunteers');
+        activeEl.textContent = (parseInt(activeEl.textContent) || 0) + 1;
+
+        // Refresh all data from server to confirm and sync
         loadAvailableStations();
         loadActiveSessions();
         refreshStats();
@@ -688,7 +700,23 @@
         document.getElementById('sessionInput').value = '';
         selectedSession = null;
 
-        // Refresh all data immediately
+        // Optimistically remove signed-out session so autocomplete is immediately up-to-date
+        allSessions = allSessions.filter(s => s.sessionId !== sessionId);
+
+        // Optimistically remove signed-out volunteer from the displayed list immediately
+        const list = document.getElementById('activeSessionsList');
+        list.querySelectorAll('.session-item').forEach(item => {
+          const nameEl = item.querySelector('strong');
+          if (nameEl && nameEl.textContent === result.volunteerName) item.remove();
+        });
+        const activeEl = document.getElementById('activeVolunteers');
+        const newCount = Math.max(0, (parseInt(activeEl.textContent) || 1) - 1);
+        activeEl.textContent = newCount;
+        if (list.children.length === 0) {
+          document.getElementById('activeSessionsContainer').style.display = 'none';
+        }
+
+        // Refresh all data from server to confirm and sync
         loadAvailableStations();
         loadActiveSessions();
         refreshStats();
