@@ -322,51 +322,6 @@ function findTrackerRowByStatus(trackerSheet, clientID, taxYear, preferredStatus
 }
 
 /**
- * Creates a new training client ID (T001, T002, ...) and logs it in the Training Log sheet.
- * Called from the control sheet when a volunteer at the Training station needs a practice client.
- * @param {string} volunteer - Volunteer name
- * @returns {string} The new training client ID (e.g. 'T001')
- */
-function createTrainingClient(volunteer) {
-  return safeExecute(() => {
-    volunteer = sanitizeInput(volunteer, 100);
-    if (!volunteer) throw new Error('Volunteer name is required');
-
-    const lock = LockService.getScriptLock();
-    if (!lock.tryLock(CONFIG.PERFORMANCE.LOCK_TIMEOUT_MS)) {
-      throw new Error('System is busy, please try again');
-    }
-
-    try {
-      const sheet = getSheet(CONFIG.SHEETS.TRAINING_LOG);
-      const lastRow = sheet.getLastRow();
-
-      // Collect existing T-numbers
-      const existingNumbers = new Set();
-      if (lastRow > 1) {
-        const idCol = CONFIG.COLUMNS.TRAINING_LOG.CLIENT_ID + 1;
-        const data = sheet.getRange(2, idCol, lastRow - 1, 1).getValues();
-        for (const row of data) {
-          const id = row[0]?.toString().trim();
-          if (/^T\d{3}$/.test(id)) existingNumbers.add(parseInt(id.slice(1), 10));
-        }
-      }
-
-      // Find next available number
-      let num = 1;
-      while (existingNumbers.has(num)) num++;
-      if (num > 999) throw new Error('Training client IDs exhausted (T001–T999)');
-
-      const clientId = 'T' + String(num).padStart(3, '0');
-      sheet.appendRow([new Date(), sanitizeInput(volunteer, 100), clientId, 'Active']);
-      return clientId;
-    } finally {
-      lock.releaseLock();
-    }
-  }, 'createTrainingClient');
-}
-
-/**
  * Finalizes returns and stores per-tax-year data to the tracker
  * @param {string} volunteer - Volunteer name
  * @param {string} client - Client ID
@@ -389,25 +344,9 @@ function finalizeReturnsAndStore(volunteer, client, rows, meta) {
     // Use trimmed client ID for the rest of the function
     const clientID = trimmedClient;
 
-    // --- Training mode: skip assignment + tracker, just mark Training Log complete ---
+    // --- Training mode: skip assignment + tracker ---
     if (/^T\d{3}$/.test(clientID)) {
       Logger.log(`Training client ${clientID} — skipping Tax Return Tracker`);
-      try {
-        const trainingSheet = getSheet(CONFIG.SHEETS.TRAINING_LOG);
-        const lastRow = trainingSheet.getLastRow();
-        if (lastRow > 1) {
-          const data = trainingSheet.getRange(2, CONFIG.COLUMNS.TRAINING_LOG.CLIENT_ID + 1,
-                                               lastRow - 1, 2).getValues();
-          for (let i = data.length - 1; i >= 0; i--) {
-            if (data[i][0]?.toString().trim() === clientID) {
-              trainingSheet.getRange(i + 2, CONFIG.COLUMNS.TRAINING_LOG.STATUS + 1).setValue('Completed');
-              break;
-            }
-          }
-        }
-      } catch (e) {
-        Logger.log('Warning: could not update Training Log: ' + e.message);
-      }
       return true;
     }
 
@@ -530,25 +469,9 @@ function cancelClientAndStore(volunteer, client, rows) {
       return true;
     }
 
-    // --- Training mode: skip assignment + tracker, mark Training Log cancelled ---
+    // --- Training mode: skip assignment + tracker ---
     if (/^T\d{3}$/.test(clientID)) {
       Logger.log(`Training client ${clientID} — skipping Tax Return Tracker (cancel)`);
-      try {
-        const trainingSheet = getSheet(CONFIG.SHEETS.TRAINING_LOG);
-        const lastRow = trainingSheet.getLastRow();
-        if (lastRow > 1) {
-          const data = trainingSheet.getRange(2, CONFIG.COLUMNS.TRAINING_LOG.CLIENT_ID + 1,
-                                               lastRow - 1, 2).getValues();
-          for (let i = data.length - 1; i >= 0; i--) {
-            if (data[i][0]?.toString().trim() === clientID) {
-              trainingSheet.getRange(i + 2, CONFIG.COLUMNS.TRAINING_LOG.STATUS + 1).setValue('Cancelled');
-              break;
-            }
-          }
-        }
-      } catch (e) {
-        Logger.log('Warning: could not update Training Log: ' + e.message);
-      }
       return true;
     }
     

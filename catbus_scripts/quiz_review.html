@@ -342,7 +342,7 @@
     var sel = document.getElementById('submissionSelect');
     sel.innerHTML = '';
 
-    var ungraded = submissions.filter(function(s) { return !s.status; });
+    var ungraded = submissions;
 
     if (ungraded.length === 0) {
       sel.innerHTML = '<option value="">No pending submissions</option>';

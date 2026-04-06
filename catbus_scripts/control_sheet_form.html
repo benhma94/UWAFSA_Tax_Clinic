@@ -1873,23 +1873,16 @@
         rowCount = 1;
         currentClientData = null;
 
-        const volunteerNameOnly = volunteer.includes('–') ? volunteer.split('–')[1].trim() : volunteer;
-        google.script.run
-          .withSuccessHandler(clientId => {
-            const clientSelect = document.getElementById('client');
-            clientSelect.innerHTML = '<option value="">Select Client</option>';
-            const opt = document.createElement('option');
-            opt.value = clientId;
-            opt.textContent = clientId;
-            clientSelect.appendChild(opt);
-            clientSelect.value = clientId;
-            clientSelect.dispatchEvent(new Event('change'));
-            document.getElementById('trainingClientId').value = clientId;
-            showMessage('Training client ' + clientId + ' created.');
-            addTaxYearRow();
-          })
-          .withFailureHandler(err => showError('Could not create training client: ' + (err.message || err)))
-          .createTrainingClient(volunteerNameOnly);
+        const clientId = 'T001';
+        clientSelect.innerHTML = '<option value="">Select Client</option>';
+        const trainingOpt = document.createElement('option');
+        trainingOpt.value = clientId;
+        trainingOpt.textContent = clientId;
+        clientSelect.appendChild(trainingOpt);
+        clientSelect.value = clientId;
+        clientSelect.dispatchEvent(new Event('change'));
+        document.getElementById('trainingClientId').value = clientId;
+        addTaxYearRow();
         return;
       }
 
@@ -1899,19 +1892,15 @@
         clientSelect.innerHTML = '<option value="">Select Client</option>';
         clientSelect.value = '';
         checkFormReady();
-        google.script.run
-          .withSuccessHandler(id => {
-            const opt = document.createElement('option');
-            opt.value = id;
-            opt.textContent = id;
-            clientSelect.appendChild(opt);
-            clientSelect.value = id;
-            clientSelect.dispatchEvent(new Event('change'));
-            checkFormReady();
-            addTaxYearRow();
-          })
-          .withFailureHandler(err => showError('Could not create quiz client: ' + (err.message || err)))
-          .createQuizClient();
+        const quizId = 'Q001';
+        const quizOpt = document.createElement('option');
+        quizOpt.value = quizId;
+        quizOpt.textContent = quizId;
+        clientSelect.appendChild(quizOpt);
+        clientSelect.value = quizId;
+        clientSelect.dispatchEvent(new Event('change'));
+        checkFormReady();
+        addTaxYearRow();
         if (isKnownVolunteer) {
           currentBreakState = breakStatusMap[volunteer] === true;
           updateBreakUI();
