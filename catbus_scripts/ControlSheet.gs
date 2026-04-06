@@ -222,7 +222,6 @@ function getMentorList() {
           }
         }
 
-        mentorsToday.add('Yuzhen Quiz Mentor');
         return {
           reviewers: [...mentorsToday].sort(),
           seniors: []
@@ -422,11 +421,10 @@ function finalizeReturnsAndStore(volunteer, client, rows, meta) {
 
       const volunteerNameOnly = volunteer.includes('–') ? volunteer.split('–')[1].trim() : volunteer.trim();
       const receiptData = {
-        refund:            (meta && meta.refund)            || '',
-        onben:             (meta && meta.onben)             || '',
-        gst:               (meta && meta.gst)               || '',
-        efileConfirmation: (meta && meta.efileConfirmation) || '',
-        notes:             (meta && meta.notes)             || ''
+        refund: (meta && meta.refund) || '',
+        onben:  (meta && meta.onben)  || '',
+        gst:    (meta && meta.gst)    || '',
+        notes:  (meta && meta.notes)  || ''
       };
       writeQuizSubmission(volunteerNameOnly, (meta && meta.partner) || '', clientID, receiptData, rows, []);
       return true;

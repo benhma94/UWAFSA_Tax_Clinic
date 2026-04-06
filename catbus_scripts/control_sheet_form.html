@@ -1353,7 +1353,7 @@
   </div>
 
   <div id="trainingModeBadge" style="display:none; background:#e67e22; color:white; padding:6px 16px; border-radius:20px; font-size:0.85em; font-weight:700; margin-bottom:10px; width:fit-content;">Training Mode — returns will not be tracked</div>
-  <div id="quizModeBadge" style="display:none; background:#6c3483; color:white; padding:6px 16px; border-radius:20px; font-size:0.85em; font-weight:700; margin-bottom:10px; width:fit-content;">Quiz Mode — return will not be tracked</div>
+  <div id="quizModeBadge" style="display:none; background:#6c3483; color:white; padding:6px 16px; border-radius:20px; font-size:0.85em; font-weight:700; margin-bottom:10px; width:fit-content;">Quiz Mode</div>
 
   <div class="form-row">
     <div>
@@ -1379,41 +1379,11 @@
         </div>
       </div>
       <div id="quizClientContainer" style="display:none;">
-        <label>Quiz Client:</label><br>
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:4px;">
-          <input type="text" id="quizClientId" readonly placeholder="(click New Quiz Client)" style="width:160px; background:#f5f5f5; cursor:default;" tabindex="-1">
-          <button type="button" onclick="createQuizClientFn()" id="createQuizClientBtn" style="background-color:#6c3483; color:white; font-weight:600; padding:8px 14px; border-radius:8px; border:none; cursor:pointer; font-size:0.9rem;">New Quiz Client</button>
-        </div>
         <div style="margin-top:10px;">
           <label>Partner Name <span style="font-weight:400; color:#888; font-size:0.85rem;">(optional)</span></label>
           <div class="autocomplete-container" style="width:220px; margin-top:4px;">
             <input type="text" id="quizPartnerName" placeholder="Start typing partner name..." autocomplete="off">
             <div id="quizPartnerDropdown" class="autocomplete-dropdown" role="listbox"></div>
-          </div>
-        </div>
-        <div style="margin-top:14px; padding:12px; border:1px solid rgba(108,52,131,0.3); border-radius:8px; background:rgba(108,52,131,0.05);">
-          <label style="font-weight:600; color:#6c3483; display:block; margin-bottom:10px;">Receipt Details</label>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <div>
-              <label style="font-size:0.85em;">Refund / Balance Owing</label>
-              <input type="text" id="quizRefundAmount" placeholder="e.g. 1,500.00" style="width:100%; box-sizing:border-box;">
-            </div>
-            <div>
-              <label style="font-size:0.85em;">ON-BEN Credit</label>
-              <input type="text" id="quizOnbenCredit" placeholder="e.g. 450.00" style="width:100%; box-sizing:border-box;">
-            </div>
-            <div>
-              <label style="font-size:0.85em;">GST/HST Credit</label>
-              <input type="text" id="quizGstCredit" placeholder="e.g. 280.00" style="width:100%; box-sizing:border-box;">
-            </div>
-            <div>
-              <label style="font-size:0.85em;">E-file Confirmation #</label>
-              <input type="text" id="quizEfileConfirmation" placeholder="e.g. A123456789" style="width:100%; box-sizing:border-box;">
-            </div>
-          </div>
-          <div style="margin-top:10px;">
-            <label style="font-size:0.85em;">Notes</label>
-            <textarea id="quizNotes" placeholder="Any additional notes..." style="width:100%; box-sizing:border-box; min-height:50px; resize:vertical;"></textarea>
           </div>
         </div>
       </div>
@@ -1617,6 +1587,7 @@
     let trainingVolunteerSet = new Set(); // names of volunteers at Training station
     let quizVolunteerSet = new Set();     // names of volunteers at Quiz station
     let quizMode = false;                 // true when current volunteer is in quiz mode
+    let quizReceiptData = {};             // receipt values captured from email receipt modal in quiz mode
     let acQuizPartner = null;             // autocomplete handle for quiz partner field
     let currentBreakState = false;
     let rowCount = 1;
@@ -2011,11 +1982,24 @@
       }
 
       if (isQuiz) {
-        // Reset quiz client display — volunteer must click "New Quiz Client"
-        document.getElementById('quizClientId').value = '';
+        quizReceiptData = {};
         document.getElementById('quizPartnerName').value = '';
+        clientSelect.innerHTML = '<option value="">Select Client</option>';
         clientSelect.value = '';
         checkFormReady();
+        google.script.run
+          .withSuccessHandler(id => {
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = id;
+            clientSelect.appendChild(opt);
+            clientSelect.value = id;
+            clientSelect.dispatchEvent(new Event('change'));
+            checkFormReady();
+            addTaxYearRow();
+          })
+          .withFailureHandler(err => showError('Could not create quiz client: ' + (err.message || err)))
+          .createQuizClient();
         if (isKnownVolunteer) {
           currentBreakState = breakStatusMap[volunteer] === true;
           updateBreakUI();
@@ -2641,37 +2625,6 @@
         .createTrainingClient(volunteerNameOnly);
     }
 
-    // Quiz mode: create a new Q-prefix practice client
-    function createQuizClientFn() {
-      const btn = document.getElementById('createQuizClientBtn');
-      btn.disabled = true;
-      btn.textContent = 'Creating...';
-
-      google.script.run
-        .withSuccessHandler(clientId => {
-          const clientSelect = document.getElementById('client');
-          clientSelect.innerHTML = '<option value="">Select Client</option>';
-          const opt = document.createElement('option');
-          opt.value = clientId;
-          opt.textContent = clientId;
-          clientSelect.appendChild(opt);
-          clientSelect.value = clientId;
-          clientSelect.dispatchEvent(new Event('change'));
-
-          document.getElementById('quizClientId').value = clientId;
-          btn.disabled = false;
-          btn.textContent = 'New Quiz Client';
-          showMessage('Quiz client ' + clientId + ' created.');
-          addTaxYearRow();
-        })
-        .withFailureHandler(error => {
-          btn.disabled = false;
-          btn.textContent = 'New Quiz Client';
-          showError('Error creating quiz client: ' + (error.message || error));
-        })
-        .createQuizClient();
-    }
-
     function proceedFinalize() {
       closeModal();
       document.getElementById('spinner').style.display = 'block';
@@ -2784,12 +2737,11 @@
         })
         .finalizeReturnsAndStore(volunteer, client, rows,
           quizMode ? {
-            partner:           document.getElementById('quizPartnerName').value.trim(),
-            refund:            document.getElementById('quizRefundAmount').value.trim(),
-            onben:             document.getElementById('quizOnbenCredit').value.trim(),
-            gst:               document.getElementById('quizGstCredit').value.trim(),
-            efileConfirmation: document.getElementById('quizEfileConfirmation').value.trim(),
-            notes:             document.getElementById('quizNotes').value.trim()
+            partner: document.getElementById('quizPartnerName').value.trim(),
+            refund:  quizReceiptData.refund || '',
+            onben:   quizReceiptData.onben  || '',
+            gst:     quizReceiptData.gst    || '',
+            notes:   quizReceiptData.notes  || ''
           } : {});
     }
 
@@ -3552,7 +3504,17 @@
           showEmailStatus('Email sent successfully to ' + result.recipient + (fileDataArray.length > 0 ? ' with ' + fileDataArray.length + ' attachment(s)' : ''), 'success');
           sendBtn.textContent = originalText;
           sendBtn.disabled = false;
-          
+
+          // In quiz mode, capture receipt values for submission
+          if (quizMode) {
+            quizReceiptData = {
+              refund: document.getElementById('refundBalanceReceipt').value.trim(),
+              onben:  document.getElementById('onBenReceipt').value.trim(),
+              gst:    document.getElementById('gstHstReceipt').value.trim(),
+              notes:  document.getElementById('notesReceipt').value.trim()
+            };
+          }
+
           // Show receipt sent indicator for this row
           if (currentEmailRowId) {
             const indicator = document.getElementById(`receiptSentIndicator${currentEmailRowId}`);
