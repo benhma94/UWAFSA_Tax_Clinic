@@ -1352,6 +1352,9 @@
     <button onclick="dismissDraft()" style="background-color:#888;">Dismiss</button>
   </div>
 
+  <div id="trainingModeBadge" style="display:none; background:#e67e22; color:white; padding:6px 16px; border-radius:20px; font-size:0.85em; font-weight:700; margin-bottom:10px; width:fit-content;">Training Mode — returns will not be tracked</div>
+  <div id="quizModeBadge" style="display:none; background:#6c3483; color:white; padding:6px 16px; border-radius:20px; font-size:0.85em; font-weight:700; margin-bottom:10px; width:fit-content;">Quiz Mode — return will not be tracked</div>
+
   <div class="form-row">
     <div>
       <label for="volunteer">Volunteer:</label><br>
@@ -1361,11 +1364,59 @@
       </div>
     </div>
     <div>
-      <label for="client">Assigned Client:</label><br>
-      <select id="client" onchange="checkFormReady();">
-        <option value="">Select Client</option>
-      </select>
-      <div id="noClientMsg">No client assigned — waiting for assignment</div>
+      <div id="clientSelectWrapper">
+        <label for="client">Assigned Client:</label><br>
+        <select id="client" onchange="checkFormReady();">
+          <option value="">Select Client</option>
+        </select>
+        <div id="noClientMsg">No client assigned — waiting for assignment</div>
+      </div>
+      <div id="trainingClientContainer" style="display:none;">
+        <label>Training Client:</label><br>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:4px;">
+          <input type="text" id="trainingClientId" readonly placeholder="(click New Training Client)" style="width:160px; background:#f5f5f5; cursor:default;" tabindex="-1">
+          <button type="button" onclick="createTrainingClientFn()" id="createTrainingClientBtn" style="background-color:#e67e22; color:white; font-weight:600; padding:8px 14px; border-radius:8px; border:none; cursor:pointer; font-size:0.9rem;">New Training Client</button>
+        </div>
+      </div>
+      <div id="quizClientContainer" style="display:none;">
+        <label>Quiz Client:</label><br>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:4px;">
+          <input type="text" id="quizClientId" readonly placeholder="(click New Quiz Client)" style="width:160px; background:#f5f5f5; cursor:default;" tabindex="-1">
+          <button type="button" onclick="createQuizClientFn()" id="createQuizClientBtn" style="background-color:#6c3483; color:white; font-weight:600; padding:8px 14px; border-radius:8px; border:none; cursor:pointer; font-size:0.9rem;">New Quiz Client</button>
+        </div>
+        <div style="margin-top:10px;">
+          <label>Partner Name <span style="font-weight:400; color:#888; font-size:0.85rem;">(optional)</span></label>
+          <div class="autocomplete-container" style="width:220px; margin-top:4px;">
+            <input type="text" id="quizPartnerName" placeholder="Start typing partner name..." autocomplete="off">
+            <div id="quizPartnerDropdown" class="autocomplete-dropdown" role="listbox"></div>
+          </div>
+        </div>
+        <div style="margin-top:14px; padding:12px; border:1px solid rgba(108,52,131,0.3); border-radius:8px; background:rgba(108,52,131,0.05);">
+          <label style="font-weight:600; color:#6c3483; display:block; margin-bottom:10px;">Receipt Details</label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div>
+              <label style="font-size:0.85em;">Refund / Balance Owing</label>
+              <input type="text" id="quizRefundAmount" placeholder="e.g. 1,500.00" style="width:100%; box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:0.85em;">ON-BEN Credit</label>
+              <input type="text" id="quizOnbenCredit" placeholder="e.g. 450.00" style="width:100%; box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:0.85em;">GST/HST Credit</label>
+              <input type="text" id="quizGstCredit" placeholder="e.g. 280.00" style="width:100%; box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:0.85em;">E-file Confirmation #</label>
+              <input type="text" id="quizEfileConfirmation" placeholder="e.g. A123456789" style="width:100%; box-sizing:border-box;">
+            </div>
+          </div>
+          <div style="margin-top:10px;">
+            <label style="font-size:0.85em;">Notes</label>
+            <textarea id="quizNotes" placeholder="Any additional notes..." style="width:100%; box-sizing:border-box; min-height:50px; resize:vertical;"></textarea>
+          </div>
+        </div>
+      </div>
     </div>
     <div style="align-self: end;">
       <label style="visibility: hidden; display: block;">_</label>
@@ -1414,14 +1465,14 @@
     <span id="finalizeReminderArrowWrap"><span id="finalizeReminderArrow">&#8593;</span></span>
   </div>
 
-  <button id="finalizeBtn" onclick="finalizeReturns()" disabled>&#10003; Finalize Returns</button>
+  <button id="finalizeBtn" onclick="finalizeReturns()" disabled>&#10003; Close Client</button>
   <br><br>
   <button id="cancelClientBtn" onclick="openCancelClientModal()" disabled style="background-color: #c0392b;">Cancel Client</button>
 
   <!-- Finalize Modal -->
   <div id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmModalLabel">
     <div class="modal-content">
-      <p id="confirmModalLabel">Are you sure you'd like to finalize?<br>Have all returns been finalized/EFILEd at this point?</p>
+      <p id="confirmModalLabel">Close this client? This will mark them complete and free you for your next return.</p>
       <button onclick="proceedFinalize()">Yes, finalize</button>
       <button onclick="closeModal()">Cancel</button>
     </div>
@@ -1563,6 +1614,10 @@
     let volunteerMap = {};        // clientMap: { name: [clientIds] }
     let allVolunteerNames = [];   // all signed-in filers
     let breakStatusMap = {};      // { name: true/false }
+    let trainingVolunteerSet = new Set(); // names of volunteers at Training station
+    let quizVolunteerSet = new Set();     // names of volunteers at Quiz station
+    let quizMode = false;                 // true when current volunteer is in quiz mode
+    let acQuizPartner = null;             // autocomplete handle for quiz partner field
     let currentBreakState = false;
     let rowCount = 1;
     let currentClientData = null; // Store current client intake data
@@ -1851,6 +1906,8 @@
         volunteerMap = data.clientMap || {};
         allVolunteerNames = (data.allFilerNames || Object.keys(volunteerMap)).sort();
         breakStatusMap = data.breakStatus || {};
+        trainingVolunteerSet = new Set(data.trainingVolunteers || []);
+        quizVolunteerSet     = new Set(data.quizVolunteers || []);
         checkFormReady();
         checkAndShowDraftBanner(); // show restore banner if a draft exists
       }).getVolunteersAndClients();
@@ -1897,6 +1954,17 @@
         onSelect: (name) => selectVolunteerFromDropdown(name),
         onInput: () => { updateClients(); checkFormReady(); }
       });
+
+      acQuizPartner = createAutocomplete({
+        inputId: 'quizPartnerName',
+        dropdownId: 'quizPartnerDropdown',
+        idPrefix: 'qp-option-',
+        wrapAround: false,
+        getItems: () => allVolunteerNames,
+        filterItem: (name, term) => name.toLowerCase().includes(term),
+        renderItem: (name, i, term) => autocompleteHighlightMatch(name, term),
+        onSelect: (name) => { document.getElementById('quizPartnerName').value = name; }
+      });
     }
 
     function selectVolunteerFromDropdown(name) {
@@ -1912,6 +1980,55 @@
       clientSelect.innerHTML = '<option value="">Select Client</option>';
 
       const isKnownVolunteer = allVolunteerNames.includes(volunteer);
+      const isTraining = trainingVolunteerSet.has(volunteer);
+      const isQuiz     = quizVolunteerSet.has(volunteer);
+      quizMode = isQuiz;
+
+      // Toggle mode-specific UI elements
+      document.getElementById('trainingModeBadge').style.display = isTraining ? 'block' : 'none';
+      document.getElementById('quizModeBadge').style.display     = isQuiz     ? 'block' : 'none';
+      document.getElementById('trainingClientContainer').style.display = isTraining ? 'block' : 'none';
+      document.getElementById('quizClientContainer').style.display     = isQuiz     ? 'block' : 'none';
+      document.getElementById('clientSelectWrapper').style.display = (isTraining || isQuiz) ? 'none' : '';
+
+      if (isTraining) {
+        // Reset training client display — volunteer must click "New Training Client"
+        document.getElementById('trainingClientId').value = '';
+        checkFormReady();
+        // Break button still works for training volunteers
+        if (isKnownVolunteer) {
+          currentBreakState = breakStatusMap[volunteer] === true;
+          updateBreakUI();
+          breakBtn.style.display = '';
+        }
+        noClientMsg.style.display = 'none';
+
+        const table = document.getElementById('taxYearTable');
+        while (table.rows.length > 1) table.deleteRow(1);
+        rowCount = 1;
+        currentClientData = null;
+        return;
+      }
+
+      if (isQuiz) {
+        // Reset quiz client display — volunteer must click "New Quiz Client"
+        document.getElementById('quizClientId').value = '';
+        document.getElementById('quizPartnerName').value = '';
+        clientSelect.value = '';
+        checkFormReady();
+        if (isKnownVolunteer) {
+          currentBreakState = breakStatusMap[volunteer] === true;
+          updateBreakUI();
+          breakBtn.style.display = '';
+        }
+        noClientMsg.style.display = 'none';
+
+        const table = document.getElementById('taxYearTable');
+        while (table.rows.length > 1) table.deleteRow(1);
+        rowCount = 1;
+        currentClientData = null;
+        return;
+      }
 
       if (volunteerMap[volunteer]) {
         volunteerMap[volunteer].forEach(client => {
@@ -1954,6 +2071,8 @@
               volunteerMap      = data.clientMap   || {};
               allVolunteerNames = (data.allFilerNames || Object.keys(volunteerMap)).sort();
               breakStatusMap    = data.breakStatus || {};
+              trainingVolunteerSet = new Set(data.trainingVolunteers || []);
+              quizVolunteerSet     = new Set(data.quizVolunteers || []);
               updateClients(); // cooldown prevents re-entry
             }
           })
@@ -2046,6 +2165,12 @@
 
 
     function addTaxYearRow() {
+      // Quiz mode: only one tax year allowed
+      if (quizMode) {
+        const table = document.getElementById('taxYearTable');
+        if (table.rows.length > 1) return; // already has a row
+      }
+
       // Get client data if available, otherwise use defaults
       const isMarried = currentClientData?.situations?.includes("Married/Common-Law") || false;
       const needsSeniorReview = currentClientData?.needsSeniorReview === true;
@@ -2059,12 +2184,12 @@
         const rowId = `row_${rowCount}`;
         row.setAttribute('data-row-id', rowId);
         
-        const taxYearOptions = Array.from({ length: 16 }, (_, i) => (2025 - i).toString());
+        const taxYearOptions = Array.from({ length: 16 }, (_, i) => (2026 - i).toString());
 
         row.innerHTML = `
           <td>
             <select name="taxYear">
-              ${taxYearOptions.map(y => `<option value="${y}" ${y === '2024' ? 'selected' : ''}>${y}</option>`).join('')}
+              ${taxYearOptions.map(y => `<option value="${y}" ${y === '2025' ? 'selected' : ''}>${y}</option>`).join('')}
             </select>
           </td>
           <td id="reviewerCell${rowId}">
@@ -2244,33 +2369,51 @@
     // Review functions
     function callForReview(rowId) {
       const volunteer = document.getElementById('volunteer').value.trim();
-      
+
       if (!volunteer) {
         showError('Please select a volunteer first.');
         return;
       }
-      
+
       // Extract volunteer name only (remove station prefix if present)
-      const volunteerNameOnly = volunteer.includes('–') 
-        ? volunteer.split('–')[1].trim() 
+      const volunteerNameOnly = volunteer.includes('–')
+        ? volunteer.split('–')[1].trim()
         : volunteer.trim();
-      
+
       // Collect context for the review request
       const clientId = document.getElementById('client').value;
       const rowEl = document.querySelector(`[data-row-id="${rowId}"]`);
       const taxYear = rowEl ? (rowEl.querySelector('select[name="taxYear"]')?.value || '') : '';
 
-      // Send review request to admin dashboard
-      google.script.run
-        .withSuccessHandler(() => {
-          // Hide the initial button, show the review actions
-          const reviewInitial = document.getElementById(`reviewInitial${rowId}`);
-          const reviewActions = document.getElementById(`reviewActions${rowId}`);
+      const onSuccess = () => {
+        const reviewInitial = document.getElementById(`reviewInitial${rowId}`);
+        const reviewActions = document.getElementById(`reviewActions${rowId}`);
+        if (reviewInitial) reviewInitial.style.display = 'none';
+        if (reviewActions) reviewActions.style.display = 'block';
+        showMessage(trainingVolunteerSet.has(volunteer) || quizVolunteerSet.has(volunteer)
+          ? 'Review auto-approved. Reviewer will appear shortly.'
+          : 'Review request sent. A reviewer will respond shortly.');
+      };
 
-          if (reviewInitial) reviewInitial.style.display = 'none';
-          if (reviewActions) reviewActions.style.display = 'block';
-          showMessage('Review request sent. A reviewer will respond shortly.');
-        })
+      // Training / quiz mode: auto-approve immediately instead of sending to alert dashboard
+      if (trainingVolunteerSet.has(volunteer)) {
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(error => showError('Error: ' + (error.message || error)))
+          .autoApproveSimulatedReview(volunteerNameOnly, clientId, taxYear, 'Training Simulation');
+        return;
+      }
+      if (quizVolunteerSet.has(volunteer)) {
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(error => showError('Error: ' + (error.message || error)))
+          .autoApproveSimulatedReview(volunteerNameOnly, clientId, taxYear, 'Quiz Simulation');
+        return;
+      }
+
+      // Live mode: send review request to alert dashboard
+      google.script.run
+        .withSuccessHandler(onSuccess)
         .withFailureHandler(error => {
           showError('Error sending review request: ' + (error.message || error));
         })
@@ -2464,6 +2607,71 @@
     // Make function globally accessible
     window.finalizeReturns = finalizeReturns;
 
+    // Training mode: create a new T-prefix practice client
+    function createTrainingClientFn() {
+      const volunteer = document.getElementById('volunteer').value.trim();
+      const volunteerNameOnly = volunteer.includes('–') ? volunteer.split('–')[1].trim() : volunteer;
+      const btn = document.getElementById('createTrainingClientBtn');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+
+      google.script.run
+        .withSuccessHandler(clientId => {
+          // Add T-prefix ID as an option in the hidden select so checkFormReady() works
+          const clientSelect = document.getElementById('client');
+          clientSelect.innerHTML = '<option value="">Select Client</option>';
+          const opt = document.createElement('option');
+          opt.value = clientId;
+          opt.textContent = clientId;
+          clientSelect.appendChild(opt);
+          clientSelect.value = clientId;
+          clientSelect.dispatchEvent(new Event('change'));
+
+          document.getElementById('trainingClientId').value = clientId;
+          btn.disabled = false;
+          btn.textContent = 'New Training Client';
+          showMessage('Training client ' + clientId + ' created.');
+          addTaxYearRow();
+        })
+        .withFailureHandler(error => {
+          btn.disabled = false;
+          btn.textContent = 'New Training Client';
+          showError('Error creating training client: ' + (error.message || error));
+        })
+        .createTrainingClient(volunteerNameOnly);
+    }
+
+    // Quiz mode: create a new Q-prefix practice client
+    function createQuizClientFn() {
+      const btn = document.getElementById('createQuizClientBtn');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+
+      google.script.run
+        .withSuccessHandler(clientId => {
+          const clientSelect = document.getElementById('client');
+          clientSelect.innerHTML = '<option value="">Select Client</option>';
+          const opt = document.createElement('option');
+          opt.value = clientId;
+          opt.textContent = clientId;
+          clientSelect.appendChild(opt);
+          clientSelect.value = clientId;
+          clientSelect.dispatchEvent(new Event('change'));
+
+          document.getElementById('quizClientId').value = clientId;
+          btn.disabled = false;
+          btn.textContent = 'New Quiz Client';
+          showMessage('Quiz client ' + clientId + ' created.');
+          addTaxYearRow();
+        })
+        .withFailureHandler(error => {
+          btn.disabled = false;
+          btn.textContent = 'New Quiz Client';
+          showError('Error creating quiz client: ' + (error.message || error));
+        })
+        .createQuizClient();
+    }
+
     function proceedFinalize() {
       closeModal();
       document.getElementById('spinner').style.display = 'block';
@@ -2553,73 +2761,36 @@
         return;
       }
 
-      // Validate reviewers against mentor list
+      console.log('Sending data to server:', { volunteer, client, clientType: typeof client, clientLength: client.length, rowsCount: rows.length, rows });
       google.script.run
-        .withSuccessHandler(mentorData => {
-          const reviewerOptions = mentorData.reviewers || [];
-          const seniorOptions = mentorData.seniors || [];
-          const allValidReviewers = new Set([...reviewerOptions, ...seniorOptions]);
-          
-          // Validate each row's reviewers
-          for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            const rowNum = i + 1;
-            const tableRow = table.rows[rowNum];
-            
-            // Validate primary reviewer if provided
-            if (row.reviewer && row.reviewer.trim()) {
-              const reviewerName = row.reviewer.trim();
-              if (!allValidReviewers.has(reviewerName)) {
-                if (tableRow) tableRow.classList.add("error-highlight");
-                showError(`Row ${rowNum}: Reviewer "${reviewerName}" is not an on-shift mentor or senior mentor. Please select a valid reviewer from the dropdown.`);
-                document.getElementById('spinner').style.display = 'none';
-                return;
-              }
-            }
-            
-            // Validate secondary reviewer if provided
-            if (row.secondaryReviewer && row.secondaryReviewer.trim()) {
-              const secondaryReviewerName = row.secondaryReviewer.trim();
-              if (!seniorOptions.includes(secondaryReviewerName)) {
-                if (tableRow) tableRow.classList.add("error-highlight");
-                showError(`Row ${rowNum}: Secondary reviewer "${secondaryReviewerName}" is not an on-shift senior mentor. Please select a valid senior mentor from the dropdown.`);
-                document.getElementById('spinner').style.display = 'none';
-                return;
-              }
-            }
+        .withSuccessHandler(success => {
+          document.getElementById('spinner').style.display = 'none';
+          console.log('Server response:', success);
+          if (success === true) {
+            showMessage('Client closed. Ready for next return.', true);
+            loadDropdowns();
+            setTimeout(clearForm, 5000);
+          } else {
+            showError('Could not close client. Server returned: ' + JSON.stringify(success));
+            console.error('Unexpected server response:', success);
           }
-          
-          // All validations passed, proceed with finalization
-          console.log('Sending data to server:', { volunteer, client, clientType: typeof client, clientLength: client.length, rowsCount: rows.length, rows });
-          
-          google.script.run
-            .withSuccessHandler(success => {
-              document.getElementById('spinner').style.display = 'none';
-              console.log('Server response:', success);
-              if (success === true) {
-                showMessage('Returns finalized successfully.', true);
-                loadDropdowns();
-                setTimeout(clearForm, 5000);
-              } else {
-                showError('Could not finalize. Server returned: ' + JSON.stringify(success));
-                console.error('Unexpected server response:', success);
-              }
-            })
-            .withFailureHandler(error => {
-              document.getElementById('spinner').style.display = 'none';
-              const errorMsg = error.message || error.toString() || error;
-              showError('Error finalizing returns: ' + errorMsg);
-              console.error('Finalize error:', error);
-              console.error('Error details - Volunteer:', volunteer, 'Client:', client, 'Client type:', typeof client);
-            })
-            .finalizeReturnsAndStore(volunteer, client, rows);
         })
         .withFailureHandler(error => {
           document.getElementById('spinner').style.display = 'none';
-          showError('Error validating reviewers: ' + (error.message || error));
-          console.error('Error getting mentor list:', error);
+          const errorMsg = error.message || error.toString() || error;
+          showError('Error closing client: ' + errorMsg);
+          console.error('Close client error:', error);
+          console.error('Error details - Volunteer:', volunteer, 'Client:', client, 'Client type:', typeof client);
         })
-        .getMentorList();
+        .finalizeReturnsAndStore(volunteer, client, rows,
+          quizMode ? {
+            partner:           document.getElementById('quizPartnerName').value.trim(),
+            refund:            document.getElementById('quizRefundAmount').value.trim(),
+            onben:             document.getElementById('quizOnbenCredit').value.trim(),
+            gst:               document.getElementById('quizGstCredit').value.trim(),
+            efileConfirmation: document.getElementById('quizEfileConfirmation').value.trim(),
+            notes:             document.getElementById('quizNotes').value.trim()
+          } : {});
     }
 
     function closeModal() {
@@ -2867,7 +3038,7 @@
       google.script.run.withSuccessHandler(mentorData => {
         const reviewerOptions = mentorData.reviewers;
         const seniorOptions = mentorData.seniors;
-        const taxYearOptions = Array.from({ length: 16 }, (_, i) => (2025 - i).toString());
+        const taxYearOptions = Array.from({ length: 16 }, (_, i) => (2026 - i).toString());
 
         // Create one row for each filing year from intake form
         filingYears.forEach(taxYear => {
@@ -3783,6 +3954,6 @@
     });
 
   </script>
-<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2026 All rights reserved.</span></div>
+<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
 </body>
 </html>

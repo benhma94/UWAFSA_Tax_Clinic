@@ -152,7 +152,7 @@ function getScheduleSheet() {
   }
 
   // First, try common schedule sheet names
-  const commonNames = ['Shift Schedule', 'Tax Clinic Shifts 2026', 'Tax Clinic Shifts 2025', 'Schedule Output', CONFIG.SHEETS.SCHEDULE_OUTPUT];
+  const commonNames = ['Shift Schedule', 'Tax Clinic Shifts 2027', 'Tax Clinic Shifts 2026', 'Tax Clinic Shifts 2025', 'Schedule Output', CONFIG.SHEETS.SCHEDULE_OUTPUT];
   for (const name of commonNames) {
     try {
       const sheet = ss.getSheetByName(name);

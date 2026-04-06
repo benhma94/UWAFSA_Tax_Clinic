@@ -6,6 +6,9 @@
 // Folder ID for filer application resume uploads (defined in Secrets.gs)
 const RESUME_FOLDER_ID = SECRETS.RESUME_FOLDER_ID;
 
+// Folder ID for quiz submission file uploads (defined in Secrets.gs)
+const QUIZ_FOLDER_ID = SECRETS.QUIZ_FOLDER_ID;
+
 const CONFIG = {
   SPREADSHEET_ID: SECRETS.SPREADSHEET_ID,
 
@@ -34,7 +37,9 @@ const CONFIG = {
     PRODUCT_CODES: 'UFILE Keys', // Product codes for distribution
     PRODUCT_CODE_DISTRIBUTION_LOG: 'Product Code Distribution Log', // Distribution tracking
     VOLUNTEER_TAGS: 'Volunteer Tags', // Custom display tags for volunteers
-    MESSAGES: 'Messages' // Internal messaging between managers and volunteers
+    MESSAGES: 'Messages', // Internal messaging between managers and volunteers
+    TRAINING_LOG: 'Training Log', // Training session log (T-prefix clients)
+    QUIZ_SUBMISSIONS: 'Quiz Submissions' // Quiz session submissions
   },
 
   // Clinic contact info (used in emails and public pages)
@@ -98,13 +103,32 @@ const CONFIG = {
       VOLUNTEER_INFO: 1,
       SESSION_ID: 2,
       DURATION: 3
+    },
+    TRAINING_LOG: {
+      TIMESTAMP: 0,
+      VOLUNTEER: 1,
+      CLIENT_ID: 2,
+      STATUS: 3
+    },
+    QUIZ_SUBMISSIONS: {
+      TIMESTAMP: 0,
+      VOLUNTEER: 1,
+      PARTNER: 2,
+      EMAIL_1: 3,
+      EMAIL_2: 4,
+      STATUS: 5,
+      REFUND: 6,
+      ONBEN: 7,
+      GST: 8,
+      NOTES: 9,
+      FILE_URLS: 10
     }
   },
   
   SIGN_IN_OUT: {
     STATION_COUNT: 50,
     EXCEPTION_STATIONS: ['Mentor', 'Senior Mentor', 'Frontline', 'Internal Services', 'Quiz', 'Training'],
-    NON_FILER_STATIONS: ['mentor', 'senior mentor', 'frontline', 'internal services', 'training']
+    NON_FILER_STATIONS: ['mentor', 'senior mentor', 'frontline', 'internal services', 'training', 'quiz']
   },
   
   // Help Request Status Values
@@ -118,7 +142,8 @@ const CONFIG = {
   // Tax Return Tracker Status Values
   TRACKER_STATUS: {
     EMAILED: 'Emailed',
-    FINALIZED: 'Finalized'
+    FINALIZED: 'Finalized',
+    INCOMPLETE: 'Incomplete'
   },
 
   // Review Request Status Values
@@ -350,6 +375,33 @@ const SCHEDULE_CONFIG = {
     return this.SHIFTS.hasOwnProperty(shiftId);
   }
 };
+
+// Apply any clinic date overrides saved via the Archive & Rollforward page.
+// If a 'CLINIC_DATES_OVERRIDE' Script Property exists, it replaces the hardcoded
+// ELIGIBILITY_CONFIG clinic dates/locations and SCHEDULE_CONFIG day labels.
+(function applyClinicDatesOverride_() {
+  try {
+    var raw = PropertiesService.getScriptProperties().getProperty('CLINIC_DATES_OVERRIDE');
+    if (!raw) return;
+    var entries = JSON.parse(raw); // [{date, room, mapsUrl}]
+    if (!Array.isArray(entries) || entries.length !== 4) return;
+
+    // Override ELIGIBILITY_CONFIG
+    ELIGIBILITY_CONFIG.CLINIC_DATES = entries.map(function(e) { return e.date; });
+    var newLocations = {};
+    entries.forEach(function(e) {
+      newLocations[e.date] = { room: e.room, mapsUrl: e.mapsUrl || '' };
+    });
+    ELIGIBILITY_CONFIG.DATE_LOCATIONS = newLocations;
+
+    // Override SCHEDULE_CONFIG — derive no-comma label from date string
+    SCHEDULE_CONFIG.DEFAULT_DAY_LABELS = entries.map(function(e) {
+      return e.date.replace(/,/g, '');
+    });
+  } catch (err) {
+    Logger.log('applyClinicDatesOverride_: ' + err.message);
+  }
+})();
 
 /**
  * Product Code Distribution Configuration

@@ -71,7 +71,7 @@ function doGet(e) {
     case 'control':
       return loadPage('control_sheet_form', 'AFSA Tax Clinic Control Sheet', { xframe: ALLOW, vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/catbus' } });
     case 'admin':
-      return loadPage('admin_dashboard', 'Admin Dashboard', { vars: { baseUrl, adminWebsiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/admin' } });
+      return loadPage('stats_dashboard', 'Stats Dashboard', { vars: { baseUrl, adminWebsiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/admin' } });
     case 'alerts':
       return loadPage('alert_dashboard', 'Alert Dashboard', { vars: { baseUrl, adminWebsiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/admin' } });
     case 'signin':
@@ -89,9 +89,10 @@ function doGet(e) {
     case 'productcodes':
       return loadPage('product_code_dashboard', 'Product Code Distribution');
     case 'quiz':
-      return loadPage('quiz_submission', 'Tax Clinic Training Quiz', { xframe: ALLOW });
     case 'quizreview':
       return loadPage('quiz_review', 'Quiz Review');
+    case 'archive':
+      return loadPage('archive_rollforward', 'Archive & Rollforward', {});
     default:
       return loadPage('catbus_intake_form', 'AFSA Tax Clinic Intake Form', { xframe: ALLOW });
   }

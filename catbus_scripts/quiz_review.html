@@ -272,29 +272,28 @@
           <div class="detail-label">Current Status</div>
           <div class="detail-value" id="dStatus">—</div>
         </div>
+        <div class="detail-item">
+          <div class="detail-label">Refund / Balance</div>
+          <div class="detail-value" id="dRefund">—</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">ON-BEN Credit</div>
+          <div class="detail-value" id="dOnben">—</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">GST/HST Credit</div>
+          <div class="detail-value" id="dGst">—</div>
+        </div>
       </div>
 
-      <div class="answer-block">
-        <div class="answer-label">Q1 &mdash; What information did you not claim?</div>
-        <div class="answer-text" id="dQ1">—</div>
+      <div id="dNotesBlock" style="display:none;" class="answer-block">
+        <div class="answer-label">Notes</div>
+        <div class="answer-text" id="dNotes"></div>
       </div>
-      <div class="answer-block">
-        <div class="answer-label">Q2 &mdash; What other form should be mailed?</div>
-        <div class="answer-text" id="dQ2">—</div>
-      </div>
-      <div class="detail-grid" style="margin-top: 4px;">
-        <div class="detail-item">
-          <div class="detail-label">Q4 &mdash; Refund / Payable</div>
-          <div class="detail-value" id="dQ4">—</div>
-        </div>
-        <div class="detail-item">
-          <div class="detail-label">Q5 &mdash; Ontario Trillium</div>
-          <div class="detail-value" id="dQ5">—</div>
-        </div>
-        <div class="detail-item">
-          <div class="detail-label">Q6 &mdash; Canada Essentials</div>
-          <div class="detail-value" id="dQ6">—</div>
-        </div>
+
+      <div id="dFilesBlock" style="display:none;" class="answer-block">
+        <div class="answer-label">Attachments</div>
+        <div id="dFiles"></div>
       </div>
     </div>
 
@@ -384,17 +383,37 @@
     var s = submissions.find(function(x) { return x.rowIndex === rowIndex; });
     panel.style.display = 'block';
 
-    document.getElementById('dVolunteer').textContent = s.volunteer || '—';
-    document.getElementById('dPartner').textContent = s.partner || '—';
-    document.getElementById('dTimestamp').textContent = s.timestamp || '—';
-    document.getElementById('dEmail1').textContent = s.email1 || '—';
-    document.getElementById('dEmail2').textContent = s.email2 || '—';
-    document.getElementById('dStatus').textContent = s.status || 'Ungraded';
-    document.getElementById('dQ1').textContent = s.q1 || '—';
-    document.getElementById('dQ2').textContent = s.q2 || '—';
-    document.getElementById('dQ4').textContent = s.q4 !== '' ? '$' + s.q4 : '—';
-    document.getElementById('dQ5').textContent = s.q5 !== '' ? '$' + s.q5 : '—';
-    document.getElementById('dQ6').textContent = s.q6 !== '' ? '$' + s.q6 : '—';
+    document.getElementById('dVolunteer').textContent  = s.volunteer  || '—';
+    document.getElementById('dPartner').textContent    = s.partner    || '—';
+    document.getElementById('dTimestamp').textContent  = s.timestamp  || '—';
+    document.getElementById('dEmail1').textContent     = s.email1     || '—';
+    document.getElementById('dEmail2').textContent     = s.email2     || '—';
+    document.getElementById('dStatus').textContent     = s.status     || 'Ungraded';
+    document.getElementById('dRefund').textContent     = s.refund     || '—';
+    document.getElementById('dOnben').textContent      = s.onben      || '—';
+    document.getElementById('dGst').textContent        = s.gst        || '—';
+
+    // Notes
+    var notesBlock = document.getElementById('dNotesBlock');
+    if (s.notes) {
+      document.getElementById('dNotes').textContent = s.notes;
+      notesBlock.style.display = 'block';
+    } else {
+      notesBlock.style.display = 'none';
+    }
+
+    // Attachments
+    var filesBlock = document.getElementById('dFilesBlock');
+    var filesContainer = document.getElementById('dFiles');
+    if (s.fileUrls && s.fileUrls.length > 0) {
+      filesContainer.innerHTML = s.fileUrls.map(function(f) {
+        return '<div style="margin:4px 0;"><a href="' + f.url + '" target="_blank" rel="noopener" ' +
+          'style="color:var(--accent-color);">' + (f.name || 'File') + '</a></div>';
+      }).join('');
+      filesBlock.style.display = 'block';
+    } else {
+      filesBlock.style.display = 'none';
+    }
 
     // Reset grading section
     selectedVerdict = '';

@@ -151,6 +151,35 @@ function completeReviewApproval(volunteer) {
 }
 
 /**
+ * Creates a review request that is immediately auto-approved (for training/quiz simulation).
+ * Writes a single row with STATUS = 'Approved' so the control sheet's polling picks it up instantly.
+ * @param {string} volunteer - Volunteer name (bare, no station prefix)
+ * @param {string} clientId - Client ID
+ * @param {string} taxYear - Tax year
+ * @param {string} reviewerLabel - Label shown as reviewer (e.g. 'Training Simulation', 'Quiz Simulation')
+ * @returns {boolean} True if successful
+ */
+function autoApproveSimulatedReview(volunteer, clientId, taxYear, reviewerLabel) {
+  return safeExecute(() => {
+    volunteer = sanitizeInput(volunteer, 100);
+    if (!volunteer) throw new Error('Volunteer name is required');
+
+    const sheet = getSheet(CONFIG.SHEETS.REVIEW_REQUESTS);
+    sheet.appendRow([
+      new Date(),
+      volunteer,
+      CONFIG.REVIEW_STATUS.APPROVED,
+      sanitizeInput(clientId || '', 10),
+      sanitizeInput(taxYear || '', 10),
+      sanitizeInput(reviewerLabel || 'Simulation', 50)
+    ]);
+
+    invalidateCache(CACHE_CONFIG.KEYS.REVIEW_REQUESTS);
+    return true;
+  }, 'autoApproveSimulatedReview');
+}
+
+/**
  * Builds a map of volunteer name → station string from the Volunteer List sheet.
  * @returns {Object} { volunteerName: stationString }
  */

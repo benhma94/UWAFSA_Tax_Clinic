@@ -23,6 +23,12 @@
  */
 function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
   try {
+    // Skip entirely for quiz clients (Q-prefix)
+    if (emailData.clientID && /^Q\d{3}$/.test(emailData.clientID.trim())) {
+      Logger.log(`Quiz client ${emailData.clientID} — skipping receipt email`);
+      return { success: true, message: 'Quiz mode — no email sent.', recipient: null, attachmentCount: 0 };
+    }
+
     // Validate inputs
     if (!emailData || !emailData.clientEmail) {
       throw new Error('Client email is required');
@@ -260,6 +266,11 @@ function buildPasswordEmailBody(ufilePassword, taxYear) {
  * @param {string} taxYear - Tax year string
  */
 function trackReturnOnEmailSent(emailData, filingStatus, taxYear) {
+  if (/^Q\d{3}$/.test((emailData.clientID || '').trim())) {
+    Logger.log(`Quiz client ${emailData.clientID} — skipping tracker write`);
+    return;
+  }
+
   if (!emailData.clientID || !taxYear) {
     Logger.log('trackReturnOnEmailSent: missing clientID or taxYear, skipping');
     return;

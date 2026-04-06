@@ -25,5 +25,8 @@
  *
  *   // Password required to access admin-only pages
  *   ADMIN_PASSWORD: 'choose-a-strong-password',
+ *
+ *   // Google Drive folder ID for quiz submission file uploads
+ *   QUIZ_FOLDER_ID: 'YOUR_QUIZ_FOLDER_ID',
  * };
  */

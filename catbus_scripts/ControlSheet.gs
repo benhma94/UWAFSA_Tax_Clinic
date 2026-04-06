@@ -61,6 +61,8 @@ function getVolunteersAndClients() {
 
         const allFilerNames = [];
         const breakStatus = {};
+        const trainingVolunteers = [];
+        const quizVolunteers = [];
 
         for (const row of volData) {
           const name      = row[CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
@@ -73,15 +75,27 @@ function getVolunteersAndClients() {
           const signInDate = new Date(row[CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP]).toDateString();
           if (signInDate !== today && station !== 'quiz') continue;
 
-          if (nonFilerStations.some(r => station === r)) continue;
           if (signedOutSessions.has(sessionId)) continue;
+
+          const isTrainingStation = station === 'training';
+          const isQuizStation     = station === 'quiz';
+
+          // Exclude non-filer stations except training and quiz (they get their own modes)
+          if (nonFilerStations.some(r => station === r) && !isTrainingStation && !isQuizStation) continue;
 
           if (!allFilerNames.includes(name)) allFilerNames.push(name);
           // Last row for this volunteer wins for break status
           breakStatus[name] = (onBreak === 'yes');
+
+          if (isTrainingStation && !trainingVolunteers.includes(name)) {
+            trainingVolunteers.push(name);
+          }
+          if (isQuizStation && !quizVolunteers.includes(name)) {
+            quizVolunteers.push(name);
+          }
         }
 
-        return { clientMap, allFilerNames, breakStatus };
+        return { clientMap, allFilerNames, breakStatus, trainingVolunteers, quizVolunteers };
       },
       CACHE_CONFIG.TTL.VOLUNTEERS_AND_CLIENTS
     );
@@ -305,70 +319,119 @@ function findTrackerRowByStatus(trackerSheet, clientID, taxYear, preferredStatus
 }
 
 /**
+ * Creates a new training client ID (T001, T002, ...) and logs it in the Training Log sheet.
+ * Called from the control sheet when a volunteer at the Training station needs a practice client.
+ * @param {string} volunteer - Volunteer name
+ * @returns {string} The new training client ID (e.g. 'T001')
+ */
+function createTrainingClient(volunteer) {
+  return safeExecute(() => {
+    volunteer = sanitizeInput(volunteer, 100);
+    if (!volunteer) throw new Error('Volunteer name is required');
+
+    const lock = LockService.getScriptLock();
+    if (!lock.tryLock(CONFIG.PERFORMANCE.LOCK_TIMEOUT_MS)) {
+      throw new Error('System is busy, please try again');
+    }
+
+    try {
+      const sheet = getSheet(CONFIG.SHEETS.TRAINING_LOG);
+      const lastRow = sheet.getLastRow();
+
+      // Collect existing T-numbers
+      const existingNumbers = new Set();
+      if (lastRow > 1) {
+        const idCol = CONFIG.COLUMNS.TRAINING_LOG.CLIENT_ID + 1;
+        const data = sheet.getRange(2, idCol, lastRow - 1, 1).getValues();
+        for (const row of data) {
+          const id = row[0]?.toString().trim();
+          if (/^T\d{3}$/.test(id)) existingNumbers.add(parseInt(id.slice(1), 10));
+        }
+      }
+
+      // Find next available number
+      let num = 1;
+      while (existingNumbers.has(num)) num++;
+      if (num > 999) throw new Error('Training client IDs exhausted (T001–T999)');
+
+      const clientId = 'T' + String(num).padStart(3, '0');
+      sheet.appendRow([new Date(), sanitizeInput(volunteer, 100), clientId, 'Active']);
+      return clientId;
+    } finally {
+      lock.releaseLock();
+    }
+  }, 'createTrainingClient');
+}
+
+/**
  * Finalizes returns and stores per-tax-year data to the tracker
  * @param {string} volunteer - Volunteer name
  * @param {string} client - Client ID
  * @param {Array<Object>} rows - Array of tax year data objects
  * @returns {boolean} True if successful
  */
-function finalizeReturnsAndStore(volunteer, client, rows) {
+function finalizeReturnsAndStore(volunteer, client, rows, meta) {
   return safeExecute(() => {
     if (!volunteer || !client || !rows || rows.length === 0) {
       throw new Error('Volunteer, client, and at least one tax year are required');
     }
-    
+
     // Trim and validate client ID
     const trimmedClient = client.trim();
     if (!validateClientID(trimmedClient)) {
       Logger.log(`Invalid client ID format: "${client}" (trimmed: "${trimmedClient}")`);
       throw new Error(`Invalid client ID format: "${trimmedClient}". Expected format: A001 (one letter followed by 3 digits).`);
     }
-    
+
     // Use trimmed client ID for the rest of the function
     const clientID = trimmedClient;
-    
-    // Batch validation: Collect all errors first, then fail with all errors at once
-    const validationErrors = [];
-    
-    // Get mentor list for reviewer validation
-    const mentorData = getMentorList();
-    const reviewerOptions = new Set(mentorData.reviewers || []);
-    const seniorOptions = new Set(mentorData.seniors || []);
-    const allValidReviewers = new Set([...reviewerOptions, ...seniorOptions]);
-    
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const rowNum = i + 1;
-      
-      if (!validateTaxYear(row.taxYear)) {
-        validationErrors.push(`Row ${rowNum}: Invalid tax year "${row.taxYear}"`);
-      }
-      if (!row.taxYear) {
-        validationErrors.push(`Row ${rowNum}: Tax year is required`);
-      }
-      
-      // Validate primary reviewer if provided
-      if (row.reviewer && row.reviewer.trim()) {
-        const reviewerName = row.reviewer.trim();
-        if (!allValidReviewers.has(reviewerName)) {
-          validationErrors.push(`Row ${rowNum}: Reviewer "${reviewerName}" is not an on-shift mentor or senior mentor`);
+
+    // --- Training mode: skip assignment + tracker, just mark Training Log complete ---
+    if (/^T\d{3}$/.test(clientID)) {
+      Logger.log(`Training client ${clientID} — skipping Tax Return Tracker`);
+      try {
+        const trainingSheet = getSheet(CONFIG.SHEETS.TRAINING_LOG);
+        const lastRow = trainingSheet.getLastRow();
+        if (lastRow > 1) {
+          const data = trainingSheet.getRange(2, CONFIG.COLUMNS.TRAINING_LOG.CLIENT_ID + 1,
+                                               lastRow - 1, 2).getValues();
+          for (let i = data.length - 1; i >= 0; i--) {
+            if (data[i][0]?.toString().trim() === clientID) {
+              trainingSheet.getRange(i + 2, CONFIG.COLUMNS.TRAINING_LOG.STATUS + 1).setValue('Completed');
+              break;
+            }
+          }
         }
+      } catch (e) {
+        Logger.log('Warning: could not update Training Log: ' + e.message);
       }
-      
-      // Validate secondary reviewer if provided
-      if (row.secondaryReviewer && row.secondaryReviewer.trim()) {
-        const secondaryReviewerName = row.secondaryReviewer.trim();
-        if (!seniorOptions.has(secondaryReviewerName)) {
-          validationErrors.push(`Row ${rowNum}: Secondary reviewer "${secondaryReviewerName}" is not an on-shift senior mentor`);
-        }
+      return true;
+    }
+
+    // --- Quiz mode: skip tracker, write to Quiz Submissions, mark assignment complete ---
+    if (/^Q\d{3}$/.test(clientID)) {
+      Logger.log(`Quiz client ${clientID} — writing to Quiz Submissions`);
+
+      // Mark Client Assignment complete so the quiz client doesn't stay active in the queue
+      const assignSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+      const assignRowNum = findAssignmentRow(assignSheet, volunteer, clientID);
+      if (assignRowNum > 0) {
+        assignSheet.getRange(assignRowNum, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1).setValue('Complete');
+        Logger.log(`Marked quiz assignment complete at row ${assignRowNum}`);
       }
+
+      const volunteerNameOnly = volunteer.includes('–') ? volunteer.split('–')[1].trim() : volunteer.trim();
+      const receiptData = {
+        refund:            (meta && meta.refund)            || '',
+        onben:             (meta && meta.onben)             || '',
+        gst:               (meta && meta.gst)               || '',
+        efileConfirmation: (meta && meta.efileConfirmation) || '',
+        notes:             (meta && meta.notes)             || ''
+      };
+      writeQuizSubmission(volunteerNameOnly, (meta && meta.partner) || '', clientID, receiptData, rows, []);
+      return true;
     }
-    
-    // If there are validation errors, throw with all errors at once
-    if (validationErrors.length > 0) {
-      throw new Error(`Validation errors:\n${validationErrors.join('\n')}`);
-    }
-    
+
     // 1. Mark client as Complete in 'Client Assignment'
     const assignSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
     const assignRowNum = findAssignmentRow(assignSheet, volunteer, clientID);
@@ -381,64 +444,53 @@ function finalizeReturnsAndStore(volunteer, client, rows) {
       throw new Error(`Assignment not found for volunteer ${volunteer} and client ${clientID}`);
     }
 
-    // 2. Append tax year data directly to 'Tax Return Tracker'
-    const trackerSheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
-    
-    if (!trackerSheet) {
-      throw new Error('Tax Return Tracker sheet not found');
-    }
-    
-    // Extract just the volunteer's actual name (remove "Station X –" prefix if present)
-    const volunteerNameOnly = volunteer.includes('–') 
-      ? volunteer.split('–')[1].trim() 
-      : volunteer.trim();
-    
-    const toAppend = rows.map(r => [
-      new Date(),
-      sanitizeInput(volunteerNameOnly, 100),
-      sanitizeInput(clientID, 10),
-      sanitizeInput(r.taxYear, 10),
-      sanitizeInput(r.reviewer || '', 100), // Reviewer name
-      sanitizeInput(r.secondaryReviewer || '', 100),
-      r.married ? 'Yes' : 'No',
-      r.efile ? 'Yes' : '',
-      r.paper ? 'Yes' : '',
-      r.incomplete ? 'Yes' : '',
-      CONFIG.TRACKER_STATUS.FINALIZED
-    ]);
-    
-    Logger.log(`Finalizing ${toAppend.length} returns for volunteer ${volunteer}, client ${clientID}`);
-    Logger.log(`Data to append: ${JSON.stringify(toAppend)}`);
+    // 2. Write incomplete returns to Tax Return Tracker.
+    // Efile/paper returns are already tracked by trackReturnOnEmailSent() when the receipt email
+    // is sent, so we only need to record returns that were marked incomplete (no email sent).
+    const incompleteRows = rows.filter(r => r.incomplete);
+    if (incompleteRows.length > 0) {
+      const trackerSheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+      if (!trackerSheet) {
+        throw new Error('Tax Return Tracker sheet not found');
+      }
 
-    if (toAppend.length > 0) {
-      const numCols = toAppend[0].length;
+      const volunteerNameOnly = volunteer.includes('–')
+        ? volunteer.split('–')[1].trim()
+        : volunteer.trim();
+
+      const numCols = CONFIG.COLUMNS.TAX_RETURN_TRACKER.STATUS + 1;
 
       try {
-        for (const rowData of toAppend) {
-          const taxYear = rowData[CONFIG.COLUMNS.TAX_RETURN_TRACKER.TAX_YEAR];
-          // Look for an 'Emailed' row to upgrade; leaves already-Finalized rows alone (couples support)
-          const existingRowNum = findTrackerRowByStatus(trackerSheet, clientID, taxYear, CONFIG.TRACKER_STATUS.EMAILED);
+        for (const r of incompleteRows) {
+          // Skip if an entry already exists for this client+year (e.g. previously recorded)
+          const existingRowNum = findTrackerRowByStatus(trackerSheet, clientID, r.taxYear, null);
           if (existingRowNum > 0) {
-            // Upgrade the auto-tracked 'Emailed' row to 'Finalized' in-place
-            Logger.log(`Upgrading tracker row ${existingRowNum} from Emailed to Finalized for client ${clientID}, year ${taxYear}`);
-            trackerSheet.getRange(existingRowNum, 1, 1, numCols).setValues([rowData]);
-          } else {
-            // No 'Emailed' row found — email was skipped, or all same client+year rows are already Finalized (second spouse)
-            const newRow = trackerSheet.getLastRow() + 1;
-            Logger.log(`Appending new Finalized tracker row ${newRow} for client ${clientID}, year ${taxYear}`);
-            trackerSheet.getRange(newRow, 1, 1, numCols).setValues([rowData]);
+            Logger.log(`Tracker entry already exists for client ${clientID}, year ${r.taxYear} — skipping`);
+            continue;
           }
+          const rowData = [
+            new Date(),
+            sanitizeInput(volunteerNameOnly, 100),
+            sanitizeInput(clientID, 10),
+            sanitizeInput(r.taxYear, 10),
+            '', // Reviewer (none for incomplete)
+            '', // Secondary reviewer
+            r.married ? 'Yes' : 'No',
+            '',  // Efile
+            '',  // Paper
+            'Yes', // Incomplete
+            CONFIG.TRACKER_STATUS.INCOMPLETE
+          ];
+          const newRow = trackerSheet.getLastRow() + 1;
+          Logger.log(`Appending Incomplete tracker row ${newRow} for client ${clientID}, year ${r.taxYear}`);
+          trackerSheet.getRange(newRow, 1, 1, numCols).setValues([rowData]);
         }
-        Logger.log(`Successfully wrote ${toAppend.length} rows to Tax Return Tracker`);
       } catch (writeError) {
         Logger.log(`Error writing to Tax Return Tracker: ${writeError.message}`);
         throw new Error(`Failed to write to Tax Return Tracker: ${writeError.message}`);
       }
-    } else {
-      Logger.log('Warning: No rows to append to Tax Return Tracker');
-      throw new Error('No tax year data to append');
     }
-    
+
     return true;
   }, 'finalizeReturnsAndStore');
 }
@@ -455,15 +507,43 @@ function cancelClientAndStore(volunteer, client, rows) {
     if (!volunteer || !client || !rows || rows.length === 0) {
       throw new Error('Volunteer, client, and at least one tax year are required');
     }
-    
+
     // Trim and validate client ID
     const trimmedClient = client.trim();
     if (!validateClientID(trimmedClient)) {
       Logger.log(`Invalid client ID format: "${client}" (trimmed: "${trimmedClient}")`);
       throw new Error(`Invalid client ID format: "${trimmedClient}". Expected format: A001 (one letter followed by 3 digits).`);
     }
-    
+
     const clientID = trimmedClient;
+
+    // --- Quiz mode: nothing to clean up ---
+    if (/^Q\d{3}$/.test(clientID)) {
+      Logger.log(`Quiz client ${clientID} — skipping Tax Return Tracker (cancel)`);
+      return true;
+    }
+
+    // --- Training mode: skip assignment + tracker, mark Training Log cancelled ---
+    if (/^T\d{3}$/.test(clientID)) {
+      Logger.log(`Training client ${clientID} — skipping Tax Return Tracker (cancel)`);
+      try {
+        const trainingSheet = getSheet(CONFIG.SHEETS.TRAINING_LOG);
+        const lastRow = trainingSheet.getLastRow();
+        if (lastRow > 1) {
+          const data = trainingSheet.getRange(2, CONFIG.COLUMNS.TRAINING_LOG.CLIENT_ID + 1,
+                                               lastRow - 1, 2).getValues();
+          for (let i = data.length - 1; i >= 0; i--) {
+            if (data[i][0]?.toString().trim() === clientID) {
+              trainingSheet.getRange(i + 2, CONFIG.COLUMNS.TRAINING_LOG.STATUS + 1).setValue('Cancelled');
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        Logger.log('Warning: could not update Training Log: ' + e.message);
+      }
+      return true;
+    }
     
     // Validate rows
     const validationErrors = [];

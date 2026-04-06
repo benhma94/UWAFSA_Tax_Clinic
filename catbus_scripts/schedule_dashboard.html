@@ -321,10 +321,10 @@
     <h2>Day Labels</h2>
     <div class="form-group">
       <div class="day-labels-group">
-        <input type="text" id="day1" placeholder="Day 1" value="Saturday March 21 2026">
-        <input type="text" id="day2" placeholder="Day 2" value="Sunday March 22 2026">
-        <input type="text" id="day3" placeholder="Day 3" value="Saturday March 28 2026">
-        <input type="text" id="day4" placeholder="Day 4" value="Sunday March 29 2026">
+        <input type="text" id="day1" placeholder="Day 1" value="Saturday March 20 2027">
+        <input type="text" id="day2" placeholder="Day 2" value="Sunday March 21 2027">
+        <input type="text" id="day3" placeholder="Day 3" value="Saturday March 27 2027">
+        <input type="text" id="day4" placeholder="Day 4" value="Sunday March 28 2027">
       </div>
       <div class="help-text">Custom labels for the 4 days in the generated schedule output</div>
     </div>
@@ -415,10 +415,10 @@
   function generateSchedule() {
     const outputSheet = 'Shift Schedule'; // Hardcoded output sheet name
     const prioritizeConsecutive = true; // Always prioritize consecutive shifts
-    const day1 = document.getElementById('day1').value.trim() || 'Saturday March 21 2026';
-    const day2 = document.getElementById('day2').value.trim() || 'Sunday March 22 2026';
-    const day3 = document.getElementById('day3').value.trim() || 'Saturday March 28 2026';
-    const day4 = document.getElementById('day4').value.trim() || 'Sunday March 29 2026';
+    const day1 = document.getElementById('day1').value.trim() || 'Saturday March 20 2027';
+    const day2 = document.getElementById('day2').value.trim() || 'Sunday March 21 2027';
+    const day3 = document.getElementById('day3').value.trim() || 'Saturday March 27 2027';
+    const day4 = document.getElementById('day4').value.trim() || 'Sunday March 28 2027';
 
     const generateBtn = document.getElementById('generateBtn');
     const originalText = generateBtn.textContent;
@@ -865,6 +865,6 @@
   }
 
 </script>
-<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2026 All rights reserved.</span></div>
+<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
 </body>
 </html>
