@@ -142,7 +142,8 @@ const CONFIG = {
   // Tax Return Tracker Status Values
   TRACKER_STATUS: {
     EMAILED: 'Emailed',
-    FINALIZED: 'Finalized'
+    FINALIZED: 'Finalized',
+    INCOMPLETE: 'Incomplete'
   },
 
   // Review Request Status Values

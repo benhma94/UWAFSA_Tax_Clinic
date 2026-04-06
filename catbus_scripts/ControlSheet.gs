@@ -432,48 +432,6 @@ function finalizeReturnsAndStore(volunteer, client, rows, meta) {
       return true;
     }
 
-    // Batch validation: Collect all errors first, then fail with all errors at once
-    const validationErrors = [];
-    
-    // Get mentor list for reviewer validation
-    const mentorData = getMentorList();
-    const reviewerOptions = new Set(mentorData.reviewers || []);
-    const seniorOptions = new Set(mentorData.seniors || []);
-    const allValidReviewers = new Set([...reviewerOptions, ...seniorOptions]);
-    
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const rowNum = i + 1;
-      
-      if (!validateTaxYear(row.taxYear)) {
-        validationErrors.push(`Row ${rowNum}: Invalid tax year "${row.taxYear}"`);
-      }
-      if (!row.taxYear) {
-        validationErrors.push(`Row ${rowNum}: Tax year is required`);
-      }
-      
-      // Validate primary reviewer if provided
-      if (row.reviewer && row.reviewer.trim()) {
-        const reviewerName = row.reviewer.trim();
-        if (!allValidReviewers.has(reviewerName)) {
-          validationErrors.push(`Row ${rowNum}: Reviewer "${reviewerName}" is not an on-shift mentor or senior mentor`);
-        }
-      }
-      
-      // Validate secondary reviewer if provided
-      if (row.secondaryReviewer && row.secondaryReviewer.trim()) {
-        const secondaryReviewerName = row.secondaryReviewer.trim();
-        if (!seniorOptions.has(secondaryReviewerName)) {
-          validationErrors.push(`Row ${rowNum}: Secondary reviewer "${secondaryReviewerName}" is not an on-shift senior mentor`);
-        }
-      }
-    }
-    
-    // If there are validation errors, throw with all errors at once
-    if (validationErrors.length > 0) {
-      throw new Error(`Validation errors:\n${validationErrors.join('\n')}`);
-    }
-    
     // 1. Mark client as Complete in 'Client Assignment'
     const assignSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
     const assignRowNum = findAssignmentRow(assignSheet, volunteer, clientID);
@@ -486,64 +444,53 @@ function finalizeReturnsAndStore(volunteer, client, rows, meta) {
       throw new Error(`Assignment not found for volunteer ${volunteer} and client ${clientID}`);
     }
 
-    // 2. Append tax year data directly to 'Tax Return Tracker'
-    const trackerSheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
-    
-    if (!trackerSheet) {
-      throw new Error('Tax Return Tracker sheet not found');
-    }
-    
-    // Extract just the volunteer's actual name (remove "Station X –" prefix if present)
-    const volunteerNameOnly = volunteer.includes('–') 
-      ? volunteer.split('–')[1].trim() 
-      : volunteer.trim();
-    
-    const toAppend = rows.map(r => [
-      new Date(),
-      sanitizeInput(volunteerNameOnly, 100),
-      sanitizeInput(clientID, 10),
-      sanitizeInput(r.taxYear, 10),
-      sanitizeInput(r.reviewer || '', 100), // Reviewer name
-      sanitizeInput(r.secondaryReviewer || '', 100),
-      r.married ? 'Yes' : 'No',
-      r.efile ? 'Yes' : '',
-      r.paper ? 'Yes' : '',
-      r.incomplete ? 'Yes' : '',
-      CONFIG.TRACKER_STATUS.FINALIZED
-    ]);
-    
-    Logger.log(`Finalizing ${toAppend.length} returns for volunteer ${volunteer}, client ${clientID}`);
-    Logger.log(`Data to append: ${JSON.stringify(toAppend)}`);
+    // 2. Write incomplete returns to Tax Return Tracker.
+    // Efile/paper returns are already tracked by trackReturnOnEmailSent() when the receipt email
+    // is sent, so we only need to record returns that were marked incomplete (no email sent).
+    const incompleteRows = rows.filter(r => r.incomplete);
+    if (incompleteRows.length > 0) {
+      const trackerSheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+      if (!trackerSheet) {
+        throw new Error('Tax Return Tracker sheet not found');
+      }
 
-    if (toAppend.length > 0) {
-      const numCols = toAppend[0].length;
+      const volunteerNameOnly = volunteer.includes('–')
+        ? volunteer.split('–')[1].trim()
+        : volunteer.trim();
+
+      const numCols = CONFIG.COLUMNS.TAX_RETURN_TRACKER.STATUS + 1;
 
       try {
-        for (const rowData of toAppend) {
-          const taxYear = rowData[CONFIG.COLUMNS.TAX_RETURN_TRACKER.TAX_YEAR];
-          // Look for an 'Emailed' row to upgrade; leaves already-Finalized rows alone (couples support)
-          const existingRowNum = findTrackerRowByStatus(trackerSheet, clientID, taxYear, CONFIG.TRACKER_STATUS.EMAILED);
+        for (const r of incompleteRows) {
+          // Skip if an entry already exists for this client+year (e.g. previously recorded)
+          const existingRowNum = findTrackerRowByStatus(trackerSheet, clientID, r.taxYear, null);
           if (existingRowNum > 0) {
-            // Upgrade the auto-tracked 'Emailed' row to 'Finalized' in-place
-            Logger.log(`Upgrading tracker row ${existingRowNum} from Emailed to Finalized for client ${clientID}, year ${taxYear}`);
-            trackerSheet.getRange(existingRowNum, 1, 1, numCols).setValues([rowData]);
-          } else {
-            // No 'Emailed' row found — email was skipped, or all same client+year rows are already Finalized (second spouse)
-            const newRow = trackerSheet.getLastRow() + 1;
-            Logger.log(`Appending new Finalized tracker row ${newRow} for client ${clientID}, year ${taxYear}`);
-            trackerSheet.getRange(newRow, 1, 1, numCols).setValues([rowData]);
+            Logger.log(`Tracker entry already exists for client ${clientID}, year ${r.taxYear} — skipping`);
+            continue;
           }
+          const rowData = [
+            new Date(),
+            sanitizeInput(volunteerNameOnly, 100),
+            sanitizeInput(clientID, 10),
+            sanitizeInput(r.taxYear, 10),
+            '', // Reviewer (none for incomplete)
+            '', // Secondary reviewer
+            r.married ? 'Yes' : 'No',
+            '',  // Efile
+            '',  // Paper
+            'Yes', // Incomplete
+            CONFIG.TRACKER_STATUS.INCOMPLETE
+          ];
+          const newRow = trackerSheet.getLastRow() + 1;
+          Logger.log(`Appending Incomplete tracker row ${newRow} for client ${clientID}, year ${r.taxYear}`);
+          trackerSheet.getRange(newRow, 1, 1, numCols).setValues([rowData]);
         }
-        Logger.log(`Successfully wrote ${toAppend.length} rows to Tax Return Tracker`);
       } catch (writeError) {
         Logger.log(`Error writing to Tax Return Tracker: ${writeError.message}`);
         throw new Error(`Failed to write to Tax Return Tracker: ${writeError.message}`);
       }
-    } else {
-      Logger.log('Warning: No rows to append to Tax Return Tracker');
-      throw new Error('No tax year data to append');
     }
-    
+
     return true;
   }, 'finalizeReturnsAndStore');
 }
