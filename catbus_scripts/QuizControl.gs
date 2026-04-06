@@ -1,8 +1,6 @@
 /**
  * Quiz Control Functions
- * Generates Q-prefix client IDs and handles quiz form submissions.
- * createQuizClient: called from control_sheet_form.html and quiz_control_form.html.
- * submitQuizSession: called from quiz_control_form.html on final submit.
+ * Generates Q-prefix client IDs for quiz mode in control_sheet_form.html.
  */
 
 /**
@@ -32,33 +30,3 @@ function createQuizClient() {
   }, 'createQuizClient');
 }
 
-/**
- * Handles final submission from quiz_control_form.html.
- * Uploads any attached files to Google Drive, then writes the quiz submission record.
- * @param {string} volunteer   - Volunteer name
- * @param {string} clientId    - Q-prefix client ID (e.g. 'Q001')
- * @param {Array}  rows        - [{taxYear, filingStatus, married}]
- * @param {Object} receiptData - {refund, onben, gst, efileConfirmation, notes}
- * @param {Array}  filesArray  - [{name, data (base64), mimeType}] (may be empty)
- * @returns {boolean} true on success
- */
-function submitQuizSession(volunteer, clientId, rows, receiptData, filesArray) {
-  return safeExecute(() => {
-    if (!volunteer || !clientId) throw new Error('Volunteer and client ID are required.');
-
-    const fileUrls = [];
-    if (filesArray && filesArray.length > 0) {
-      const folder = DriveApp.getFolderById(QUIZ_FOLDER_ID);
-      for (const f of filesArray) {
-        const bytes = Utilities.base64Decode(f.data);
-        const blob  = Utilities.newBlob(bytes, f.mimeType, f.name);
-        const file  = folder.createFile(blob);
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        fileUrls.push({ name: f.name, url: file.getUrl() });
-      }
-    }
-
-    writeQuizSubmission(volunteer, '', clientId, receiptData || {}, rows || [], fileUrls);
-    return true;
-  }, 'submitQuizSession');
-}

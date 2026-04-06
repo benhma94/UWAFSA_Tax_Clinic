@@ -1536,6 +1536,7 @@
     const CLIENT_REFRESH_COOLDOWN = 10000; // ms — max one background refresh per 10 s
     let currentMentorListJson = null;
     let currentFilerNamesJson = null;
+    let cachedMentors = null; // parsed mentor data from polling, reused to skip getMentorList round-trip
 
     // Draft persistence (sessionStorage — survives same-tab refresh in private browsing)
     const DRAFT_KEY = 'catbus_draft_control';
@@ -2036,20 +2037,22 @@
           applyTrackerStatusIndicators();
 
           currentClientData = data;
-          preloadTaxYearRows(data);
-          if (data && data.notes) {
-            document.getElementById('notesDisplay').textContent = data.notes;
-            document.getElementById('notesContainer').style.display = 'block';
-          } else {
-            document.getElementById('notesDisplay').textContent = '';
-            document.getElementById('notesContainer').style.display = 'none';
-          }
-          renderDocumentChecklist();
-          if (!document.body.classList.contains('panel-open')) {
-            document.body.classList.add('panel-open');
-            document.getElementById('documentChecklist').setAttribute('aria-hidden', 'false');
-          }
-          showSituationNotes(data);
+          preloadTaxYearRows(data, () => {
+            // Show notes and situation chips only after tax year rows are ready
+            if (data && data.notes) {
+              document.getElementById('notesDisplay').textContent = data.notes;
+              document.getElementById('notesContainer').style.display = 'block';
+            } else {
+              document.getElementById('notesDisplay').textContent = '';
+              document.getElementById('notesContainer').style.display = 'none';
+            }
+            renderDocumentChecklist();
+            if (!document.body.classList.contains('panel-open')) {
+              document.body.classList.add('panel-open');
+              document.getElementById('documentChecklist').setAttribute('aria-hidden', 'false');
+            }
+            showSituationNotes(data);
+          });
         })
         .withFailureHandler(error => {
           console.error('Error loading client info:', error);
@@ -2169,6 +2172,7 @@
           const newJson = JSON.stringify(data.mentors);
           if (newJson !== currentMentorListJson) {
             currentMentorListJson = newJson;
+            cachedMentors = data.mentors;
             updateMentorDatalists(data.mentors);
           }
         }
@@ -2663,12 +2667,13 @@
         })
         .finalizeReturnsAndStore(volunteer, client, rows,
           quizMode ? {
-            partner:  document.getElementById('quizPartnerName').value.trim(),
-            refund:   quizReceiptData.refund    || '',
-            onben:    quizReceiptData.onben     || '',
-            gst:      quizReceiptData.gst       || '',
-            notes:    quizReceiptData.notes     || '',
-            fileUrls: quizReceiptData.fileUrls  || []
+            partner:       document.getElementById('quizPartnerName').value.trim(),
+            refund:        quizReceiptData.refund        || '',
+            onben:         quizReceiptData.onben         || '',
+            gst:           quizReceiptData.gst           || '',
+            notes:         quizReceiptData.notes         || '',
+            fileUrls:      quizReceiptData.fileUrls      || [],
+            fileDataArray: quizReceiptData.fileDataArray || []
           } : {});
     }
 
@@ -2910,8 +2915,11 @@
         escalateBtn.disabled = true;
       }).escalateHelpRequest(volunteer);
     }
-    function preloadTaxYearRows(data) {
-      if (!data || !data.filingYears || data.filingYears.length === 0) return;
+    function preloadTaxYearRows(data, onComplete) {
+      if (!data || !data.filingYears || data.filingYears.length === 0) {
+        if (onComplete) onComplete();
+        return;
+      }
 
       // Reset current rows
       const table = document.getElementById('taxYearTable');
@@ -2922,8 +2930,8 @@
       const needsSeniorReview = data?.needsSeniorReview === true;
       const filingYears = data.filingYears || [];
       
-      // Fetch mentor list and create rows
-      google.script.run.withSuccessHandler(mentorData => {
+      // Use cached mentor data if available to avoid a round-trip; otherwise fetch
+      function buildRowsWithMentors(mentorData) {
         const reviewerOptions = mentorData.reviewers;
         const seniorOptions = mentorData.seniors;
         const taxYearOptions = Array.from({ length: 16 }, (_, i) => (2026 - i).toString());
@@ -2991,7 +2999,17 @@
         }
         // Restore receipt indicators from sheet status (in case tracker status arrived first)
         applyTrackerStatusIndicators();
-      }).getMentorList();
+        if (onComplete) onComplete();
+      } // end buildRowsWithMentors
+
+      if (cachedMentors) {
+        buildRowsWithMentors(cachedMentors);
+      } else {
+        google.script.run.withSuccessHandler(mentorData => {
+          cachedMentors = mentorData;
+          buildRowsWithMentors(mentorData);
+        }).getMentorList();
+      }
     }
 
     /**
@@ -3453,14 +3471,15 @@
           sendBtn.textContent = originalText;
           sendBtn.disabled = false;
 
-          // In quiz mode, capture receipt values for submission
+          // In quiz mode, capture receipt values and raw file data for upload at finalization
           if (quizMode) {
             quizReceiptData = {
-              refund:   document.getElementById('refundBalanceReceipt').value.trim(),
-              onben:    document.getElementById('onBenReceipt').value.trim(),
-              gst:      document.getElementById('gstHstReceipt').value.trim(),
-              notes:    document.getElementById('notesReceipt').value.trim(),
-              fileUrls: result.fileUrls || []
+              refund:        document.getElementById('refundBalanceReceipt').value.trim(),
+              onben:         document.getElementById('onBenReceipt').value.trim(),
+              gst:           document.getElementById('gstHstReceipt').value.trim(),
+              notes:         document.getElementById('notesReceipt').value.trim(),
+              fileUrls:      [],
+              fileDataArray: fileDataArray
             };
           }
 

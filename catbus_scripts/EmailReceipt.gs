@@ -23,11 +23,11 @@
  */
 function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
   try {
-    // For quiz clients (Q-prefix): skip email but upload files to Drive for review
+    // For quiz clients (Q-prefix): skip email and skip file upload here.
+    // Files are uploaded to Drive during finalizeReturnsAndStore() instead, to avoid hangs.
     if (emailData.clientID && /^Q\d{3}$/.test(emailData.clientID.trim())) {
-      Logger.log(`Quiz client ${emailData.clientID} — skipping receipt email, uploading files to Drive`);
-      const fileUrls = uploadQuizFilesToDrive_(fileDataArray, emailData.clientID);
-      return { success: true, message: 'Quiz mode — no email sent.', recipient: null, attachmentCount: 0, fileUrls };
+      Logger.log(`Quiz client ${emailData.clientID} — skipping receipt email`);
+      return { success: true, message: 'Quiz mode — no email sent.', recipient: null, attachmentCount: 0, fileUrls: [] };
     }
 
     // For training clients (T-prefix): skip email entirely

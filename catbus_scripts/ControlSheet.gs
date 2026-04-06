@@ -430,7 +430,12 @@ function finalizeReturnsAndStore(volunteer, client, rows, meta) {
         gst:    (meta && meta.gst)    || '',
         notes:  (meta && meta.notes)  || ''
       };
-      writeQuizSubmission(volunteerNameOnly, (meta && meta.partner) || '', clientID, receiptData, rows, (meta && meta.fileUrls) || []);
+      // Upload files to Drive here (deferred from receipt step to avoid UI hang)
+      let fileUrls = (meta && meta.fileUrls) || [];
+      if (meta && meta.fileDataArray && meta.fileDataArray.length > 0) {
+        fileUrls = uploadQuizFilesToDrive_(meta.fileDataArray, clientID);
+      }
+      writeQuizSubmission(volunteerNameOnly, (meta && meta.partner) || '', clientID, receiptData, rows, fileUrls);
       return true;
     }
 

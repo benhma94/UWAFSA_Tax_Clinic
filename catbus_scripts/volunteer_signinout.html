@@ -508,14 +508,14 @@
     const messageBox = document.getElementById('messageBox');
     messageBox.textContent = message;
     messageBox.className = type;
+    messageBox.style.display = '';
     messageBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    
-    // Auto-hide success messages after 5 seconds
-    if (type === 'success') {
-      setTimeout(() => {
-        messageBox.style.display = 'none';
-      }, 5000);
-    }
+
+    // Auto-hide all messages: success after 5s, errors after 6s
+    const delay = type === 'error' ? 6000 : 5000;
+    setTimeout(() => {
+      messageBox.style.display = 'none';
+    }, delay);
   }
 
   function hideMessage() {
@@ -688,7 +688,10 @@
         document.getElementById('sessionInput').value = '';
         selectedSession = null;
 
-        // Refresh all data immediately
+        // Optimistically remove signed-out session so autocomplete is immediately up-to-date
+        allSessions = allSessions.filter(s => s.sessionId !== sessionId);
+
+        // Refresh all data from server
         loadAvailableStations();
         loadActiveSessions();
         refreshStats();
