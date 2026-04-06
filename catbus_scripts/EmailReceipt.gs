@@ -357,7 +357,7 @@ function checkEmailQuota() {
 function uploadQuizFilesToDrive_(fileDataArray, clientId) {
   if (!fileDataArray || fileDataArray.length === 0) return [];
   try {
-    const folder = DriveApp.getFolderById(SECRETS.RESUME_FOLDER_ID);
+    const folder = DriveApp.getFolderById(SECRETS.QUIZ_FOLDER_ID);
     return fileDataArray.map(fileData => {
       const bytes = Utilities.base64Decode(fileData.data);
       const blob = Utilities.newBlob(bytes, fileData.mimeType, fileData.name);
