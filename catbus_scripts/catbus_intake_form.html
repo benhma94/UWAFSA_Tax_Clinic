@@ -175,8 +175,13 @@
     }
 
     #receptionHelpArea {
-      margin-top: 30px;
-      text-align: center;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    #receptionHelpArea button {
+      display: inline-block;
+      margin: 0;
     }
     .tooltip {
       display: inline-block;
@@ -702,37 +707,65 @@
     });
 
     let receptionHelpActive = false;
+    let receptionHelpPending = false;
 
     function toggleReceptionHelp() {
+      if (receptionHelpPending) return;
+
       const helpBtn = document.getElementById('receptionHelpBtn');
       const escalateBtn = document.getElementById('receptionEscalateBtn');
       const volunteer = "Reception";
 
-      receptionHelpActive = !receptionHelpActive;
+      receptionHelpPending = true;
+      helpBtn.disabled = true;
 
-      if (receptionHelpActive) {
-        google.script.run.withSuccessHandler(() => {
-          helpBtn.textContent = '✅ Cancel Call';
-          helpBtn.classList.add('active');
-          escalateBtn.style.display = 'inline-block';
-          escalateBtn.disabled = false;
-        }).sendHelpRequest(volunteer);
+      if (!receptionHelpActive) {
+        google.script.run
+          .withSuccessHandler(function() {
+            receptionHelpPending = false;
+            helpBtn.disabled = false;
+            receptionHelpActive = true;
+            helpBtn.textContent = '✅ Cancel Call';
+            helpBtn.classList.add('active');
+            escalateBtn.style.display = 'inline-block';
+            escalateBtn.disabled = false;
+          })
+          .withFailureHandler(function() {
+            receptionHelpPending = false;
+            helpBtn.disabled = false;
+          })
+          .sendHelpRequest(volunteer);
       } else {
-        google.script.run.withSuccessHandler(() => {
-          helpBtn.textContent = '📞 Call for Help';
-          helpBtn.classList.remove('active');
-          escalateBtn.style.display = 'none';
-        }).clearHelpRequest(volunteer);
+        google.script.run
+          .withSuccessHandler(function() {
+            receptionHelpPending = false;
+            helpBtn.disabled = false;
+            receptionHelpActive = false;
+            helpBtn.textContent = '📞 Call for Help';
+            helpBtn.classList.remove('active');
+            escalateBtn.style.display = 'none';
+          })
+          .withFailureHandler(function() {
+            receptionHelpPending = false;
+            helpBtn.disabled = false;
+          })
+          .clearHelpRequest(volunteer);
       }
     }
 
     function escalateReceptionHelp() {
       const volunteer = "Reception";
       const escalateBtn = document.getElementById('receptionEscalateBtn');
+      escalateBtn.disabled = true;
 
-      google.script.run.withSuccessHandler(() => {
-        escalateBtn.disabled = true;
-      }).escalateHelpRequest(volunteer);
+      google.script.run
+        .withSuccessHandler(function() {
+          // Escalated — button stays disabled
+        })
+        .withFailureHandler(function() {
+          escalateBtn.disabled = false;
+        })
+        .escalateHelpRequest(volunteer);
     }
   </script>
 </head>
@@ -744,6 +777,11 @@
       <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
   </header>
+
+  <div id="receptionHelpArea">
+    <button id="receptionHelpBtn" onclick="toggleReceptionHelp()">📞 Call for Help</button>
+    <button id="receptionEscalateBtn" onclick="escalateReceptionHelp()" style="display: none;">🚨 Escalate to Senior Mentor</button>
+  </div>
 
   <div class="form-wrapper">
     <div class="form-section">
@@ -908,10 +946,6 @@
 
       <button type="submit">Submit</button>
     </form>
-    </div>
-    <div id="receptionHelpArea" style="text-align: center; margin-top: 30px;">
-      <button id="receptionHelpBtn" onclick="toggleReceptionHelp()">📞 Call for Help</button>
-      <button id="receptionEscalateBtn" onclick="escalateReceptionHelp()" style="display: none;">🚨 Escalate to Senior Mentor</button>
     </div>
   </div>
 

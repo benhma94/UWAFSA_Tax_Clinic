@@ -2861,7 +2861,11 @@
     }
 
     let helpActive = false;
+    let helpPending = false;
+
     function toggleHelpRequest() {
+      if (helpPending) return;
+
       const volunteer = document.getElementById('volunteer').value;
       const helpBtn = document.getElementById('helpBtn');
       const escalateBtn = document.getElementById('escalateBtn');
@@ -2871,25 +2875,45 @@
         return;
       }
 
-      helpActive = !helpActive;
+      helpPending = true;
+      helpBtn.disabled = true;
 
-      if (helpActive) {
-        google.script.run.withSuccessHandler(() => {
-          showMessage('Help request sent.');
-          helpBtn.textContent = '✅ Cancel Call';
-          helpBtn.classList.add('active');
-          escalateBtn.style.display = 'inline-block';  // Show escalate button
-          escalateBtn.disabled = false; // Enable it
-        }).sendHelpRequest(volunteer);
+      if (!helpActive) {
+        google.script.run
+          .withSuccessHandler(function() {
+            helpPending = false;
+            helpBtn.disabled = false;
+            helpActive = true;
+            showMessage('Help request sent.');
+            helpBtn.textContent = '✅ Cancel Call';
+            helpBtn.classList.add('active');
+            escalateBtn.style.display = 'inline-block';
+            escalateBtn.disabled = false;
+          })
+          .withFailureHandler(function() {
+            helpPending = false;
+            helpBtn.disabled = false;
+          })
+          .sendHelpRequest(volunteer);
       } else {
-        google.script.run.withSuccessHandler(() => {
-          showMessage('Help request cleared.');
-          helpBtn.textContent = '📞 Call for Help';
-          helpBtn.classList.remove('active');
-          escalateBtn.style.display = 'none';          // Hide on cancel
-        }).clearHelpRequest(volunteer);
+        google.script.run
+          .withSuccessHandler(function() {
+            helpPending = false;
+            helpBtn.disabled = false;
+            helpActive = false;
+            showMessage('Help request cleared.');
+            helpBtn.textContent = '📞 Call for Help';
+            helpBtn.classList.remove('active');
+            escalateBtn.style.display = 'none';
+          })
+          .withFailureHandler(function() {
+            helpPending = false;
+            helpBtn.disabled = false;
+          })
+          .clearHelpRequest(volunteer);
       }
     }
+
     function escalateHelpRequest() {
       const volunteer = document.getElementById('volunteer').value;
       const escalateBtn = document.getElementById('escalateBtn');
@@ -2899,10 +2923,16 @@
         return;
       }
 
-      google.script.run.withSuccessHandler(() => {
-        showMessage(`Help request escalated for ${volunteer}.`);
-        escalateBtn.disabled = true;
-      }).escalateHelpRequest(volunteer);
+      escalateBtn.disabled = true;
+
+      google.script.run
+        .withSuccessHandler(function() {
+          showMessage(`Help request escalated for ${volunteer}.`);
+        })
+        .withFailureHandler(function() {
+          escalateBtn.disabled = false;
+        })
+        .escalateHelpRequest(volunteer);
     }
     function preloadTaxYearRows(data, onComplete) {
       if (!data || !data.filingYears || data.filingYears.length === 0) {
