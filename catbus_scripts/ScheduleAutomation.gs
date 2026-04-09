@@ -952,7 +952,6 @@ function getChangedVolunteerNames(volunteers, oldAssignments, lastGenTimestamp) 
   return changedNames;
 }
 
-// Mentor team functions moved to MentorTeams.gs
 // Schedule notification functions moved to ScheduleNotifications.gs
 
 

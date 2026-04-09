@@ -85,7 +85,6 @@ function rollforwardData() {
     CONFIG.SHEETS.SCHEDULE_OUTPUT,
     CONFIG.SHEETS.MESSAGES,
     APPOINTMENT_CONFIG.SHEET_NAME,
-    'Mentor Teams'
   ];
 
   const SHEETS_PRESERVED = [
