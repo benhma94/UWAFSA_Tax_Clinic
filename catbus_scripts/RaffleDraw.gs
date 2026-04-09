@@ -48,6 +48,6 @@ function getRaffleVolunteerData() {
     });
 
     result.sort((a, b) => a.name.localeCompare(b.name));
-    return result;
+    return result.filter(v => v.draws >= 3);
   }, 'getRaffleVolunteerData');
 }

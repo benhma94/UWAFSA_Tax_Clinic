@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --accent: rgb(142, 0, 0);
+      --card-bg: #f2f2f2;
+      --border: #ccc;
+      --success: #27ae60;
+      --error: #e74c3c;
+    }
+
+    body {
+      margin: 0 auto;
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      padding: 20px;
+      max-width: 980px;
+      color: #1a1a1a;
+    }
+
+    h1 { margin: 0 0 20px; color: var(--accent); }
+
+    .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .card h2 { margin: 0 0 14px; font-size: 1.1rem; }
+
+    /* Role filter */
+    .role-filter-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 24px;
+      margin-bottom: 12px;
+    }
+
+    .role-filter-grid label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Table */
+    .table-wrap {
+      overflow-x: auto;
+      max-height: 480px;
+      overflow-y: auto;
+      margin-top: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.87rem;
+    }
+
+    th, td {
+      padding: 8px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #e0e0e0;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tr:hover td { background: #fafafa; }
+
+    /* Buttons */
+    button {
+      padding: 7px 14px;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button:hover:not(:disabled) { opacity: 0.8; }
+
+    .btn-muted { background: #7f8c8d; color: #fff; }
+    .btn-blue  { background: #3498db; color: #fff; }
+    .btn-send  { background: var(--accent); color: #fff; font-size: 0.95rem; padding: 10px 22px; }
+
+    /* Count badge */
+    .badge {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 12px;
+      padding: 2px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    /* Table card header row */
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .card-header h2 { margin: 0; }
+
+    /* Status messages */
+    .status {
+      padding: 10px 14px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .status.loading { background: #d6eaf8; color: #21618c; display: block; }
+    .status.success { background: #d5f5e3; color: #1e8449; display: block; }
+    .status.error   { background: #fadbd8; color: #922b21; display: block; }
+
+    /* Compose */
+    .compose-field {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+
+    textarea.compose-field {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    label.field-label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.88rem;
+      margin-bottom: 4px;
+    }
+
+    .send-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 600px) {
+      .card-header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <?!= include('_PasswordGate') ?>
+
+  <h1>Volunteer Management</h1>
+
+  <!-- Role Filter -->
+  <div class="card">
+    <h2>Filter by Role</h2>
+    <div class="role-filter-grid" id="roleFilterGrid">
+      <span style="color:#999; font-size:0.9rem;">Loading...</span>
+    </div>
+    <div class="btn-row">
+      <button class="btn-muted" onclick="selectAllRoles()">Select All Roles</button>
+      <button class="btn-muted" onclick="deselectAllRoles()">Deselect All Roles</button>
+    </div>
+  </div>
+
+  <!-- Volunteer Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Volunteers <span class="badge" id="selectedCount">0 selected</span></h2>
+      <div class="btn-row">
+        <button class="btn-blue" onclick="selectAllVisible()">Select All Visible</button>
+        <button class="btn-muted" onclick="deselectAllVisible()">Deselect All</button>
+      </div>
+    </div>
+
+    <div id="tableStatus" class="status loading">Loading volunteer data...</div>
+
+    <div class="table-wrap">
+      <table id="volunteerTable">
+        <thead>
+          <tr>
+            <th style="width:36px;">
+              <input type="checkbox" id="checkAll" onchange="toggleAllVisible(this.checked)" title="Toggle all visible">
+            </th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Email</th>
+            <th>E-file #</th>
+            <th>Training</th>
+          </tr>
+        </thead>
+        <tbody id="volunteerBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Compose & Send -->
+  <div class="card">
+    <h2>Compose Email</h2>
+    <p style="margin: 0 0 14px; color: #555; font-size: 0.9rem;">
+      Email will be sent from the clinic account. Selected volunteers will be BCC'd — they will not see each other's addresses.
+    </p>
+
+    <label class="field-label" for="emailSubject">Subject</label>
+    <input type="text" id="emailSubject" class="compose-field" placeholder="Email subject..." oninput="updateSendButton()">
+
+    <label class="field-label" for="emailBody">Body</label>
+    <textarea id="emailBody" class="compose-field" placeholder="Email body..." oninput="updateSendButton()"></textarea>
+
+    <div class="send-row">
+      <button class="btn-send" id="btnSend" onclick="sendEmail()" disabled>
+        Send BCC Email (<span id="sendCount">0</span> volunteers)
+      </button>
+      <span id="sendStatus" class="status" style="margin-top:0;"></span>
+    </div>
+  </div>
+
+<script>
+  // ── State ─────────────────────────────────────────────────────────────────
+  var allVolunteers = [];
+  var activeRoles = {};    // role -> true/false
+  var selectedEmails = {}; // email -> true (using object as Set for IE compat)
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  google.script.run
+    .withSuccessHandler(onDataLoaded)
+    .withFailureHandler(onDataError)
+    .getVolunteerManagementData();
+
+  function onDataLoaded(volunteers) {
+    allVolunteers = volunteers || [];
+
+    // Count per role
+    var roleCounts = {};
+    for (var i = 0; i < allVolunteers.length; i++) {
+      var r = allVolunteers[i].role || 'Unknown';
+      roleCounts[r] = (roleCounts[r] || 0) + 1;
+    }
+
+    // Canonical order first, then extras alphabetically
+    var canonical = ['Mentor', 'Filer', 'Frontline', 'Internal Services'];
+    var extras = Object.keys(roleCounts).filter(function(r) {
+      return canonical.indexOf(r) === -1;
+    }).sort();
+    var orderedRoles = canonical.filter(function(r) { return roleCounts[r]; }).concat(extras);
+
+    // Build checkboxes — all checked by default
+    var grid = document.getElementById('roleFilterGrid');
+    grid.innerHTML = '';
+    for (var j = 0; j < orderedRoles.length; j++) {
+      (function(role, count) {
+        activeRoles[role] = true;
+        var lbl = document.createElement('label');
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = true;
+        cb.value = role;
+        cb.addEventListener('change', function() {
+          activeRoles[role] = this.checked;
+          renderTable();
+        });
+        lbl.appendChild(cb);
+        lbl.appendChild(document.createTextNode('\u00a0' + role + ' (' + count + ')'));
+        grid.appendChild(lbl);
+      })(orderedRoles[j], roleCounts[orderedRoles[j]]);
+    }
+
+    setTableStatus('', '');
+    renderTable();
+  }
+
+  function onDataError(err) {
+    setTableStatus('Failed to load volunteers: ' + (err.message || String(err)), 'error');
+  }
+
+  // ── Table ─────────────────────────────────────────────────────────────────
+  function getVisible() {
+    return allVolunteers.filter(function(v) {
+      return activeRoles[v.role || 'Unknown'];
+    });
+  }
+
+  function renderTable() {
+    var visible = getVisible();
+    var tbody = document.getElementById('volunteerBody');
+    var html = '';
+
+    for (var i = 0; i < visible.length; i++) {
+      var v = visible[i];
+      var checked = selectedEmails[v.email] ? 'checked' : '';
+      html += '<tr>' +
+        '<td><input type="checkbox" data-email="' + esc(v.email) + '" ' + checked + ' onchange="toggleRow(this)"></td>' +
+        '<td>' + esc(v.name) + '</td>' +
+        '<td>' + esc(v.role || '') + '</td>' +
+        '<td style="font-size:0.82rem;">' + esc(v.email) + '</td>' +
+        '<td>' + esc(v.efileNum || '') + '</td>' +
+        '<td>' + (v.attendedTraining ? 'Yes' : '') + '</td>' +
+        '</tr>';
+    }
+
+    if (visible.length === 0) {
+      html = '<tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">No volunteers match the selected roles.</td></tr>';
+    }
+
+    tbody.innerHTML = html;
+    syncHeaderCheckbox(visible);
+    updateCounts();
+  }
+
+  function syncHeaderCheckbox(visible) {
+    var checkAll = document.getElementById('checkAll');
+    if (!visible) visible = getVisible();
+    var selCount = 0;
+    for (var i = 0; i < visible.length; i++) {
+      if (selectedEmails[visible[i].email]) selCount++;
+    }
+    checkAll.checked = visible.length > 0 && selCount === visible.length;
+    checkAll.indeterminate = selCount > 0 && selCount < visible.length;
+  }
+
+  // ── Selection ─────────────────────────────────────────────────────────────
+  function toggleRow(cb) {
+    if (cb.checked) selectedEmails[cb.dataset.email] = true;
+    else delete selectedEmails[cb.dataset.email];
+    syncHeaderCheckbox();
+    updateCounts();
+  }
+
+  function toggleAllVisible(checked) {
+    var visible = getVisible();
+    for (var i = 0; i < visible.length; i++) {
+      if (checked) selectedEmails[visible[i].email] = true;
+      else delete selectedEmails[visible[i].email];
+    }
+    renderTable();
+  }
+
+  function selectAllVisible()   { document.getElementById('checkAll').checked = true;  toggleAllVisible(true);  }
+  function deselectAllVisible() { document.getElementById('checkAll').checked = false; toggleAllVisible(false); }
+
+  function selectAllRoles() {
+    var cbs = document.querySelectorAll('#roleFilterGrid input[type="checkbox"]');
+    for (var i = 0; i < cbs.length; i++) { cbs[i].checked = true; activeRoles[cbs[i].value] = true; }
+    renderTable();
+  }
+
+  function deselectAllRoles() {
+    var cbs = document.querySelectorAll('#roleFilterGrid input[type="checkbox"]');
+    for (var i = 0; i < cbs.length; i++) { cbs[i].checked = false; activeRoles[cbs[i].value] = false; }
+    renderTable();
+  }
+
+  // ── Send ──────────────────────────────────────────────────────────────────
+  function sendEmail() {
+    var emails = Object.keys(selectedEmails);
+    var subject = document.getElementById('emailSubject').value.trim();
+    var body = document.getElementById('emailBody').value.trim();
+
+    if (emails.length === 0 || !subject || !body) return;
+
+    var btn = document.getElementById('btnSend');
+    btn.disabled = true;
+    setSendStatus('Sending...', 'loading');
+
+    google.script.run
+      .withSuccessHandler(function() {
+        setSendStatus('Email sent to ' + emails.length + ' volunteer' + (emails.length === 1 ? '' : 's') + '.', 'success');
+        btn.disabled = false;
+        updateSendButton();
+      })
+      .withFailureHandler(function(err) {
+        setSendStatus('Error: ' + (err.message || String(err)), 'error');
+        btn.disabled = false;
+      })
+      .sendVolunteerBccEmail(emails, subject, body);
+  }
+
+  // ── UI helpers ─────────────────────────────────────────────────────────────
+  function updateCounts() {
+    var n = Object.keys(selectedEmails).length;
+    document.getElementById('selectedCount').textContent = n + ' selected';
+    document.getElementById('sendCount').textContent = n;
+    updateSendButton();
+  }
+
+  function updateSendButton() {
+    var n = Object.keys(selectedEmails).length;
+    var subject = document.getElementById('emailSubject').value.trim();
+    var body = document.getElementById('emailBody').value.trim();
+    document.getElementById('btnSend').disabled = (n === 0 || !subject || !body);
+  }
+
+  function setTableStatus(msg, type) {
+    var el = document.getElementById('tableStatus');
+    el.textContent = msg;
+    el.className = 'status' + (type ? ' ' + type : '');
+  }
+
+  function setSendStatus(msg, type) {
+    var el = document.getElementById('sendStatus');
+    el.textContent = msg;
+    el.className = 'status ' + type;
+    el.style.display = 'block';
+  }
+
+  function esc(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

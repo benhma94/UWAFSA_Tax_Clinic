@@ -97,6 +97,8 @@ function doGet(e) {
       return loadPage('archive_rollforward', 'Archive & Rollforward', {});
     case 'raffledraw':
       return loadPage('raffle_draw', 'Raffle Draw', { xframe: ALLOW });
+    case 'volunteermgmt':
+      return loadPage('volunteer_management', 'Volunteer Management', {});
     default:
       return loadPage('catbus_intake_form', 'AFSA Tax Clinic Intake Form', { xframe: ALLOW });
   }
