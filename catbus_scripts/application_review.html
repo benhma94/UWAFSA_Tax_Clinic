@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <?!= include('shared_styles') ?>
+  <style>
+    body {
+      margin: 0 auto;
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      padding: 20px;
+      max-width: 820px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      color: var(--accent-color);
+    }
+
+    .subtitle {
+      font-size: 0.95rem;
+      margin: 0 0 20px;
+    }
+
+    body.light .subtitle { color: #666; }
+    body.dark  .subtitle { color: #aaa; }
+
+    .card {
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid;
+      margin-bottom: 20px;
+    }
+
+    body.light .card { background: #f2f2f2; border-color: var(--border-light); }
+    body.dark  .card { background: #2a2a2a; border-color: var(--border-dark); }
+
+    .card h2 {
+      margin: 0 0 16px;
+      font-size: 1.05rem;
+      color: var(--accent-color);
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+    }
+
+    select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+
+    body.light select, body.light textarea {
+      background: #fff;
+      color: var(--text-color-light);
+      border-color: var(--border-light);
+    }
+
+    body.dark select, body.dark textarea {
+      background: var(--input-bg-dark);
+      color: var(--text-color-dark);
+      border-color: var(--border-dark);
+    }
+
+    select { height: 42px; }
+    textarea { min-height: 90px; resize: vertical; }
+
+    .field { margin-bottom: 18px; }
+
+    /* Role tabs */
+    .role-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .role-tab {
+      padding: 8px 22px;
+      border: 2px solid;
+      border-radius: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.15s;
+    }
+
+    body.light .role-tab { background: #fff; color: #555; border-color: #ccc; }
+    body.dark  .role-tab { background: #333; color: #bbb; border-color: var(--border-dark); }
+
+    .role-tab.active {
+      border-color: var(--accent-color) !important;
+      background: var(--accent-color) !important;
+      color: #fff !important;
+    }
+
+    body.light .role-tab:hover:not(.active) { border-color: #999; background: #f8f8f8; }
+    body.dark  .role-tab:hover:not(.active) { border-color: #666; background: #3a3a3a; }
+
+    /* Stats bar */
+    .stats-bar {
+      border: 1px solid;
+      border-radius: 6px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+
+    body.light .stats-bar { background: #fff; color: #555; border-color: var(--border-light); }
+    body.dark  .stats-bar { background: #1e1e1e; color: #aaa; border-color: var(--border-dark); }
+
+    .stats-bar strong { color: var(--accent-color); }
+
+    /* Detail grid */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .detail-item {
+      border: 1px solid;
+      border-radius: 6px;
+      padding: 10px 14px;
+    }
+
+    body.light .detail-item { background: #fff; border-color: var(--border-light); }
+    body.dark  .detail-item { background: #1e1e1e; border-color: var(--border-dark); }
+
+    .detail-item .detail-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent-color);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+
+    body.light .detail-item .detail-value { font-size: 0.92rem; color: var(--text-color-light); }
+    body.dark  .detail-item .detail-value { font-size: 0.92rem; color: var(--text-color-dark); }
+
+    /* Answer blocks */
+    .answer-block {
+      border: 1px solid;
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+
+    body.light .answer-block { background: #fff; border-color: var(--border-light); }
+    body.dark  .answer-block { background: #1e1e1e; border-color: var(--border-dark); }
+
+    .answer-block .answer-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--accent-color);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .answer-block .answer-text {
+      font-size: 0.93rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Accept/Reject toggle */
+    .verdict-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .verdict-btn {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    body.light .verdict-btn { background: #fff; color: #555; border-color: #ccc; }
+    body.dark  .verdict-btn { background: #333; color: #bbb; border-color: var(--border-dark); }
+
+    body.light .verdict-btn:hover:not(.selected) { border-color: #999; background: #f8f8f8; }
+    body.dark  .verdict-btn:hover:not(.selected) { border-color: #666; background: #3a3a3a; }
+
+    .verdict-btn.accept.selected { border-color: var(--success-color); background: #d5f5e3; color: #1e8449; }
+    .verdict-btn.reject.selected { border-color: #e74c3c;              background: #fadbd8; color: #922b21; }
+
+    /* Save button */
+    .btn-send {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--accent-color);
+      color: #fff;
+      transition: opacity 0.2s;
+      margin-top: 4px;
+    }
+
+    .btn-send:hover:not(:disabled) { opacity: 0.85; }
+    .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Status message */
+    .status-msg {
+      padding: 12px;
+      border-radius: 4px;
+      margin-top: 14px;
+      display: none;
+      font-size: 0.95rem;
+    }
+
+    .status-msg.success { background: #d5f5e3; color: #1e8449; display: block; }
+    .status-msg.error   { background: #fadbd8; color: #922b21; display: block; }
+    .status-msg.loading { background: #d6eaf8; color: #21618c; display: block; }
+
+    #detailPanel { display: none; }
+
+    /* Header with theme toggle */
+    header {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 12px; }
+      .detail-grid { grid-template-columns: 1fr 1fr; }
+      .role-tabs { gap: 6px; }
+      .role-tab { padding: 7px 14px; font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body class="light">
+  <?!= include('_PasswordGate') ?>
+
+  <header>
+    <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">&#9728;&#65039;</button>
+  </header>
+
+  <h1>Application Review</h1>
+  <p class="subtitle">UW AFSA Tax Clinic &mdash; Review and decide on volunteer applications</p>
+
+  <!-- Role Tabs -->
+  <div class="role-tabs">
+    <button class="role-tab active" id="tabMentor"    onclick="switchRole('mentor')">Mentor</button>
+    <button class="role-tab"        id="tabFrontline" onclick="switchRole('frontline')">Frontline</button>
+    <button class="role-tab"        id="tabFiler"     onclick="switchRole('filer')">Filer</button>
+  </div>
+
+  <!-- Selector Card -->
+  <div class="card">
+    <h2>Select Application</h2>
+    <div id="statsBar" class="stats-bar">Loading...</div>
+    <div class="field">
+      <label for="applicationSelect">Application</label>
+      <select id="applicationSelect" onchange="onSelectApplication()">
+        <option value="">Loading applications...</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Detail Panel -->
+  <div id="detailPanel">
+
+    <div class="card">
+      <h2>Application Details</h2>
+      <div class="detail-grid" id="detailGrid"></div>
+      <div id="longTextBlocks"></div>
+      <div id="caseStudyBlocks"></div>
+    </div>
+
+    <div class="card">
+      <h2>Decision</h2>
+
+      <div class="field">
+        <label>Verdict</label>
+        <div class="verdict-row">
+          <button type="button" class="verdict-btn accept" id="btnAccept" onclick="selectVerdict('Accept')">Accept</button>
+          <button type="button" class="verdict-btn reject" id="btnReject" onclick="selectVerdict('Reject')">Reject</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="comments">Comments <span style="font-weight:400;color:#888;font-size:0.85rem;">(optional)</span></label>
+        <textarea id="comments" placeholder="Notes for this application..."></textarea>
+      </div>
+
+      <button type="button" class="btn-send" id="saveBtn" onclick="saveDecision()">Save Decision</button>
+      <div id="statusMsg" class="status-msg"></div>
+    </div>
+
+  </div>
+
+<?!= include('shared_scripts') ?>
+
+<script>
+  var applications = [];
+  var currentRole = 'mentor';
+  var selectedVerdict = '';
+
+  function switchRole(role) {
+    currentRole = role;
+    ['Mentor', 'Frontline', 'Filer'].forEach(function(r) {
+      document.getElementById('tab' + r).classList.toggle('active', r.toLowerCase() === role);
+    });
+    document.getElementById('detailPanel').style.display = 'none';
+    document.getElementById('applicationSelect').innerHTML = '<option value="">Loading applications...</option>';
+    document.getElementById('statsBar').textContent = 'Loading...';
+    loadApplications(role);
+  }
+
+  function loadApplications(role) {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        applications = data || [];
+        updateStatsBar();
+        populateSelect();
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('applicationSelect').innerHTML =
+          '<option value="">Failed to load: ' + err.message + '</option>';
+        document.getElementById('statsBar').textContent = 'Error loading data.';
+      })
+      .getVolunteerApplications(role);
+  }
+
+  function updateStatsBar() {
+    var accepted = applications.filter(function(a) { return a.status === 'Accept'; }).length;
+    var rejected = applications.filter(function(a) { return a.status === 'Reject'; }).length;
+    var pending  = applications.filter(function(a) { return !a.status; }).length;
+    var total    = applications.length;
+    document.getElementById('statsBar').innerHTML =
+      '<strong>' + accepted + ' accepted</strong> &nbsp;/&nbsp; ' +
+      rejected + ' rejected &nbsp;/&nbsp; ' +
+      pending + ' pending &nbsp;/&nbsp; ' +
+      total + ' total';
+  }
+
+  function populateSelect() {
+    var sel = document.getElementById('applicationSelect');
+    sel.innerHTML = '';
+
+    if (applications.length === 0) {
+      sel.innerHTML = '<option value="">No applications found</option>';
+      return;
+    }
+
+    var placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '\u2014 Select an application \u2014';
+    sel.appendChild(placeholder);
+
+    applications.forEach(function(app) {
+      var opt = document.createElement('option');
+      opt.value = app.rowIndex;
+      var prefix = app.status === 'Accept' ? '[A] ' : app.status === 'Reject' ? '[R] ' : '[\u00B7] ';
+      opt.textContent = prefix + app.firstName + ' ' + app.lastName + ' \u2014 ' + app.timestamp;
+      sel.appendChild(opt);
+    });
+  }
+
+  function onSelectApplication() {
+    var sel      = document.getElementById('applicationSelect');
+    var rowIndex = parseInt(sel.value);
+    var panel    = document.getElementById('detailPanel');
+
+    if (!sel.value) {
+      panel.style.display = 'none';
+      return;
+    }
+
+    var app = applications.find(function(a) { return a.rowIndex === rowIndex; });
+    panel.style.display = 'block';
+
+    var grid = document.getElementById('detailGrid');
+    grid.innerHTML = '';
+
+    var gridFields;
+    if (currentRole === 'mentor') {
+      gridFields = [
+        ['Timestamp',              app.timestamp],
+        ['Email',                  app.email],
+        ['First Name',             app.firstName],
+        ['Preferred Name',         app.preferredName],
+        ['Last Name',              app.lastName],
+        ['Program',                app.program],
+        ['Year / Term',            app.term],
+        ['Other Languages',        app.otherLanguages],
+        ['T-Shirt Size',           app.tshirtSize],
+        ['Previously Volunteered', app.previouslyVolunteered],
+        ['Current Decision',       app.status || 'Pending']
+      ];
+    } else {
+      gridFields = [
+        ['Timestamp',           app.timestamp],
+        ['First Name',          app.firstName],
+        ['Preferred Name',      app.preferredName],
+        ['Last Name',           app.lastName],
+        ['Email',               app.email],
+        ['Program',             app.program],
+        ['Term',                app.term],
+        ['Area of Affiliation', app.areaOfAffiliation],
+        ['Other Languages',     app.otherLanguages],
+        ['Current Decision',    app.status || 'Pending']
+      ];
+    }
+
+    gridFields.forEach(function(pair) {
+      var item = document.createElement('div');
+      item.className = 'detail-item';
+      var lbl = document.createElement('div');
+      lbl.className = 'detail-label';
+      lbl.textContent = pair[0];
+      var val = document.createElement('div');
+      val.className = 'detail-value';
+      val.textContent = pair[1] || '\u2014';
+      item.appendChild(lbl);
+      item.appendChild(val);
+      grid.appendChild(item);
+    });
+
+    var longBlocks = document.getElementById('longTextBlocks');
+    longBlocks.innerHTML = '';
+    var caseBlocks = document.getElementById('caseStudyBlocks');
+    caseBlocks.innerHTML = '';
+
+    if (currentRole === 'filer' || currentRole === 'frontline') {
+      if (app.resumeUrl) {
+        longBlocks.innerHTML += makeAnswerBlock('Resume',
+          '<a href="' + escapeHtml(app.resumeUrl) + '" target="_blank" rel="noopener" ' +
+          'style="color:var(--accent-color);">View Resume</a>', true);
+      }
+      longBlocks.innerHTML += makeAnswerBlock('Why Volunteer',           app.whyVolunteer);
+      longBlocks.innerHTML += makeAnswerBlock('Time Management Example', app.timeManagement);
+      longBlocks.innerHTML += makeAnswerBlock('Willing to Commit',       app.willingToCommit);
+    } else {
+      caseBlocks.innerHTML += makeAnswerBlock('Tax Experience', app.taxExperience);
+      caseBlocks.innerHTML += makeAnswerBlock('Case Study Q1',  app.caseQ1);
+      caseBlocks.innerHTML += makeAnswerBlock('Case Study Q2',  app.caseQ2);
+      caseBlocks.innerHTML += makeAnswerBlock('Case Study Q3',  app.caseQ3);
+    }
+
+    selectedVerdict = app.status || '';
+    document.getElementById('btnAccept').classList.toggle('selected', selectedVerdict === 'Accept');
+    document.getElementById('btnReject').classList.toggle('selected', selectedVerdict === 'Reject');
+    document.getElementById('comments').value = app.comment || '';
+    clearStatus();
+  }
+
+  function makeAnswerBlock(label, content, isHtml) {
+    var inner = isHtml
+      ? content
+      : '<span style="white-space:pre-wrap;word-break:break-word;">' + escapeHtml(content || '') + '</span>';
+    return '<div class="answer-block">' +
+      '<div class="answer-label">' + escapeHtml(label) + '</div>' +
+      '<div class="answer-text">' + inner + '</div></div>';
+  }
+
+  function selectVerdict(v) {
+    selectedVerdict = v;
+    document.getElementById('btnAccept').classList.toggle('selected', v === 'Accept');
+    document.getElementById('btnReject').classList.toggle('selected', v === 'Reject');
+  }
+
+  function setStatus(msg, type) {
+    var el = document.getElementById('statusMsg');
+    el.textContent = msg;
+    el.className = 'status-msg ' + type;
+  }
+
+  function clearStatus() {
+    var el = document.getElementById('statusMsg');
+    el.className = 'status-msg';
+    el.textContent = '';
+  }
+
+  function saveDecision() {
+    var sel      = document.getElementById('applicationSelect');
+    var rowIndex = parseInt(sel.value);
+
+    if (!sel.value) {
+      setStatus('Please select an application first.', 'error');
+      return;
+    }
+    if (!selectedVerdict) {
+      setStatus('Please select Accept or Reject.', 'error');
+      return;
+    }
+
+    var app = applications.find(function(a) { return a.rowIndex === rowIndex; });
+    var btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    setStatus('Saving...', 'loading');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        if (result.success) {
+          app.status  = selectedVerdict;
+          app.comment = document.getElementById('comments').value.trim();
+          updateStatsBar();
+          populateSelect();
+          document.getElementById('applicationSelect').value = rowIndex;
+          setStatus('Decision saved.', 'success');
+        } else {
+          setStatus(result.message, 'error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        setStatus('Failed: ' + err.message, 'error');
+      })
+      .saveApplicationDecision({
+        role:     currentRole,
+        rowIndex: app.rowIndex,
+        decision: selectedVerdict,
+        comment:  document.getElementById('comments').value.trim()
+      });
+  }
+
+  loadThemePreference();
+  switchRole('mentor');
+</script>
+</body>
+</html>

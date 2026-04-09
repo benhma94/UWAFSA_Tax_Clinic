@@ -194,23 +194,14 @@ function getAvailableProductCodes(year) {
 function getVolunteerEmailsForCodes(includeAllRoles) {
   includeAllRoles = includeAllRoles === true;
 
-  const sheet = getSheet(CONFIG.SHEETS.SCHEDULE_AVAILABILITY);
-  const lastRow = sheet.getLastRow();
-
-  if (lastRow < 2) return [];
-
-  // Columns: 0=Timestamp, 1=FirstName, 2=LastName, 3=Email, 4=Role
-  const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
-
+  const allVolunteers = getConsolidatedVolunteerList_();
   const filers = [];
   const mentors = [];
   const seenEmails = new Set();
 
-  for (const row of data) {
-    const firstName = row[1]?.toString().trim() || '';
-    const lastName = row[2]?.toString().trim() || '';
-    const email = row[3]?.toString().trim().toLowerCase() || '';
-    const role = row[4]?.toString().trim().toLowerCase() || '';
+  for (const v of allVolunteers) {
+    const email = v.email;
+    const role = v.role.toLowerCase();
 
     if (!email || !email.includes('@') || seenEmails.has(email)) continue;
 
@@ -223,11 +214,7 @@ function getVolunteerEmailsForCodes(includeAllRoles) {
     }
 
     seenEmails.add(email);
-    const volunteer = {
-      email,
-      name: (firstName + ' ' + lastName).trim() || email,
-      role
-    };
+    const volunteer = { email, name: v.name || email, role };
 
     if (role.includes('mentor') || role.includes('senior')) {
       mentors.push(volunteer);

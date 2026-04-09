@@ -228,23 +228,12 @@ function getVolunteerScheduleByName(searchTerm) {
       return a.shiftId.charCodeAt(2) - b.shiftId.charCodeAt(2);
     });
 
-    // Get volunteer role to determine if mentor
+    // Get volunteer role from Consolidated Volunteer List
     let volunteerRole = '';
     try {
-      const ss = getSpreadsheet();
-      const availSheet = ss.getSheetByName(CONFIG.SHEETS.SCHEDULE_AVAILABILITY);
-      if (availSheet && availSheet.getLastRow() > 1) {
-        const availData = availSheet.getRange(2, 1, availSheet.getLastRow() - 1, 5).getValues();
-        for (const row of availData) {
-          const firstName = row[1]?.toString().trim() || '';
-          const lastName = row[2]?.toString().trim() || '';
-          const role = row[4]?.toString().trim() || '';
-          if (`${firstName} ${lastName}`.toLowerCase() === volunteerName.toLowerCase()) {
-            volunteerRole = role;
-            break;
-          }
-        }
-      }
+      const volunteers = getConsolidatedVolunteerList_();
+      const match = volunteers.find(v => v.name.toLowerCase() === volunteerName.toLowerCase());
+      if (match) volunteerRole = match.role;
     } catch (e) {
       Logger.log('Warning: Could not read volunteer role: ' + e.message);
     }
@@ -515,21 +504,11 @@ function getVolunteerScheduleByDay(day, filterRole = '') {
     // Build volunteer role map from the Schedule Availability sheet
     const volunteerRoles = {};
     try {
-      const ss = getSpreadsheet();
-      const availSheet = ss.getSheetByName(CONFIG.SHEETS.SCHEDULE_AVAILABILITY);
-      if (availSheet && availSheet.getLastRow() > 1) {
-        const availData = availSheet.getRange(2, 1, availSheet.getLastRow() - 1, 5).getValues();
-        for (const row of availData) {
-          const firstName = row[1]?.toString().trim() || '';
-          const lastName = row[2]?.toString().trim() || '';
-          const role = row[4]?.toString().trim() || '';
-          if (firstName && lastName && role) {
-            volunteerRoles[`${firstName} ${lastName}`] = role;
-          }
-        }
+      for (const v of getConsolidatedVolunteerList_()) {
+        if (v.name && v.role) volunteerRoles[v.name] = v.role;
       }
     } catch (e) {
-      Logger.log('Warning: Could not read volunteer roles from availability sheet: ' + e.message);
+      Logger.log('Warning: Could not read volunteer roles from Consolidated Volunteer List: ' + e.message);
     }
     
     // Find the day column in the header row

@@ -298,6 +298,13 @@
         <div class="help-text">We'll check if you've already submitted and pre-fill your previous selections.</div>
       </div>
 
+      <div class="form-group" id="volunteerLookupGroup">
+        <label for="volunteerLookup">Find Your Name (optional):</label>
+        <input type="text" id="volunteerLookup" list="volunteerRosterList" placeholder="Start typing your name..." autocomplete="off" oninput="handleVolunteerLookupInput()">
+        <datalist id="volunteerRosterList"></datalist>
+        <div class="help-text">Select your name to auto-fill the fields below. If you don't see your name, fill them in manually.</div>
+      </div>
+
       <div class="form-group">
         <label for="firstName" class="required">First Name:</label>
         <input type="text" id="firstName" required oninput="clearDuplicateNameWarning()">
@@ -754,8 +761,62 @@
       .submitAvailabilityForm(formData);
   }
 
+  // Volunteer roster loaded from Consolidated Volunteer List for name autocomplete
+  let volunteerRoster = [];
+
+  function loadVolunteerRoster() {
+    google.script.run
+      .withSuccessHandler(function(roster) {
+        volunteerRoster = roster || [];
+        const datalist = document.getElementById('volunteerRosterList');
+        datalist.innerHTML = '';
+        for (const v of volunteerRoster) {
+          const option = document.createElement('option');
+          option.value = v.name;
+          datalist.appendChild(option);
+        }
+      })
+      .withFailureHandler(function() { /* fail silently — autocomplete is optional */ })
+      .getVolunteersForAutocomplete();
+  }
+
+  function handleVolunteerLookupInput() {
+    const input = document.getElementById('volunteerLookup').value.trim();
+    const match = volunteerRoster.find(v => v.name.toLowerCase() === input.toLowerCase());
+    if (!match) return;
+
+    // Split name into first/last — preferred name may have spaces, last name is the last token
+    const parts = match.name.split(' ');
+    const lastName = parts.pop();
+    const firstName = parts.join(' ');
+
+    document.getElementById('firstName').value = firstName;
+    document.getElementById('lastName').value = lastName;
+    if (match.email) document.getElementById('email').value = match.email;
+    if (match.role) {
+      const roleSelect = document.getElementById('role');
+      // Match against the option values (Filer, Mentor, Frontline, Internal Services)
+      const roleMap = {
+        'filer': 'Filer',
+        'mentor': 'Mentor',
+        'senior mentor': 'Mentor',
+        'frontline': 'Frontline',
+        'internal services': 'Internal Services',
+        'receptionist': 'Frontline'
+      };
+      const mapped = roleMap[match.role.toLowerCase()];
+      if (mapped) roleSelect.value = mapped;
+    }
+
+    // Trigger the existing email lookup to pre-fill availability if they've already submitted
+    checkForExistingVolunteer();
+    clearDuplicateNameWarning();
+  }
+
   // Initialize: load config from backend, then build the UI
   window.addEventListener('load', () => {
+    loadVolunteerRoster();
+
     google.script.run
       .withSuccessHandler(config => {
         SHIFT_CONFIG.TIME_SLOTS = config.timeSlots;

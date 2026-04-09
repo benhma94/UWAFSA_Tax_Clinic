@@ -51,24 +51,10 @@ function writeQuizSubmission(volunteer, partner, clientId, receiptData, rows, fi
  */
 function lookupEmailsByName(name1, name2) {
   try {
-    const sheet = getSheet(CONFIG.SHEETS.SCHEDULE_AVAILABILITY);
-    const lastRow = sheet.getLastRow();
-    if (lastRow <= 1) return { email1: '', email2: '' };
-
-    // Columns: A=Timestamp, B=FirstName, C=LastName, D=Email
-    const data = sheet.getRange(2, 2, lastRow - 1, 3).getValues();
     const emailMap = {};
-
-    for (const row of data) {
-      const firstName = row[0]?.toString().trim() || '';
-      const lastName  = row[1]?.toString().trim() || '';
-      const email     = row[2]?.toString().trim() || '';
-      if (firstName && lastName && email) {
-        const fullName = `${firstName} ${lastName}`;
-        if (!emailMap[fullName]) emailMap[fullName] = email;
-      }
+    for (const v of getConsolidatedVolunteerList_()) {
+      if (!emailMap[v.name]) emailMap[v.name] = v.email;
     }
-
     return {
       email1: emailMap[name1] || '',
       email2: (name2 && emailMap[name2]) ? emailMap[name2] : ''

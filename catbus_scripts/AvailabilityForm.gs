@@ -80,8 +80,8 @@ function checkExistingVolunteer(email) {
 }
 
 /**
- * Checks if a volunteer with the given full name already exists in the sheet
- * Used to detect duplicate sign-ups under different email addresses
+ * Checks if a volunteer with the given full name already exists in the Schedule Availability sheet.
+ * Used to detect duplicate sign-ups under different email addresses.
  * @param {string} firstName - First name to search for
  * @param {string} lastName - Last name to search for
  * @returns {Object} { exists: true, maskedEmail } or { exists: false }
@@ -118,6 +118,19 @@ function checkAvailabilityNameExists(firstName, lastName) {
     Logger.log('checkAvailabilityNameExists error: ' + error.message);
     return { exists: false };
   }
+}
+
+/**
+ * Returns volunteer names, emails, and roles from the Consolidated Volunteer List
+ * for autocomplete on the availability form.
+ * @returns {Array<{name: string, email: string, role: string}>}
+ */
+function getVolunteersForAutocomplete() {
+  return getConsolidatedVolunteerList_().map(v => ({
+    name: v.name,
+    email: v.email,
+    role: v.role
+  }));
 }
 
 /**

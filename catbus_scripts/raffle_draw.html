@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <?!= include('shared_styles') ?>
+  <style>
+    body {
+      max-width: 860px;
+      padding: 30px 20px 80px;
+    }
+
+    header {
+      margin-bottom: 28px;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      font-size: 0.95rem;
+    }
+    body.light .subtitle { color: #666; }
+    body.dark  .subtitle { color: #aaa; }
+
+    /* ---- Exclusion chips ---- */
+    .exclusion-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      margin-bottom: 10px;
+    }
+
+    .section-label {
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.7;
+      margin: 0;
+    }
+
+    .exclusion-chevron {
+      font-size: 0.75rem;
+      opacity: 0.5;
+      transition: transform 0.2s;
+    }
+
+    .exclusion-collapsed .exclusion-chevron {
+      transform: rotate(180deg);
+    }
+
+    .chip-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 24px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid;
+      min-height: 52px;
+      max-height: 600px;
+      overflow: hidden;
+      transition: max-height 0.25s ease, opacity 0.25s ease, padding 0.25s ease, margin 0.25s ease, border-color 0.25s ease;
+    }
+    body.light .chip-area { background: #fff; border-color: var(--border-light); }
+    body.dark  .chip-area { background: var(--input-bg-dark); border-color: var(--border-dark); }
+
+    .exclusion-collapsed .chip-area {
+      max-height: 0;
+      opacity: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      margin-bottom: 0;
+      border-color: transparent;
+      min-height: 0;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px 5px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s, background 0.2s;
+      line-height: 1.4;
+    }
+    .chip.excluded {
+      background: rgba(142, 0, 0, 0.12);
+      color: var(--accent-color);
+    }
+    body.dark .chip.excluded {
+      background: rgba(142, 0, 0, 0.25);
+    }
+    .chip.excluded:hover {
+      background: rgba(142, 0, 0, 0.22);
+    }
+    .chip.included {
+      background: rgba(39, 174, 96, 0.12);
+      color: #1a7a42;
+    }
+    body.dark .chip.included {
+      background: rgba(39, 174, 96, 0.22);
+      color: #4ed47e;
+    }
+    .chip.included:hover {
+      background: rgba(39, 174, 96, 0.22);
+    }
+    .chip-x {
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+
+    /* ---- Draw controls ---- */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    #drawBtn {
+      font-size: 1rem;
+      padding: 13px 28px;
+      border-radius: 10px;
+    }
+
+    .pool-info {
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+
+    /* ---- Status / loading ---- */
+    #status {
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+      min-height: 24px;
+    }
+    .spinner-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* ---- Winner grid ---- */
+    #winnerGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .winner-card {
+      padding: 18px 20px;
+      border-radius: 12px;
+      border: 2px solid var(--accent-color);
+      animation: popIn 0.35s ease both;
+      position: relative;
+    }
+    body.light .winner-card { background: #fff; }
+    body.dark  .winner-card { background: var(--input-bg-dark); }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.85) translateY(8px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .winner-rank {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-color);
+      margin-bottom: 6px;
+    }
+
+    .winner-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .winner-meta {
+      font-size: 0.82rem;
+      opacity: 0.65;
+    }
+
+    /* ---- Again button ---- */
+    #againBtn {
+      display: none;
+      background: transparent;
+      border: 2px solid var(--accent-color);
+      color: var(--accent-color);
+      font-size: 0.95rem;
+      padding: 10px 24px;
+      border-radius: 8px;
+    }
+    body.dark #againBtn { color: #ff6b6b; border-color: #ff6b6b; }
+    #againBtn:hover:not(:disabled) {
+      background: rgba(142, 0, 0, 0.08);
+      transform: none;
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Raffle Draw</h1>
+      <p class="subtitle">Draw 10 winners weighted by volunteer hours. 1 partial hour = 1 entry.</p>
+    </div>
+    <button class="toggle-theme" id="themeToggle" title="Toggle theme">🌙</button>
+  </header>
+
+  <div id="status">
+    <div class="spinner-wrap">
+      <div class="loading"></div>
+      <span>Loading volunteer data&hellip;</span>
+    </div>
+  </div>
+
+  <div id="mainUI" style="display:none">
+    <div id="exclusionSection">
+      <div class="exclusion-header" onclick="toggleChips()">
+        <span class="section-label">Exclusions</span>
+        <span class="exclusion-chevron">▲</span>
+      </div>
+      <div class="chip-area" id="chipArea"></div>
+    </div>
+
+    <div class="controls">
+      <button id="drawBtn" onclick="runDraw()">Draw Winners</button>
+      <span class="pool-info" id="poolInfo"></span>
+    </div>
+
+    <div id="winnerGrid"></div>
+    <button id="againBtn" onclick="resetDraw()">Draw Again</button>
+  </div>
+
+  <script>
+    // ---- Theme ----
+    (function() {
+      var t = localStorage.getItem('theme');
+      document.body.classList.add(
+        (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) ? 'dark' : 'light'
+      );
+    })();
+    document.getElementById('themeToggle').addEventListener('click', function() {
+      var isDark = document.body.classList.toggle('dark');
+      document.body.classList.toggle('light', !isDark);
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+
+    // ---- State ----
+    var allVolunteers = [];   // { name, role, draws }
+    var excluded = new Set(); // lowercase names currently excluded
+
+    var DEFAULT_EXCLUDED_NAMES = ['ben ma', 'eric fong', 'rebecca lee', 'baldwyn tai'];
+    var IS_ROLE = 'internal services';
+
+    // ---- Load data ----
+    google.script.run
+      .withSuccessHandler(onDataLoaded)
+      .withFailureHandler(onDataError)
+      .getRaffleVolunteerData();
+
+    function onDataLoaded(data) {
+      allVolunteers = data || [];
+
+      // Build default exclusion set
+      excluded = new Set(DEFAULT_EXCLUDED_NAMES);
+      allVolunteers.forEach(function(v) {
+        if (v.role && (v.role.toLowerCase().includes(IS_ROLE) || v.role.toLowerCase() === 'drop')) {
+          excluded.add(v.name.toLowerCase());
+        }
+      });
+
+      renderChips();
+      updatePoolInfo();
+      document.getElementById('status').textContent = '';
+      document.getElementById('mainUI').style.display = '';
+    }
+
+    function onDataError(err) {
+      document.getElementById('status').textContent = 'Error loading data: ' + (err && err.message ? err.message : err);
+    }
+
+    // ---- Chips ----
+    function renderChips() {
+      var area = document.getElementById('chipArea');
+      area.innerHTML = '';
+
+      // Show every volunteer as a chip; excluded ones look different
+      allVolunteers.forEach(function(v) {
+        var isEx = excluded.has(v.name.toLowerCase());
+        var chip = document.createElement('button');
+        chip.className = 'chip ' + (isEx ? 'excluded' : 'included');
+        chip.title = isEx ? 'Click to include in draw' : 'Click to exclude from draw';
+        chip.innerHTML = escHtml(v.name) + ' <span class="chip-x">' + (isEx ? '✕' : '✓') + '</span>';
+        chip.onclick = function() { toggleExclusion(v.name); };
+        area.appendChild(chip);
+      });
+    }
+
+    function toggleExclusion(name) {
+      var key = name.toLowerCase();
+      if (excluded.has(key)) {
+        excluded.delete(key);
+      } else {
+        excluded.add(key);
+      }
+      renderChips();
+      updatePoolInfo();
+    }
+
+    function updatePoolInfo() {
+      var eligible = allVolunteers.filter(function(v) { return !excluded.has(v.name.toLowerCase()); });
+      var totalDraws = eligible.reduce(function(sum, v) { return sum + v.draws; }, 0);
+      var canDraw = eligible.filter(function(v) { return v.draws > 0; });
+      document.getElementById('poolInfo').textContent =
+        canDraw.length + ' eligible volunteer' + (canDraw.length !== 1 ? 's' : '') +
+        ', ' + totalDraws + ' total entr' + (totalDraws !== 1 ? 'ies' : 'y');
+    }
+
+    // ---- Draw ----
+    function runDraw() {
+      var eligible = allVolunteers.filter(function(v) {
+        return !excluded.has(v.name.toLowerCase()) && v.draws > 0;
+      });
+
+      if (eligible.length < 10) {
+        alert('Not enough eligible volunteers with hours to draw 10 winners (found ' + eligible.length + ').');
+        return;
+      }
+
+      // Build weighted pool
+      var pool = [];
+      eligible.forEach(function(v) {
+        for (var i = 0; i < v.draws; i++) pool.push(v);
+      });
+
+      // Fisher-Yates sample without replacement (pick 10 unique volunteers)
+      var winners = [];
+      var seen = new Set();
+      // Shuffle the pool, then walk until we have 10 unique names
+      shuffleArray(pool);
+      for (var i = 0; i < pool.length && winners.length < 10; i++) {
+        var key = pool[i].name.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          winners.push(pool[i]);
+        }
+      }
+
+      displayWinners(winners);
+    }
+
+    function shuffleArray(arr) {
+      for (var i = arr.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+      }
+    }
+
+    function displayWinners(winners) {
+      var grid = document.getElementById('winnerGrid');
+      grid.innerHTML = '';
+      document.getElementById('drawBtn').disabled = true;
+
+      winners.forEach(function(v, idx) {
+        (function(volunteer, rank, delay) {
+          setTimeout(function() {
+            var card = document.createElement('div');
+            card.className = 'winner-card';
+            var hours = (volunteer.draws).toFixed(0);
+            card.innerHTML =
+              '<div class="winner-rank">#' + rank + '</div>' +
+              '<div class="winner-name">' + escHtml(volunteer.name) + '</div>' +
+              '<div class="winner-meta">' + escHtml(volunteer.role) + ' &bull; ' + hours + ' hr' + (hours !== '1' ? 's' : '') + ' &bull; ' + hours + ' entr' + (hours !== '1' ? 'ies' : 'y') + '</div>';
+            grid.appendChild(card);
+
+            if (rank === 10) {
+              var againBtn = document.getElementById('againBtn');
+              againBtn.style.display = '';
+            }
+          }, delay);
+        })(v, idx + 1, idx * 160);
+      });
+    }
+
+    function resetDraw() {
+      document.getElementById('winnerGrid').innerHTML = '';
+      document.getElementById('againBtn').style.display = 'none';
+      document.getElementById('drawBtn').disabled = false;
+    }
+
+    // ---- Collapse ----
+    function toggleChips() {
+      document.getElementById('exclusionSection').classList.toggle('exclusion-collapsed');
+    }
+
+    function escHtml(str) {
+      return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>
