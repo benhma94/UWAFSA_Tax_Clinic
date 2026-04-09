@@ -192,6 +192,10 @@ Instance-specific secrets live in [_Secrets.gs](catbus_scripts/_Secrets.gs) (git
 
 Copy `_Secrets.example.gs` → `_Secrets.gs` and fill in your values. This file is never committed.
 
+The Apps Script project ID lives in [.clasp.json](catbus_scripts/.clasp.example.json) (gitignored):
+
+Copy `.clasp.example.json` → `.clasp.json` and add your Script ID. This file is never committed.
+
 All other system configuration lives in [Config.gs](catbus_scripts/Config.gs):
 - `SCHEDULE_CONFIG` — day labels, shift times, shift ID mappings
 - `APPOINTMENT_CONFIG` — booking settings, client ID format
