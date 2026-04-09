@@ -139,27 +139,12 @@ function saveVolunteerScheduleEdits(volunteerName, shiftUpdates, sendEmail) {
 }
 
 /**
- * Looks up a volunteer's email from the Schedule Availability sheet
+ * Looks up a volunteer's email from the Consolidated Volunteer List
  * @param {string} volunteerName - Full name (first + last)
  * @returns {string|null} Email address or null if not found
  */
 function lookupVolunteerEmail_(volunteerName) {
-  const sheet = getSpreadsheet().getSheetByName(CONFIG.SHEETS.SCHEDULE_AVAILABILITY);
-  if (!sheet) return null;
-
-  const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return null;
-
-  const data = sheet.getRange(2, 2, lastRow - 1, 3).getValues(); // columns B(first), C(last), D(email)
   const target = volunteerName.trim().toLowerCase();
-
-  // Scan bottom-to-top to get most recent submission
-  for (let i = data.length - 1; i >= 0; i--) {
-    const fullName = ((data[i][0] || '') + ' ' + (data[i][1] || '')).trim().toLowerCase();
-    if (fullName === target) {
-      return data[i][2]?.toString().trim() || null;
-    }
-  }
-
-  return null;
+  const match = getConsolidatedVolunteerList_().find(v => v.name.toLowerCase() === target);
+  return match ? match.email : null;
 }

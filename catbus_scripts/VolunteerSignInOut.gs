@@ -398,63 +398,62 @@ function clearStaleSessions(hoursThreshold) {
 }
 
 /**
- * Gets consolidated volunteer data from external spreadsheet
- * Used for autocomplete in sign-in form
+ * Reads the Consolidated Volunteer List sheet and returns all volunteers.
+ * This is the shared helper used across the app for volunteer identity data.
+ * Schedule Availability is still used for shift-specific data.
+ * @returns {Array<Object>} Array of {name, firstName, lastName, email, role, efileNum, attendedTraining}
+ */
+function getConsolidatedVolunteerList_() {
+  const sheet = getSheet(CONFIG.SHEETS.CONSOLIDATED_VOLUNTEER_LIST);
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return [];
+  const cols = CONFIG.COLUMNS.CONSOLIDATED_VOLUNTEER_LIST;
+  const numCols = cols.ATTENDED_TRAINING + 1;
+  const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+  return data.map(row => {
+    const preferred = row[cols.PREFERRED_NAME]?.toString().trim() || '';
+    const legal = row[cols.FIRST_NAME_LEGAL]?.toString().trim() || '';
+    const last = row[cols.LAST_NAME]?.toString().trim() || '';
+    const firstName = preferred || legal;
+    return {
+      name: `${firstName} ${last}`.trim(),
+      firstName,
+      lastName: last,
+      email: row[cols.EMAIL]?.toString().trim().toLowerCase() || '',
+      role: row[cols.ROLE]?.toString().trim() || '',
+      efileNum: row[cols.EFILE_NUM]?.toString().trim() || '',
+      attendedTraining: row[cols.ATTENDED_TRAINING]
+    };
+  }).filter(v => v.name && v.email);
+}
+
+/**
+ * Gets consolidated volunteer data for autocomplete in the sign-in form.
  * @returns {Array<Object>} Array of objects with {name: string, role: string}
  */
 function getConsolidatedVolunteerData() {
   return safeExecute(() => {
-    try {
-      // Read from Schedule Availability sheet (volunteer shift sign-up data)
-      const sheet = getSheet(CONFIG.SHEETS.SCHEDULE_AVAILABILITY);
-      const lastRow = sheet.getLastRow();
+    const volunteers = getConsolidatedVolunteerList_().map(v => ({
+      name: v.name,
+      role: v.role || 'N/A'
+    }));
 
-      if (lastRow <= 1) {
-        Logger.log('Schedule Availability sheet has no data rows');
-        return [];
+    Logger.log(`Loaded ${volunteers.length} volunteers from Consolidated Volunteer List`);
+
+    // Apply role overrides from Volunteer Tags sheet
+    const tagData = getVolunteerTagsFromSheet();
+    const roleOverrides = tagData.roleOverrides || {};
+
+    for (const volunteer of volunteers) {
+      const override = roleOverrides[volunteer.name] || roleOverrides[volunteer.name.toLowerCase()];
+      // Only apply non-senior overrides (senior is set from schedule dashboard)
+      if (override && override.toLowerCase() !== 'senior mentor') {
+        volunteer.role = override;
       }
-
-      // Columns: A=Timestamp, B=FirstName, C=LastName, D=Email, E=Role
-      const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
-      Logger.log(`Schedule Availability has ${data.length} rows`);
-
-      const volunteers = [];
-
-      for (let i = 0; i < data.length; i++) {
-        const firstName = data[i][1]?.toString().trim() || '';
-        const lastName = data[i][2]?.toString().trim() || '';
-        const role = data[i][4]?.toString().trim() || '';
-
-        if (firstName && lastName) {
-          volunteers.push({
-            name: `${firstName} ${lastName}`,
-            role: role || 'N/A'
-          });
-        }
-      }
-
-      // Apply other role overrides from Volunteer Tags sheet
-      const tagData = getVolunteerTagsFromSheet();
-      const roleOverrides = tagData.roleOverrides || {};
-
-      for (const volunteer of volunteers) {
-        const override = roleOverrides[volunteer.name] || roleOverrides[volunteer.name.toLowerCase()];
-        // Only apply non-senior overrides (senior is now from schedule dashboard)
-        if (override && override.toLowerCase() !== 'senior mentor') {
-          volunteer.role = override;
-        }
-      }
-
-      // Sort by name for consistent ordering
-      volunteers.sort((a, b) => a.name.localeCompare(b.name));
-
-      Logger.log(`Loaded ${volunteers.length} volunteers from Schedule Availability`);
-      return volunteers;
-
-    } catch (error) {
-      Logger.log(`Error reading Schedule Availability: ${error.message}`);
-      return [];
     }
+
+    volunteers.sort((a, b) => a.name.localeCompare(b.name));
+    return volunteers;
   }, 'getConsolidatedVolunteerData');
 }
 

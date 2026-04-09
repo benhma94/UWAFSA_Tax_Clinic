@@ -7,9 +7,6 @@
  *   // Main Google Spreadsheet ID (from the URL of your spreadsheet)
  *   SPREADSHEET_ID: 'YOUR_SPREADSHEET_ID',
  *
- *   // External spreadsheet: Consolidated Volunteers list
- *   CONSOLIDATED_VOLUNTEERS_SHEET_ID: 'YOUR_CONSOLIDATED_VOLUNTEERS_SHEET_ID',
- *
  *   // Google Drive folder ID for filer resume uploads
  *   RESUME_FOLDER_ID: 'YOUR_RESUME_FOLDER_ID',
  *

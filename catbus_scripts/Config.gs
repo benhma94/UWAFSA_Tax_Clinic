@@ -12,17 +12,6 @@ const QUIZ_FOLDER_ID = SECRETS.QUIZ_FOLDER_ID;
 const CONFIG = {
   SPREADSHEET_ID: SECRETS.SPREADSHEET_ID,
 
-  EXTERNAL_SPREADSHEETS: {
-    CONSOLIDATED_VOLUNTEERS: {
-      ID: SECRETS.CONSOLIDATED_VOLUNTEERS_SHEET_ID,
-      SHEET_NAME: 'Consolidated List',
-      COLUMNS: {
-        ROLE: 0,
-        NAME: 7
-      }
-    }
-  },
-
   // Sheet Names
   SHEETS: {
     CLIENT_INTAKE: 'Client Intake',
@@ -32,6 +21,7 @@ const CONFIG = {
     TAX_RETURN_TRACKER: 'Tax Return Tracker',
     VOLUNTEER_LIST: 'Volunteer List',
     SIGNOUT: 'SignOut',
+    CONSOLIDATED_VOLUNTEER_LIST: 'Consolidated Volunteer List', // Master volunteer roster
     SCHEDULE_AVAILABILITY: 'Schedule Availability', // Form responses for volunteer availability
     SCHEDULE_OUTPUT: 'Shift Schedule', // Generated schedule
     PRODUCT_CODES: 'UFILE Keys', // Product codes for distribution
@@ -48,6 +38,16 @@ const CONFIG = {
   
   // Column Mappings (0-indexed)
   COLUMNS: {
+    CONSOLIDATED_VOLUNTEER_LIST: {
+      ROLE: 0,
+      EMAIL: 1,
+      FIRST_NAME_LEGAL: 2,
+      PREFERRED_NAME: 3,
+      LAST_NAME: 4,
+      EFILE_NUM: 5,
+      PASSWORD: 6,
+      ATTENDED_TRAINING: 7
+    },
     CLIENT_INTAKE: {
       TIMESTAMP: 0,
       HOUSEHOLD_SIZE: 1,
