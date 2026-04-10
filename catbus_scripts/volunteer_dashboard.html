@@ -6,6 +6,7 @@
   <style>
     /* File-specific input/select styling */
     input[type="text"],
+    input[type="password"],
     select,
     button {
       width: 100%;
@@ -18,6 +19,7 @@
     }
 
     body.light input[type="text"],
+    body.light input[type="password"],
     body.light select {
       background-color: #ffffff;
       border-color: var(--border-light);
@@ -25,6 +27,7 @@
     }
 
     body.dark input[type="text"],
+    body.dark input[type="password"],
     body.dark select {
       background-color: #333;
       border-color: var(--border-dark);
@@ -307,24 +310,6 @@
       background-color: rgba(142, 0, 0, 0.15);
     }
 
-    .stats-card {
-      margin-top: 12px;
-      padding: 14px 16px;
-      background-color: rgba(142, 0, 0, 0.05);
-      border-left: 4px solid var(--accent-color);
-      border-radius: 4px;
-    }
-
-    body.dark .stats-card {
-      background-color: rgba(142, 0, 0, 0.15);
-    }
-
-    .stats-card h3 {
-      margin: 0 0 10px 0;
-      font-size: 1em;
-      color: var(--accent-color);
-    }
-
     .stats-day-filter {
       display: flex;
       align-items: center;
@@ -390,6 +375,94 @@
       font-size: 0.9em;
     }
 
+    /* Credential section */
+    .credential-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .credential-row label {
+      font-weight: 600;
+      min-width: 90px;
+      flex-shrink: 0;
+    }
+
+    .credential-input-wrap {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .credential-input-wrap input {
+      margin: 0;
+    }
+
+    .badge-on-file {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      font-weight: 600;
+      background-color: rgba(39, 174, 96, 0.12);
+      color: #27ae60;
+      border: 1px solid #27ae60;
+      white-space: nowrap;
+    }
+
+    body.dark .badge-on-file {
+      background-color: rgba(39, 174, 96, 0.25);
+    }
+
+    .badge-missing {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      font-weight: 600;
+      background-color: rgba(0, 0, 0, 0.05);
+      color: #888;
+      border: 1px solid #bbb;
+      white-space: nowrap;
+    }
+
+    body.dark .badge-missing {
+      background-color: rgba(255, 255, 255, 0.06);
+      color: #aaa;
+      border-color: #555;
+    }
+
+    .btn-submit-creds {
+      display: inline-block;
+      width: auto;
+      padding: 11px 28px;
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-top: 8px;
+    }
+
+    .btn-submit-creds:hover:not(:disabled) {
+      background-color: #6e0000;
+      transform: translateY(-1px);
+    }
+
+    .btn-submit-creds:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .creds-feedback {
+      margin-top: 10px;
+      font-size: 0.9em;
+    }
+
     /* Mobile */
     @media (max-width: 768px) {
       body {
@@ -419,7 +492,7 @@
         justify-content: center;
       }
 
-      select, input[type="text"], button {
+      select, input[type="text"], input[type="password"], button {
         width: 100%;
         min-height: 44px;
         font-size: 1em;
@@ -471,6 +544,16 @@
         width: 100%;
       }
 
+      .credential-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+
+      .credential-input-wrap {
+        width: 100%;
+      }
+
       .footer-copyright {
         font-size: 9px;
       }
@@ -485,12 +568,13 @@
     </div>
   </header>
 
+  <!-- Section 1: Find Me -->
   <div class="form-section">
-    <h2>My Schedule</h2>
+    <h2>Find Me</h2>
     <div class="form-group">
       <label for="searchName">Search for your name:</label>
       <div class="autocomplete-container">
-        <input type="text" id="searchName" placeholder="Start typing to search for a volunteer..." autocomplete="off" style="flex: 1;" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="autocompleteDropdown">
+        <input type="text" id="searchName" placeholder="Start typing to search for a volunteer..." autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="autocompleteDropdown">
         <div id="autocompleteDropdown" class="autocomplete-dropdown" role="listbox"></div>
       </div>
       <div class="search-buttons">
@@ -498,33 +582,37 @@
         <button type="button" onclick="clearSearch()" style="background-color: #666;">✖️ Clear</button>
       </div>
     </div>
+  </div>
 
-    <div id="nameResults" class="results-section" style="display: none;">
-      <h3 id="nameResultsHeader">Your Assigned Shifts</h3>
-      <div id="nameResultsContent"></div>
+  <!-- Section 2: My Schedule -->
+  <div class="form-section" id="scheduleSection" style="display: none;">
+    <h2>My Schedule</h2>
+    <div id="nameResultsContent"><div class="loading"></div></div>
+  </div>
 
-      <!-- Stats section — shown after a successful name search -->
-      <div id="statsSection" style="margin-top: 20px; display: none;">
-        <div class="stats-card">
-          <h3>📊 Personal Stats</h3>
-          <div class="stats-day-filter">
-            <label for="statsDay">Filter by day:</label>
-            <select id="statsDay" onchange="refreshStats()">
-              <option value="">All Time</option>
-            </select>
-          </div>
-          <div id="statsContent"><div class="loading"></div></div>
-        </div>
-      </div>
+  <!-- Section 3: My Stats -->
+  <div class="form-section" id="statsSection" style="display: none;">
+    <h2>My Stats</h2>
+    <div class="stats-day-filter">
+      <label for="statsDay">Filter by day:</label>
+      <select id="statsDay" onchange="refreshStats()">
+        <option value="">All Time</option>
+      </select>
     </div>
+    <div id="statsContent"><div class="loading"></div></div>
+  </div>
+
+  <!-- Section 4: My Credentials -->
+  <div class="form-section" id="credentialsSection" style="display: none;">
+    <h2>My Credentials</h2>
+    <p class="help-text" style="margin-top: 0; margin-bottom: 16px;">Your EFILE# and password are used to file tax returns. Submit them here if not yet on file.</p>
+
+    <div id="credentialsContent"><div class="loading"></div></div>
   </div>
 
 <?!= include('shared_scripts') ?>
 <script>
-  // Schedule configuration - loaded from backend Config.gs
-  const SHIFT_CONFIG = {
-    TIME_SLOTS: {}
-  };
+  const SHIFT_CONFIG = { TIME_SLOTS: {} };
 
   let allVolunteerNames = [];
   let currentVolunteerName = '';
@@ -540,32 +628,22 @@
     google.script.run
       .withSuccessHandler(config => {
         SHIFT_CONFIG.TIME_SLOTS = config.timeSlots;
-
-        // Populate stats day dropdown from day labels
         const statsDay = document.getElementById('statsDay');
-        const dayLabels = config.dayLabels;
-        for (let i = 0; i < dayLabels.length; i++) {
+        config.dayLabels.forEach(label => {
           const opt = document.createElement('option');
-          opt.value = dayLabels[i];
-          opt.textContent = dayLabels[i];
+          opt.value = label;
+          opt.textContent = label;
           statsDay.appendChild(opt);
-        }
+        });
       })
-      .withFailureHandler(error => {
-        console.error('Error loading schedule config:', error);
-      })
+      .withFailureHandler(err => console.error('Error loading schedule config:', err))
       .getScheduleConfig();
   }
 
   function loadVolunteerNames() {
     google.script.run
-      .withSuccessHandler(names => {
-        allVolunteerNames = names || [];
-      })
-      .withFailureHandler(error => {
-        console.error('Error loading volunteer names:', error);
-        allVolunteerNames = [];
-      })
+      .withSuccessHandler(names => { allVolunteerNames = names || []; })
+      .withFailureHandler(err => { console.error('Error loading volunteer names:', err); allVolunteerNames = []; })
       .getAllVolunteerNames();
   }
 
@@ -584,52 +662,50 @@
     });
   }
 
-  function selectVolunteer(name) {
-    document.getElementById('searchName').value = name;
-    searchByName(name);
-  }
-
   function clearSearch() {
-    const searchInput = document.getElementById('searchName');
-    searchInput.value = '';
+    document.getElementById('searchName').value = '';
     if (vsAutocomplete) vsAutocomplete.clear();
-    document.getElementById('nameResults').style.display = 'none';
+    document.getElementById('scheduleSection').style.display = 'none';
     document.getElementById('statsSection').style.display = 'none';
+    document.getElementById('credentialsSection').style.display = 'none';
     currentVolunteerName = '';
     currentVolunteerRole = '';
   }
 
   function searchByName() {
     const searchTerm = document.getElementById('searchName').value.trim().toLowerCase();
-
     if (!searchTerm) {
       alert('Please enter a name to search');
       return;
     }
 
-    const nameResults = document.getElementById('nameResults');
-    const nameResultsContent = document.getElementById('nameResultsContent');
-    nameResults.style.display = 'block';
-    nameResultsContent.innerHTML = '<div class="loading"></div> Loading...';
-    document.getElementById('statsSection').style.display = 'none';
+    // Show all downstream sections in loading state
+    document.getElementById('nameResultsContent').innerHTML = '<div class="loading"></div> Loading...';
+    document.getElementById('scheduleSection').style.display = 'block';
+
+    document.getElementById('statsContent').innerHTML = '<div class="loading"></div>';
+    document.getElementById('statsDay').value = '';
+    document.getElementById('statsSection').style.display = 'block';
+
+    document.getElementById('credentialsContent').innerHTML = '<div class="loading"></div>';
+    document.getElementById('credentialsSection').style.display = 'block';
 
     google.script.run
-      .withSuccessHandler(result => {
-        displayNameResults(result, searchTerm);
-      })
-      .withFailureHandler(error => {
-        nameResultsContent.innerHTML = `<div class="no-results">Error loading schedule: ${error.message || error}</div>`;
+      .withSuccessHandler(result => displayScheduleResults(result, searchTerm))
+      .withFailureHandler(err => {
+        document.getElementById('nameResultsContent').innerHTML =
+          `<div class="no-results">Error loading schedule: ${escapeHtml(err.message || String(err))}</div>`;
       })
       .getVolunteerScheduleByName(searchTerm);
   }
 
-  function displayNameResults(result, searchTerm) {
-    const nameResultsContent = document.getElementById('nameResultsContent');
-    const nameResultsHeader = document.getElementById('nameResultsHeader');
+  function displayScheduleResults(result, searchTerm) {
+    const content = document.getElementById('nameResultsContent');
 
     if (!result || !result.shifts || result.shifts.length === 0) {
-      nameResultsHeader.textContent = 'Search Results';
-      nameResultsContent.innerHTML = `<div class="no-results">No scheduled shifts found for "${searchTerm}"</div>`;
+      content.innerHTML = `<div class="no-results">No scheduled shifts found for "${escapeHtml(searchTerm)}"</div>`;
+      document.getElementById('statsContent').innerHTML = '<span style="color:#999; font-size:0.9em;">No stats available.</span>';
+      document.getElementById('credentialsContent').innerHTML = '<div class="no-results">Name not found — check spelling.</div>';
       return;
     }
 
@@ -639,56 +715,40 @@
     const tagHtml = result.volunteerTag
       ? `<span class="volunteer-tag">${escapeHtml(result.volunteerTag)}</span>`
       : '';
-    nameResultsHeader.innerHTML = `Assigned Shifts for: ${escapeHtml(result.volunteerName || searchTerm)} ${tagHtml}`;
 
-    let html = `
-      <table class="schedule-table">
-        <thead>
-          <tr>
-            <th>Day</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
+    let html = `<div style="margin-bottom: 12px; font-size: 1em;">
+      <strong>${escapeHtml(result.volunteerName || searchTerm)}</strong>${tagHtml}
+    </div>`;
 
+    html += `<table class="schedule-table">
+      <thead><tr><th>Day</th><th>Time</th></tr></thead>
+      <tbody>`;
     result.shifts.forEach(shift => {
-      html += `
-        <tr>
-          <td>${shift.day}</td>
-          <td>${shift.time}</td>
-        </tr>
-      `;
+      html += `<tr><td>${escapeHtml(shift.day)}</td><td>${escapeHtml(shift.time)}</td></tr>`;
     });
+    html += `</tbody></table>
+      <div class="total-shifts">📅 Total Shifts: ${result.shifts.length}</div>`;
 
-    html += `
-        </tbody>
-      </table>
-      <div class="total-shifts">📅 Total Shifts: ${result.shifts.length}</div>
-    `;
+    content.innerHTML = html;
 
-    nameResultsContent.innerHTML = html;
-
-    // Show stats section and load initial stats (all-time)
-    document.getElementById('statsSection').style.display = 'block';
-    document.getElementById('statsDay').value = '';
+    // Load stats and credentials in parallel
     refreshStats();
+    loadCredentialStatus();
   }
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
 
   function refreshStats() {
     if (!currentVolunteerName) return;
-
     const filterDateStr = document.getElementById('statsDay').value || '';
-    const statsContent = document.getElementById('statsContent');
-    statsContent.innerHTML = '<div class="loading"></div>';
+    document.getElementById('statsContent').innerHTML = '<div class="loading"></div>';
 
     google.script.run
-      .withSuccessHandler(stats => {
-        renderStats(stats, filterDateStr);
-      })
-      .withFailureHandler(error => {
-        statsContent.innerHTML = `<span style="color:#999; font-size:0.9em;">Could not load stats.</span>`;
-        console.error('Stats error:', error);
+      .withSuccessHandler(stats => renderStats(stats, filterDateStr))
+      .withFailureHandler(err => {
+        document.getElementById('statsContent').innerHTML =
+          `<span style="color:#999; font-size:0.9em;">Could not load stats.</span>`;
+        console.error('Stats error:', err);
       })
       .getVolunteerPersonalStats(currentVolunteerName, filterDateStr || null);
   }
@@ -702,30 +762,28 @@
 
   function renderStats(stats, filterDateStr) {
     const statsContent = document.getElementById('statsContent');
-
     const roleLower = (currentVolunteerRole || '').toLowerCase();
     const showReviewed = roleLower.includes('mentor') || roleLower.includes('senior');
 
-    // --- Personal stats ---
     let filedLabel, filedValue, reviewedValue;
     if (filterDateStr) {
-      const dayFiled = stats.returnsFiltered !== null ? stats.returnsFiltered : 0;
+      const dayFiled    = stats.returnsFiltered  !== null ? stats.returnsFiltered  : 0;
       const dayReviewed = stats.reviewedFiltered !== null ? stats.reviewedFiltered : 0;
-      filedLabel = escapeHtml(filterDateStr);
-      filedValue = `<strong>${dayFiled}</strong> <span class="stat-alltime">(${stats.returnsAllTime} all‑time)</span>`;
+      filedLabel    = escapeHtml(filterDateStr);
+      filedValue    = `<strong>${dayFiled}</strong> <span class="stat-alltime">(${stats.returnsAllTime} all‑time)</span>`;
       reviewedValue = `<strong>${dayReviewed}</strong> <span class="stat-alltime">(${stats.reviewedAllTime} all‑time)</span>`;
     } else {
-      filedLabel = 'All time';
-      filedValue = `<strong>${stats.returnsAllTime}</strong>`;
+      filedLabel    = 'All time';
+      filedValue    = `<strong>${stats.returnsAllTime}</strong>`;
       reviewedValue = `<strong>${stats.reviewedAllTime}</strong>`;
     }
 
-    const totalMin = Math.round(stats.totalVolunteerMinutes || 0);
+    const totalMin   = Math.round(stats.totalVolunteerMinutes || 0);
     const totalHours = Math.floor(totalMin / 60);
-    const mins = totalMin % 60;
+    const mins       = totalMin % 60;
     let timeStr;
     if (totalHours > 100) {
-      const days = Math.floor(totalMin / (60 * 24));
+      const days  = Math.floor(totalMin / (60 * 24));
       const hours = Math.floor((totalMin % (60 * 24)) / 60);
       timeStr = `${days} day${days > 1 ? 's' : ''} ${hours} hr ${mins} min`;
     } else if (totalHours > 0) {
@@ -745,10 +803,9 @@
     html += `<span class="stat-item">🕐 Total volunteer time: <strong>${timeStr}</strong></span>`;
     html += '</div>';
 
-    // --- Clinic benchmarks ---
     const hasAnyBenchmark = stats.overallMedianReturnsPerFiler !== null
       || stats.overallMedianReviewsPerReviewer !== null
-      || stats.overallMedianMinutesPerReturn !== null;
+      || stats.overallMedianMinutesPerReturn   !== null;
 
     if (hasAnyBenchmark) {
       html += '<div class="stats-benchmarks">';
@@ -767,6 +824,127 @@
     }
 
     statsContent.innerHTML = html;
+  }
+
+  // ── Credentials ───────────────────────────────────────────────────────────
+
+  function loadCredentialStatus() {
+    if (!currentVolunteerName) return;
+    google.script.run
+      .withSuccessHandler(renderCredentials)
+      .withFailureHandler(err => {
+        document.getElementById('credentialsContent').innerHTML =
+          `<div class="no-results">Could not load credential status: ${escapeHtml(err.message || String(err))}</div>`;
+      })
+      .getVolunteerCredentialStatus(currentVolunteerName);
+
+    google.script.run
+      .withSuccessHandler(renderProductKeys)
+      .withFailureHandler(err => console.error('Product key error:', err))
+      .getVolunteerProductKeys(currentVolunteerName);
+  }
+
+  function renderProductKeys(keys) {
+    const el = document.getElementById('productKeysSection');
+    if (!el) return;
+    if (!keys || keys.length === 0) {
+      el.innerHTML = '';
+      return;
+    }
+    let html = '<div class="credential-row" style="flex-direction: column; align-items: flex-start; gap: 6px;">'
+      + '<label style="min-width: unset;">🔑 UFILE Key(s)</label>';
+    keys.forEach(k => {
+      html += `<div style="font-family: monospace; font-size: 1em; padding: 4px 0;">`
+        + `<span style="opacity:0.6; font-size:0.85em; margin-right: 8px;">${escapeHtml(String(k.year))}</span>`
+        + `<strong>${escapeHtml(k.code)}</strong></div>`;
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  function renderCredentials(status) {
+    const content = document.getElementById('credentialsContent');
+    const efileOnFile    = status.hasEfileNum;
+    const passwordOnFile = status.hasPassword;
+
+    const efileStatusHtml = efileOnFile
+      ? '<span class="badge-on-file">✓ On file</span>'
+      : '<span class="badge-missing">Not on file</span>';
+    const passwordStatusHtml = passwordOnFile
+      ? '<span class="badge-on-file">✓ On file</span>'
+      : '<span class="badge-missing">Not on file</span>';
+
+    const efileInputHtml = efileOnFile
+      ? ''
+      : `<div class="credential-input-wrap"><input type="text" id="credEfileNum" placeholder="Enter your EFILE#" autocomplete="off"></div>`;
+    const passwordInputHtml = passwordOnFile
+      ? ''
+      : `<div class="credential-input-wrap"><input type="password" id="credPassword" placeholder="Enter your uFile password" autocomplete="new-password"></div>`;
+
+    const showSubmit = !efileOnFile || !passwordOnFile;
+    const submitHtml = showSubmit
+      ? `<div><button type="button" class="btn-submit-creds" id="credSubmitBtn" onclick="submitCredentials()">Save</button></div>
+         <div id="credsFeedback" class="creds-feedback"></div>`
+      : '<p class="help-text" style="margin: 0;">All credentials are on file.</p>';
+
+    content.innerHTML = `
+      <div class="credential-row">
+        <label>EFILE#</label>
+        ${efileStatusHtml}
+        ${efileInputHtml}
+      </div>
+      <div class="credential-row">
+        <label>Password</label>
+        ${passwordStatusHtml}
+        ${passwordInputHtml}
+      </div>
+      <div id="productKeysSection"></div>
+      ${submitHtml}
+    `;
+  }
+
+  function submitCredentials() {
+    const efileInput    = document.getElementById('credEfileNum');
+    const passwordInput = document.getElementById('credPassword');
+    const efileVal      = efileInput    ? efileInput.value.trim()    : '';
+    const passwordVal   = passwordInput ? passwordInput.value.trim() : '';
+
+    if (!efileVal && !passwordVal) {
+      document.getElementById('credsFeedback').innerHTML =
+        '<span style="color: #e74c3c;">Please enter at least one value before saving.</span>';
+      return;
+    }
+
+    const btn = document.getElementById('credSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    document.getElementById('credsFeedback').innerHTML = '';
+
+    google.script.run
+      .withSuccessHandler(result => {
+        btn.disabled = false;
+        btn.textContent = 'Save';
+        const parts = [];
+        if (result.efileNumWritten) parts.push('EFILE#');
+        if (result.passwordWritten) parts.push('Password');
+        const feedback = document.getElementById('credsFeedback');
+        if (parts.length > 0) {
+          feedback.innerHTML = `<span style="color: #27ae60;">✓ ${parts.join(' and ')} saved successfully.</span>`;
+        } else {
+          feedback.innerHTML = `<span style="color: #888;">No changes — fields were already on file.</span>`;
+        }
+        // Refresh credential status to update badges
+        loadCredentialStatus();
+      })
+      .withFailureHandler(err => {
+        const btn2 = document.getElementById('credSubmitBtn');
+        if (btn2) { btn2.disabled = false; btn2.textContent = 'Save'; }
+        const feedback = document.getElementById('credsFeedback');
+        if (feedback) {
+          feedback.innerHTML = `<span style="color: #e74c3c;">Error: ${escapeHtml(err.message || String(err))}</span>`;
+        }
+      })
+      .submitVolunteerCredentials(currentVolunteerName, efileVal, passwordVal);
   }
 </script>
 <div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>

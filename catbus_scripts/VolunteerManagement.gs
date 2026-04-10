@@ -410,3 +410,271 @@ function sendVolunteerBccEmail(emails, subject, body) {
 
   return { success: true };
 }
+
+/**
+ * Scans SignOut and Tax Return Tracker for volunteer name strings that cannot be
+ * matched to any entry in the Consolidated Volunteer List. Returns a sorted array
+ * of unmatched name records with activity context, so admins can identify and fix
+ * typos before running archiveVolunteerStats().
+ *
+ * Read-only — makes no changes to any sheet.
+ *
+ * @returns {Array<{name: string, sources: string[], signOutCount: number, totalHours: number, returnsCount: number}>}
+ */
+function getUnmatchedVolunteerNames() {
+  const ss = getSpreadsheet();
+
+  // ── A. Build name→volunteer map (same logic as archiveVolunteerStats) ─────
+  const rosterSheet = ss.getSheetByName(CONFIG.SHEETS.CONSOLIDATED_VOLUNTEER_LIST);
+  if (!rosterSheet || rosterSheet.getLastRow() <= 1) {
+    throw new Error('Consolidated Volunteer List is empty or missing.');
+  }
+  const rosterCols    = CONFIG.COLUMNS.CONSOLIDATED_VOLUNTEER_LIST;
+  const numRosterCols = rosterCols.ATTENDED_TRAINING + 1;
+  const rosterData    = rosterSheet.getRange(2, 1, rosterSheet.getLastRow() - 1, numRosterCols).getValues();
+
+  const nameToVolunteer = {};
+  for (const row of rosterData) {
+    const email     = (row[rosterCols.EMAIL]           || '').toString().trim().toLowerCase();
+    if (!email) continue;
+    const legal     = (row[rosterCols.FIRST_NAME_LEGAL] || '').toString().trim();
+    const preferred = (row[rosterCols.PREFERRED_NAME]   || '').toString().trim();
+    const last      = (row[rosterCols.LAST_NAME]        || '').toString().trim();
+
+    const variants = new Set();
+    if (preferred && last) variants.add(`${preferred} ${last}`.toLowerCase());
+    if (legal && last)     variants.add(`${legal} ${last}`.toLowerCase());
+    for (const v of variants) nameToVolunteer[v] = email;
+  }
+
+  // Map: original name string → { sources: Set, signOutCount, minutesTotal, returnsCount }
+  const unmatched = {};
+  function getOrCreate(name) {
+    if (!unmatched[name]) {
+      unmatched[name] = { sources: new Set(), signOutCount: 0, minutesTotal: 0, returnsCount: 0 };
+    }
+    return unmatched[name];
+  }
+
+  // ── B. Scan SignOut sheet ─────────────────────────────────────────────────
+  // Uses getDisplayValues() — DURATION is a formula cell, must read as formatted string
+  const signoutSheet = ss.getSheetByName(CONFIG.SHEETS.SIGNOUT);
+  if (signoutSheet && signoutSheet.getLastRow() > 1) {
+    const soCols  = CONFIG.COLUMNS.SIGNOUT;
+    const numCols = soCols.DURATION + 1;
+    const soData  = signoutSheet.getRange(2, 1, signoutSheet.getLastRow() - 1, numCols).getDisplayValues();
+    for (const row of soData) {
+      const name = (row[soCols.VOLUNTEER_INFO] || '').toString().trim();
+      if (!name || nameToVolunteer[name.toLowerCase()]) continue;
+      const entry = getOrCreate(name);
+      entry.sources.add('SignOut');
+      entry.signOutCount++;
+      const parts = (row[soCols.DURATION] || '').trim().split(':');
+      if (parts.length >= 2) {
+        const h = parseInt(parts[0], 10) || 0;
+        const m = parseInt(parts[1], 10) || 0;
+        const s = parts.length >= 3 ? (parseInt(parts[2], 10) || 0) : 0;
+        entry.minutesTotal += h * 60 + m + s / 60;
+      }
+    }
+  }
+
+  // ── C. Scan Tax Return Tracker ────────────────────────────────────────────
+  // Only counts rows where efile or paper = "yes" (same guard as archiveVolunteerStats)
+  const trackerSheet = ss.getSheetByName(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+  if (trackerSheet && trackerSheet.getLastRow() > 1) {
+    const tc      = CONFIG.COLUMNS.TAX_RETURN_TRACKER;
+    const numCols = tc.PAPER + 1;
+    const trackerData = trackerSheet.getRange(2, 1, trackerSheet.getLastRow() - 1, numCols).getValues();
+    for (const row of trackerData) {
+      const volunteerName = (row[tc.VOLUNTEER] || '').toString().trim();
+      const efile   = (row[tc.EFILE]   || '').toString().toLowerCase() === 'yes';
+      const paper   = (row[tc.PAPER]   || '').toString().toLowerCase() === 'yes';
+      const married = (row[tc.MARRIED] || '').toString().toLowerCase() === 'yes';
+      if (!volunteerName || (!efile && !paper)) continue;
+      if (nameToVolunteer[volunteerName.toLowerCase()]) continue;
+      const entry = getOrCreate(volunteerName);
+      entry.sources.add('Tax Return Tracker');
+      entry.returnsCount += married ? 2 : 1;
+    }
+  }
+
+  // ── D. Shape and return ───────────────────────────────────────────────────
+  return Object.keys(unmatched)
+    .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+    .map(name => {
+      const e = unmatched[name];
+      return {
+        name,
+        sources:      Array.from(e.sources).sort(),
+        signOutCount: e.signOutCount,
+        totalHours:   Math.round(e.minutesTotal / 60 * 100) / 100,
+        returnsCount: e.returnsCount
+      };
+    });
+}
+
+/**
+ * Returns whether a volunteer already has an EFILE# and/or password on file.
+ * Never returns the actual credential values — booleans only.
+ *
+ * @param {string} name  Display name (case-insensitive match).
+ * @returns {{ hasEfileNum: boolean, hasPassword: boolean }}
+ */
+function getVolunteerCredentialStatus(name) {
+  const nameLower = (name || '').trim().toLowerCase();
+  if (!nameLower) throw new Error('Name is required.');
+
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.SHEETS.CONSOLIDATED_VOLUNTEER_LIST);
+  if (!sheet || sheet.getLastRow() <= 1) throw new Error('Volunteer list not found.');
+
+  const cols = CONFIG.COLUMNS.CONSOLIDATED_VOLUNTEER_LIST;
+  const numCols = cols.PASSWORD + 1;
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
+
+  for (const row of data) {
+    const legal     = (row[cols.FIRST_NAME_LEGAL] || '').toString().trim();
+    const preferred = (row[cols.PREFERRED_NAME]   || '').toString().trim();
+    const last      = (row[cols.LAST_NAME]        || '').toString().trim();
+    const firstName = preferred || legal;
+    const displayName = `${firstName} ${last}`.trim().toLowerCase();
+
+    if (displayName === nameLower) {
+      return {
+        hasEfileNum: !!(row[cols.EFILE_NUM] || '').toString().trim(),
+        hasPassword: !!(row[cols.PASSWORD]  || '').toString().trim()
+      };
+    }
+  }
+
+  throw new Error('Volunteer not found.');
+}
+
+/**
+ * Writes EFILE# and/or password for a volunteer, but ONLY if the field is currently blank.
+ * Existing values are never overwritten.
+ *
+ * @param {string} name      Display name (case-insensitive match).
+ * @param {string} efileNum  EFILE# to store, or '' to skip.
+ * @param {string} password  uFile password to store, or '' to skip.
+ * @returns {{ efileNumWritten: boolean, passwordWritten: boolean }}
+ */
+function submitVolunteerCredentials(name, efileNum, password) {
+  const nameLower   = (name     || '').trim().toLowerCase();
+  const efileVal    = (efileNum || '').trim();
+  const passwordVal = (password || '').trim();
+
+  if (!nameLower) throw new Error('Name is required.');
+
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.SHEETS.CONSOLIDATED_VOLUNTEER_LIST);
+  if (!sheet || sheet.getLastRow() <= 1) throw new Error('Volunteer list not found.');
+
+  const cols = CONFIG.COLUMNS.CONSOLIDATED_VOLUNTEER_LIST;
+  const numCols = cols.PASSWORD + 1;
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, numCols).getValues();
+
+  for (let i = 0; i < data.length; i++) {
+    const row       = data[i];
+    const legal     = (row[cols.FIRST_NAME_LEGAL] || '').toString().trim();
+    const preferred = (row[cols.PREFERRED_NAME]   || '').toString().trim();
+    const last      = (row[cols.LAST_NAME]        || '').toString().trim();
+    const firstName = preferred || legal;
+    const displayName = `${firstName} ${last}`.trim().toLowerCase();
+
+    if (displayName !== nameLower) continue;
+
+    const sheetRow = i + 2; // 1-indexed, offset by header row
+    let efileNumWritten = false;
+    let passwordWritten = false;
+
+    const existingEfile    = (row[cols.EFILE_NUM] || '').toString().trim();
+    const existingPassword = (row[cols.PASSWORD]  || '').toString().trim();
+
+    if (efileVal && !existingEfile) {
+      sheet.getRange(sheetRow, cols.EFILE_NUM + 1).setValue(efileVal);
+      efileNumWritten = true;
+    }
+    if (passwordVal && !existingPassword) {
+      sheet.getRange(sheetRow, cols.PASSWORD + 1).setValue(passwordVal);
+      passwordWritten = true;
+    }
+
+    return { efileNumWritten, passwordWritten };
+  }
+
+  throw new Error('Volunteer not found.');
+}
+
+/**
+ * Returns the UFILE product keys issued to a volunteer, looked up by display name.
+ * Searches the Product Code Distribution Log for rows where the volunteer's email
+ * appears in any of the three volunteer slots with status 'Sent'.
+ *
+ * @param {string} name  Display name (case-insensitive match).
+ * @returns {Array<{year: number, code: string}>} Sorted by year descending. Empty if none found.
+ */
+function getVolunteerProductKeys(name) {
+  const nameLower = (name || '').trim().toLowerCase();
+  if (!nameLower) throw new Error('Name is required.');
+
+  // Step 1: resolve display name → email
+  const ss = getSpreadsheet();
+  const rosterSheet = ss.getSheetByName(CONFIG.SHEETS.CONSOLIDATED_VOLUNTEER_LIST);
+  if (!rosterSheet || rosterSheet.getLastRow() <= 1) throw new Error('Volunteer list not found.');
+
+  const cols = CONFIG.COLUMNS.CONSOLIDATED_VOLUNTEER_LIST;
+  const rosterData = rosterSheet.getRange(2, 1, rosterSheet.getLastRow() - 1, cols.PASSWORD + 1).getValues();
+
+  let volunteerEmail = null;
+  for (const row of rosterData) {
+    const legal     = (row[cols.FIRST_NAME_LEGAL] || '').toString().trim();
+    const preferred = (row[cols.PREFERRED_NAME]   || '').toString().trim();
+    const last      = (row[cols.LAST_NAME]        || '').toString().trim();
+    const firstName = preferred || legal;
+    const displayName = `${firstName} ${last}`.trim().toLowerCase();
+    if (displayName === nameLower) {
+      volunteerEmail = (row[cols.EMAIL] || '').toString().trim().toLowerCase();
+      break;
+    }
+  }
+
+  if (!volunteerEmail) return [];
+
+  // Step 2: scan distribution log for this email
+  const logSheet = getOrCreateDistributionLogSheet();
+  const lastRow = logSheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const logData = logSheet.getRange(2, 1, lastRow - 1, 12).getValues();
+  const seen = new Set();
+  const keys = [];
+
+  for (const row of logData) {
+    const year = row[1];
+    const code = (row[2] || '').toString().trim();
+    if (!code) continue;
+
+    const pairs = [
+      { email: row[3], status: row[5] },
+      { email: row[6], status: row[8] },
+      { email: row[9], status: row[11] },
+    ];
+
+    for (const { email, status } of pairs) {
+      if ((email || '').toString().trim().toLowerCase() === volunteerEmail
+          && (status || '').toString().trim() === 'Sent') {
+        const dedupeKey = `${year}:${code}`;
+        if (!seen.has(dedupeKey)) {
+          seen.add(dedupeKey);
+          keys.push({ year: Number(year), code });
+        }
+        break;
+      }
+    }
+  }
+
+  keys.sort((a, b) => b.year - a.year);
+  return keys;
+}
