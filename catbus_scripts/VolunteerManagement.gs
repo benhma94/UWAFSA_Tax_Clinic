@@ -67,6 +67,7 @@ function getNoShowVolunteers() {
     const role     = (row[cols.ROLE]              || '').toString().trim();
 
     if (!email) return;
+    if (role.toLowerCase() === 'drop') return; // Dropped volunteers are expected absences, not no-shows
 
     // Build all plausible name variants this volunteer might have used at sign-in
     const firstName = preferred || legal;
@@ -277,6 +278,114 @@ function transferToConsolidatedList(volunteers) {
 
   Logger.log('transferToConsolidatedList: added=' + added + ', skipped=' + skipped);
   return { success: true, added: added, skipped: skipped };
+}
+
+/**
+ * Returns all rows from the Volunteer Alumni sheet for the management UI.
+ * Discovers dynamic year columns by scanning the header row.
+ *
+ * @returns {Array<Object>} Array of alumni objects sorted by last name then first name.
+ *   Each object: { email, firstNameLegal, preferredName, lastName,
+ *                  totalReturns, totalHours, blacklisted, blacklistReason, lastUpdated,
+ *                  years: { "2024": { returns, hours }, ... } }
+ */
+function getAlumniData() {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.SHEETS.VOLUNTEER_ALUMNI);
+  if (!sheet || sheet.getLastRow() <= 1) return [];
+
+  const cols = CONFIG.COLUMNS.VOLUNTEER_ALUMNI;
+  const lastCol  = sheet.getLastColumn();
+  const lastRow  = sheet.getLastRow();
+
+  // Read header row to discover year columns
+  const headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const yearCols = {}; // { "2024": { returnsCol: 0-based, hoursCol: 0-based }, ... }
+  for (let i = cols.LAST_UPDATED + 1; i < headerRow.length; i++) {
+    const h = (headerRow[i] || '').toString().trim();
+    const match = h.match(/^(\d{4})_(RETURNS|HOURS)$/);
+    if (match) {
+      const yr = match[1];
+      if (!yearCols[yr]) yearCols[yr] = {};
+      if (match[2] === 'RETURNS') yearCols[yr].returnsCol = i;
+      else                        yearCols[yr].hoursCol   = i;
+    }
+  }
+
+  const data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+  const result = data.map(row => {
+    const years = {};
+    for (const yr of Object.keys(yearCols)) {
+      const yc = yearCols[yr];
+      const returns = Number(row[yc.returnsCol]) || 0;
+      const hours   = Number(row[yc.hoursCol])   || 0;
+      if (returns > 0 || hours > 0 || typeof row[yc.returnsCol] === 'number') {
+        years[yr] = { returns, hours };
+      }
+    }
+    return {
+      email:           (row[cols.EMAIL]            || '').toString().trim(),
+      firstNameLegal:  (row[cols.FIRST_NAME_LEGAL] || '').toString().trim(),
+      preferredName:   (row[cols.PREFERRED_NAME]   || '').toString().trim(),
+      lastName:        (row[cols.LAST_NAME]        || '').toString().trim(),
+      totalReturns:    Number(row[cols.TOTAL_RETURNS]) || 0,
+      totalHours:      Number(row[cols.TOTAL_HOURS])   || 0,
+      blacklisted:     row[cols.BLACKLISTED] === true,
+      blacklistReason: (row[cols.BLACKLIST_REASON] || '').toString().trim(),
+      lastUpdated:     row[cols.LAST_UPDATED] instanceof Date
+                         ? row[cols.LAST_UPDATED].toISOString()
+                         : (row[cols.LAST_UPDATED] || '').toString(),
+      years
+    };
+  }).filter(v => v.email);
+
+  result.sort((a, b) => {
+    const lastCmp = a.lastName.localeCompare(b.lastName);
+    if (lastCmp !== 0) return lastCmp;
+    const aFirst = a.preferredName || a.firstNameLegal;
+    const bFirst = b.preferredName || b.firstNameLegal;
+    return aFirst.localeCompare(bFirst);
+  });
+
+  return result;
+}
+
+/**
+ * Sets or clears the blacklist flag for a volunteer in the Volunteer Alumni sheet.
+ *
+ * @param {string}  email       - Volunteer email (matched case-insensitively)
+ * @param {boolean} blacklisted - true to blacklist, false to clear
+ * @param {string}  reason      - Required when blacklisted=true; pass '' when clearing
+ * @returns {{ success: true }}
+ */
+function setVolunteerBlacklist(email, blacklisted, reason) {
+  if (!email || !email.trim()) throw new Error('Email is required.');
+  if (blacklisted && (!reason || !reason.trim())) {
+    throw new Error('A reason is required when blacklisting a volunteer.');
+  }
+
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.SHEETS.VOLUNTEER_ALUMNI);
+  if (!sheet) throw new Error('Volunteer Alumni sheet not found. Run "Archive Volunteer Stats" first.');
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) throw new Error('Volunteer not found: ' + email);
+
+  const cols = CONFIG.COLUMNS.VOLUNTEER_ALUMNI;
+  const emailColSheet = cols.EMAIL + 1; // 1-based
+  const emailData = sheet.getRange(2, emailColSheet, lastRow - 1, 1).getValues();
+  const emailKey = email.trim().toLowerCase();
+
+  for (let i = 0; i < emailData.length; i++) {
+    if ((emailData[i][0] || '').toString().trim().toLowerCase() === emailKey) {
+      const rowIdx = i + 2; // 1-based
+      sheet.getRange(rowIdx, cols.BLACKLISTED + 1, 1, 2)
+           .setValues([[blacklisted === true, blacklisted ? (reason || '').trim() : '']]);
+      return { success: true };
+    }
+  }
+  throw new Error('Volunteer not found in Alumni sheet: ' + email);
 }
 
 /**

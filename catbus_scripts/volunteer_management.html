@@ -146,7 +146,17 @@
     .role-pill.mentor    { background: #d6eaf8; color: #1a5276; }
     .role-pill.filer     { background: #d5f5e3; color: #1e6b3a; }
     .role-pill.frontline { background: #fdebd0; color: #935116; }
-    .role-pill.drop      { background: #f9ebea; color: #922b21; }
+    .role-pill.drop        { background: #f9ebea; color: #922b21; }
+    .role-pill.blacklisted { background: #1a1a1a; color: #fff; }
+
+    .btn-danger { background: #c0392b; color: #fff; }
+    .btn-danger:hover:not(:disabled) { background: #96281b; }
+
+    .year-breakdown {
+      font-size: 0.78rem;
+      color: #888;
+      margin-top: 2px;
+    }
 
     @media (max-width: 600px) {
       .card-header { flex-direction: column; align-items: flex-start; }
@@ -259,6 +269,40 @@
         Mark as Drop (<span id="noShowDropCount">0</span>)
       </button>
       <span id="noShowActionStatus" class="status" style="margin-top:0;display:none;"></span>
+    </div>
+  </div>
+
+  <!-- Section D: Volunteer Alumni & Blacklist -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Volunteer Alumni <span class="badge badge-grey" id="alumniCount" style="display:none">0</span></h2>
+      <div class="btn-row">
+        <button class="btn-blue" onclick="loadAlumni()">Load Alumni</button>
+        <button class="btn-muted" id="btnShowBlacklisted" onclick="toggleBlacklistFilter()">Show Blacklisted Only</button>
+      </div>
+    </div>
+    <p style="margin:0 0 10px;color:#555;font-size:0.88rem;">
+      Permanent record of all past volunteers. Run <strong>Phase 2.5</strong> in Archive &amp; Rollforward to populate this list.
+      Use the Blacklist action to flag volunteers who should not be re-admitted.
+    </p>
+    <div id="alumniStatus" class="status" style="display:none"></div>
+    <div class="table-wrap">
+      <table id="alumniTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Years</th>
+            <th>Returns</th>
+            <th>Hours</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="alumniBody">
+          <tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">Click "Load Alumni" to fetch data.</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -605,6 +649,136 @@
     var el = document.getElementById('noShowActionStatus');
     el.textContent = msg;
     el.className = 'status ' + (type || '');
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  // ── Section D: Volunteer Alumni & Blacklist ───────────────────────────────
+  var alumniData = [];
+  var alumniShowBlacklistedOnly = false;
+
+  function loadAlumni() {
+    setAlumniStatus('Loading alumni...', 'loading');
+    document.getElementById('alumniBody').innerHTML =
+      '<tr><td colspan="7" style="text-align:center;color:#999;padding:16px;">Loading...</td></tr>';
+    document.getElementById('alumniCount').style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(onAlumniLoaded)
+      .withFailureHandler(function(err) {
+        setAlumniStatus('Failed to load: ' + (err.message || String(err)), 'error');
+      })
+      .getAlumniData();
+  }
+
+  function onAlumniLoaded(data) {
+    alumniData = data || [];
+    var badge = document.getElementById('alumniCount');
+    badge.textContent = alumniData.length;
+    badge.style.display = alumniData.length ? '' : 'none';
+    setAlumniStatus('', '');
+    renderAlumni();
+  }
+
+  function toggleBlacklistFilter() {
+    alumniShowBlacklistedOnly = !alumniShowBlacklistedOnly;
+    document.getElementById('btnShowBlacklisted').textContent =
+      alumniShowBlacklistedOnly ? 'Show All' : 'Show Blacklisted Only';
+    renderAlumni();
+  }
+
+  function renderAlumni() {
+    var filtered = alumniShowBlacklistedOnly
+      ? alumniData.filter(function(a) { return a.blacklisted; })
+      : alumniData;
+
+    var tbody = document.getElementById('alumniBody');
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">' +
+        (alumniShowBlacklistedOnly ? 'No blacklisted volunteers.' : 'No alumni found. Run Phase 2.5 in Archive &amp; Rollforward first.') +
+        '</td></tr>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < filtered.length; i++) {
+      var a = filtered[i];
+      var firstName = a.preferredName || a.firstNameLegal;
+      var displayName = (firstName + ' ' + a.lastName).trim();
+
+      // Build year-by-year breakdown string
+      var yearKeys = Object.keys(a.years || {}).sort();
+      var yearBreakdown = yearKeys.map(function(yr) {
+        return yr + ': ' + a.years[yr].returns + ' returns, ' + a.years[yr].hours.toFixed(1) + 'h';
+      }).join(' | ');
+
+      var statusPill = a.blacklisted
+        ? '<span class="role-pill blacklisted">Blacklisted</span>'
+        : '<span class="role-pill filer" style="background:#d5f5e3;color:#1e6b3a;">Active</span>';
+
+      var actionBtn = a.blacklisted
+        ? '<button class="btn-muted" style="font-size:0.78rem;padding:4px 10px;" onclick="toggleBlacklist(' +
+            JSON.stringify(a.email) + ', true)">Clear</button>'
+        : '<button class="btn-danger" style="font-size:0.78rem;padding:4px 10px;" onclick="toggleBlacklist(' +
+            JSON.stringify(a.email) + ', false)">Blacklist</button>';
+
+      var reasonCell = a.blacklisted && a.blacklistReason
+        ? '<br><span style="font-size:0.78rem;color:#888;">' + esc(a.blacklistReason) + '</span>'
+        : '';
+
+      html += '<tr>' +
+        '<td>' + esc(displayName) + '</td>' +
+        '<td style="font-size:0.82rem;">' + esc(a.email) + '</td>' +
+        '<td>' + esc(yearKeys.join(', ')) +
+          (yearBreakdown ? '<div class="year-breakdown">' + esc(yearBreakdown) + '</div>' : '') +
+        '</td>' +
+        '<td>' + a.totalReturns + '</td>' +
+        '<td>' + a.totalHours.toFixed(1) + '</td>' +
+        '<td>' + statusPill + reasonCell + '</td>' +
+        '<td>' + actionBtn + '</td>' +
+        '</tr>';
+    }
+    tbody.innerHTML = html;
+  }
+
+  function toggleBlacklist(email, currentlyBlacklisted) {
+    if (!currentlyBlacklisted) {
+      // Blacklisting: prompt for reason
+      var reason = prompt('Enter blacklist reason for ' + email + ' (required):');
+      if (reason === null) return; // cancelled
+      if (!reason.trim()) {
+        alert('A reason is required.');
+        return;
+      }
+      setAlumniStatus('Blacklisting volunteer...', 'loading');
+      google.script.run
+        .withSuccessHandler(function() {
+          setAlumniStatus('Volunteer blacklisted.', 'success');
+          loadAlumni();
+        })
+        .withFailureHandler(function(err) {
+          setAlumniStatus('Error: ' + (err.message || String(err)), 'error');
+        })
+        .setVolunteerBlacklist(email, true, reason.trim());
+    } else {
+      // Clearing blacklist
+      if (!confirm('Clear blacklist flag for ' + email + '?')) return;
+      setAlumniStatus('Clearing blacklist flag...', 'loading');
+      google.script.run
+        .withSuccessHandler(function() {
+          setAlumniStatus('Blacklist flag cleared.', 'success');
+          loadAlumni();
+        })
+        .withFailureHandler(function(err) {
+          setAlumniStatus('Error: ' + (err.message || String(err)), 'error');
+        })
+        .setVolunteerBlacklist(email, false, '');
+    }
+  }
+
+  function setAlumniStatus(msg, type) {
+    var el = document.getElementById('alumniStatus');
+    el.textContent = msg;
+    el.className = 'status' + (type ? ' ' + type : '');
     el.style.display = msg ? 'block' : 'none';
   }
 </script>

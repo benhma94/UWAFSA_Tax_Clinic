@@ -352,6 +352,18 @@
     <div id="datesStatus" class="status-msg"></div>
   </div>
 
+  <!-- Phase 2.5: Archive Volunteer Stats -->
+  <div class="card card-locked" id="phase25Card">
+    <h2>Phase 2.5 — Archive Volunteer Stats</h2>
+    <p>Reads the current Consolidated Volunteer List, SignOut sheet, and Tax Return Tracker
+       to compute per-volunteer hours and returns for <strong><span id="archiveStatsYear"></span></strong>.
+       Upserts each volunteer into the permanent <em>Volunteer Alumni</em> sheet
+       (created automatically if it doesn't exist). This must run <strong>before</strong>
+       Phase 3 clears the operational sheets.</p>
+    <button id="btnArchiveStats" onclick="startArchiveStats()">Archive Volunteer Stats</button>
+    <div id="archiveStatsStatus" class="status-msg"></div>
+  </div>
+
   <!-- Phase 3: Rollforward -->
   <div class="card card-locked" id="phase3Card">
     <h2>Phase 3 — Clear Operational Data</h2>
@@ -365,6 +377,8 @@
       <ul>
         <li>Add the new year's UFILE product keys to the <em>UFILE Keys</em> sheet
             (Year column = next year, Key column = code string, Times Used = 0).</li>
+        <li>Verify the <em>Volunteer Alumni</em> sheet has the expected rows — one per volunteer,
+            with correct returns and hours for <span id="manualTasksYear"></span>.</li>
       </ul>
     </div>
   </div>
@@ -390,7 +404,10 @@
   </div>
 
   <script>
-    document.getElementById('archiveYear').textContent = new Date().getFullYear();
+    var currentYear = new Date().getFullYear();
+    document.getElementById('archiveYear').textContent = currentYear;
+    document.getElementById('archiveStatsYear').textContent = currentYear;
+    document.getElementById('manualTasksYear').textContent = currentYear;
 
     // ── Phase 1: Archive ──────────────────────────────────────────────────────
 
@@ -447,13 +464,40 @@
       google.script.run
         .withSuccessHandler(function() {
           setStatus(status, 'success', 'Clinic dates saved. Config.gs will use these dates going forward.');
-          unlock('phase3Card');
+          unlock('phase25Card');
         })
         .withFailureHandler(function(err) {
           setStatus(status, 'error', 'Failed to save: ' + esc(err.message || String(err)));
           btn.disabled = false;
         })
         .saveClinicDates({ dates: dates });
+    }
+
+    // ── Phase 2.5: Archive Volunteer Stats ───────────────────────────────────
+
+    function startArchiveStats() {
+      var btn = document.getElementById('btnArchiveStats');
+      var status = document.getElementById('archiveStatsStatus');
+      btn.disabled = true;
+      setStatus(status, 'info', 'Computing volunteer stats and writing to Alumni sheet\u2026 please wait.');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          var msg = 'Done. ' + result.processed + ' volunteer(s) archived '
+            + '(' + result.inserted + ' new, ' + result.updated + ' updated).';
+          if (result.unmatched && result.unmatched.length > 0) {
+            msg += ' <strong>Warning:</strong> ' + result.unmatched.length
+              + ' name(s) from SignOut/Tracker could not be matched to an email: '
+              + result.unmatched.map(esc).join(', ') + '. These were skipped.';
+          }
+          setStatus(status, result.unmatched && result.unmatched.length > 0 ? 'info' : 'success', msg);
+          unlock('phase3Card');
+        })
+        .withFailureHandler(function(err) {
+          setStatus(status, 'error', 'Failed: ' + esc(err.message || String(err)));
+          btn.disabled = false;
+        })
+        .archiveVolunteerStats(currentYear);
     }
 
     // ── Phase 3: Rollforward ─────────────────────────────────────────────────
