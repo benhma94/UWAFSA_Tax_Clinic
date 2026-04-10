@@ -272,7 +272,39 @@
     </div>
   </div>
 
-  <!-- Section D: Volunteer Alumni & Blacklist -->
+  <!-- Section D: Unmatched Name Audit -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Unmatched Name Audit <span class="badge badge-grey" id="unmatchedCount" style="display:none">0</span></h2>
+      <div class="btn-row">
+        <button class="btn-blue" onclick="loadUnmatched()">Check Name Mismatches</button>
+      </div>
+    </div>
+    <p style="margin:0 0 10px;color:#555;font-size:0.88rem;">
+      Names in the SignOut and Tax Return Tracker sheets that do not match any volunteer
+      in the Consolidated Volunteer List. These records are silently skipped when archiving
+      volunteer stats — fix the source data before running Phase 2.5.
+    </p>
+    <div id="unmatchedStatus" class="status" style="display:none"></div>
+    <div class="table-wrap">
+      <table id="unmatchedTable">
+        <thead>
+          <tr>
+            <th>Name (as stored in sheet)</th>
+            <th>Appears In</th>
+            <th style="text-align:right;">Sign-Outs</th>
+            <th style="text-align:right;">Hours</th>
+            <th style="text-align:right;">Returns</th>
+          </tr>
+        </thead>
+        <tbody id="unmatchedBody">
+          <tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">Click "Check Name Mismatches" to scan.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Section E: Volunteer Alumni & Blacklist -->
   <div class="card">
     <div class="card-header">
       <h2>Volunteer Alumni <span class="badge badge-grey" id="alumniCount" style="display:none">0</span></h2>
@@ -652,7 +684,57 @@
     el.style.display = msg ? 'block' : 'none';
   }
 
-  // ── Section D: Volunteer Alumni & Blacklist ───────────────────────────────
+  // ── Section D: Unmatched Name Audit ──────────────────────────────────────
+
+  function loadUnmatched() {
+    setUnmatchedStatus('Scanning sheets for unmatched names...', 'loading');
+    document.getElementById('unmatchedBody').innerHTML =
+      '<tr><td colspan="5" style="text-align:center;color:#999;padding:16px;">Loading...</td></tr>';
+    document.getElementById('unmatchedCount').style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(onUnmatchedLoaded)
+      .withFailureHandler(function(err) {
+        setUnmatchedStatus('Failed to load: ' + (err.message || String(err)), 'error');
+      })
+      .getUnmatchedVolunteerNames();
+  }
+
+  function onUnmatchedLoaded(data) {
+    var badge = document.getElementById('unmatchedCount');
+    badge.textContent = data.length;
+    badge.style.display = data.length ? '' : 'none';
+
+    if (data.length === 0) {
+      setUnmatchedStatus('All names matched \u2014 no mismatches found.', 'success');
+      document.getElementById('unmatchedBody').innerHTML =
+        '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">No mismatches found.</td></tr>';
+      return;
+    }
+
+    setUnmatchedStatus('', '');
+    var html = '';
+    for (var i = 0; i < data.length; i++) {
+      var r = data[i];
+      html += '<tr>'
+        + '<td>' + esc(r.name) + '</td>'
+        + '<td>' + esc(r.sources.join(', ')) + '</td>'
+        + '<td style="text-align:right;">' + (r.signOutCount || '&mdash;') + '</td>'
+        + '<td style="text-align:right;">' + (r.totalHours   || '&mdash;') + '</td>'
+        + '<td style="text-align:right;">' + (r.returnsCount || '&mdash;') + '</td>'
+        + '</tr>';
+    }
+    document.getElementById('unmatchedBody').innerHTML = html;
+  }
+
+  function setUnmatchedStatus(msg, type) {
+    var el = document.getElementById('unmatchedStatus');
+    el.textContent = msg;
+    el.className = 'status' + (type ? ' ' + type : '');
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  // ── Section E: Volunteer Alumni & Blacklist ───────────────────────────────
   var alumniData = [];
   var alumniShowBlacklistedOnly = false;
 
