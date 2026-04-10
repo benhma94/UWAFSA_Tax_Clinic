@@ -217,6 +217,24 @@
       <button class="btn-muted" onclick="loadRoster()">Refresh</button>
     </div>
 
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+      <select id="rosterRoleFilter" onchange="renderRoster()" style="padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:0.88rem;">
+        <option value="">All Roles</option>
+        <option value="Mentor">Mentor</option>
+        <option value="Filer">Filer</option>
+        <option value="Frontline">Frontline</option>
+        <option value="Drop">Drop</option>
+        <option value="__none__">No Role</option>
+      </select>
+      <select id="rosterTrainingFilter" onchange="renderRoster()" style="padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:0.88rem;">
+        <option value="">All Training</option>
+        <option value="yes">Trained</option>
+        <option value="no">Not Trained</option>
+      </select>
+      <input type="search" id="rosterSearch" oninput="renderRoster()" placeholder="Search name or email..." style="padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:0.88rem;min-width:180px;">
+      <button class="btn-muted" onclick="clearRosterFilters()" style="padding:5px 10px;">Clear</button>
+    </div>
+
     <div id="rosterStatus" class="status loading">Loading volunteer list...</div>
 
     <div class="table-wrap">
@@ -485,39 +503,79 @@
   }
 
   // ── Section B: Consolidated Volunteer List ────────────────────────────────
+  var rosterData = [];
+
   function loadRoster() {
     setRosterStatus('Loading...', 'loading');
 
     google.script.run
       .withSuccessHandler(function(volunteers) {
         setRosterStatus('', '');
-        volunteers = (volunteers || []).slice().sort(function(a, b) { return a.name.localeCompare(b.name); });
-        document.getElementById('rosterCount').textContent = volunteers.length;
-
-        var tbody = document.getElementById('rosterBody');
-        if (volunteers.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">No volunteers on list.</td></tr>';
-          return;
-        }
-
-        var html = '';
-        for (var i = 0; i < volunteers.length; i++) {
-          var v = volunteers[i];
-          var roleClass = v.role ? v.role.replace(/\s+/g, '').toLowerCase() : '';
-          html += '<tr>' +
-            '<td><span class="role-pill ' + roleClass + '">' + esc(v.role || '') + '</span></td>' +
-            '<td>' + esc(v.name) + '</td>' +
-            '<td style="font-size:0.82rem;">' + esc(v.email) + '</td>' +
-            '<td>' + esc(v.efileNum || '') + '</td>' +
-            '<td>' + (v.attendedTraining ? 'Yes' : '') + '</td>' +
-            '</tr>';
-        }
-        tbody.innerHTML = html;
+        rosterData = (volunteers || []).slice().sort(function(a, b) { return a.name.localeCompare(b.name); });
+        renderRoster();
       })
       .withFailureHandler(function(err) {
         setRosterStatus('Failed to load: ' + (err.message || String(err)), 'error');
       })
       .getVolunteerManagementData();
+  }
+
+  function renderRoster() {
+    var roleFilter = document.getElementById('rosterRoleFilter').value;
+    var trainingFilter = document.getElementById('rosterTrainingFilter').value;
+    var searchTerm = document.getElementById('rosterSearch').value.trim().toLowerCase();
+
+    var filtered = rosterData.filter(function(v) {
+      if (roleFilter === '__none__') {
+        if (v.role) return false;
+      } else if (roleFilter) {
+        if (v.role !== roleFilter) return false;
+      }
+      if (trainingFilter === 'yes' && !v.attendedTraining) return false;
+      if (trainingFilter === 'no' && v.attendedTraining) return false;
+      if (searchTerm) {
+        var name = (v.name || '').toLowerCase();
+        var email = (v.email || '').toLowerCase();
+        if (name.indexOf(searchTerm) === -1 && email.indexOf(searchTerm) === -1) return false;
+      }
+      return true;
+    });
+
+    var total = rosterData.length;
+    var count = filtered.length;
+    var anyActive = roleFilter || trainingFilter || searchTerm;
+    document.getElementById('rosterCount').textContent = anyActive ? (count + ' / ' + total) : total;
+
+    var tbody = document.getElementById('rosterBody');
+    if (total === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">No volunteers on list.</td></tr>';
+      return;
+    }
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">No volunteers match the current filters.</td></tr>';
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < filtered.length; i++) {
+      var v = filtered[i];
+      var roleClass = v.role ? v.role.replace(/\s+/g, '').toLowerCase() : '';
+      html += '<tr>' +
+        '<td><span class="role-pill ' + roleClass + '">' + esc(v.role || '') + '</span></td>' +
+        '<td>' + esc(v.name) + '</td>' +
+        '<td style="font-size:0.82rem;">' + esc(v.email) + '</td>' +
+        '<td>' + esc(v.efileNum || '') + '</td>' +
+        '<td>' + (v.attendedTraining ? 'Yes' : '') + '</td>' +
+        '</tr>';
+    }
+    tbody.innerHTML = html;
+  }
+
+  function clearRosterFilters() {
+    document.getElementById('rosterRoleFilter').value = '';
+    document.getElementById('rosterTrainingFilter').value = '';
+    document.getElementById('rosterSearch').value = '';
+    renderRoster();
   }
 
   // ── UI helpers ─────────────────────────────────────────────────────────────
