@@ -276,6 +276,59 @@ function escapeHtmlServer(text) {
 }
 
 /**
+ * Reads a block of values from a sheet starting at the given row and column.
+ * @param {Sheet} sheet - Spreadsheet sheet to read from
+ * @param {number} numCols - Number of columns to read
+ * @param {number} [startRow=2] - 1-indexed starting row
+ * @param {number} [startCol=1] - 1-indexed starting column
+ * @param {number} [numRows] - Number of rows to read (defaults to all rows to the sheet bottom)
+ * @returns {Array<Array>} Sheet values
+ */
+function readSheetData(sheet, numCols, startRow = 2, startCol = 1, numRows) {
+  if (!sheet) {
+    throw new Error('Sheet is required for readSheetData');
+  }
+  const lastRow = sheet.getLastRow();
+  if (lastRow < startRow || numCols <= 0) {
+    return [];
+  }
+  const rowsToRead = typeof numRows === 'number'
+    ? Math.max(0, Math.min(numRows, lastRow - startRow + 1))
+    : lastRow - startRow + 1;
+
+  if (rowsToRead === 0) {
+    return [];
+  }
+  return sheet.getRange(startRow, startCol, rowsToRead, numCols).getValues();
+}
+
+/**
+ * Reads sheet values by sheet name.
+ * @param {string} sheetName - Name of the sheet
+ * @param {number} numCols - Number of columns to read
+ * @param {number} [startRow=2] - 1-indexed starting row
+ * @param {number} [startCol=1] - 1-indexed starting column
+ * @returns {Array<Array>} Sheet values
+ */
+function getSheetData(sheetName, numCols, startRow = 2, startCol = 1) {
+  return readSheetData(getSheet(sheetName), numCols, startRow, startCol);
+}
+
+/**
+ * Sets a cell value using a 0-indexed column reference.
+ * @param {Sheet} sheet - Spreadsheet sheet
+ * @param {number} row - 1-indexed row number
+ * @param {number} col - 0-indexed column number
+ * @param {*} value - Value to write
+ */
+function setCellValue(sheet, row, col, value) {
+  if (!sheet) {
+    throw new Error('Sheet is required for setCellValue');
+  }
+  sheet.getRange(row, col + 1).setValue(value);
+}
+
+/**
  * Validates volunteer name format
  * @param {string} volunteerName - Volunteer name to validate
  * @returns {boolean} True if valid format

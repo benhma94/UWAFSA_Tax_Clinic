@@ -24,8 +24,7 @@ function getVolunteersAndClients() {
         if (lastRow > 1) {
           const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, lastRow - 1);
           const startRow = Math.max(2, lastRow - checkRows + 1);
-          const data = assignSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1,
-                                            checkRows, 4).getValues();
+          const data = readSheetData(assignSheet, 4, startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, checkRows);
           for (let i = 0; i < data.length; i++) {
             const client    = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
             const label     = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim() || '';
@@ -49,11 +48,11 @@ function getVolunteersAndClients() {
         const signOutLastRow = signOutSheet.getLastRow();
 
         const volData = volLastRow > 1
-          ? volunteerSheet.getRange(2, 1, volLastRow - 1, 5).getValues()
+          ? readSheetData(volunteerSheet, 5, 2, 1, volLastRow - 1)
           : [];
 
         const signOutData = signOutLastRow > 1
-          ? signOutSheet.getRange(2, 1, signOutLastRow - 1, 3).getValues()
+          ? readSheetData(signOutSheet, 3, 2, 1, signOutLastRow - 1)
           : [];
 
         const signedOutSessions = new Set(signOutData.map(r => r[CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim()));
@@ -139,7 +138,7 @@ function getClientIntakeInfoInner(clientID) {
   if (lastRow <= 1) return null;
 
   const clientIdCol = CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID + 1;
-  const clientIdData = sheet.getRange(2, clientIdCol, lastRow - 1, 1).getValues();
+  const clientIdData = readSheetData(sheet, 1, 2, clientIdCol, lastRow - 1);
 
   for (let i = clientIdData.length - 1; i >= 0; i--) {
     if (clientIdData[i][0]?.toString().trim() === clientID) {
@@ -190,7 +189,7 @@ function getMentorList() {
           return { reviewers: [], seniors: [] };
         }
 
-        const data = volunteerSheet.getRange(2, 1, lastRow - 1, 4).getValues();
+        const data = readSheetData(volunteerSheet, 4, 2, 1, lastRow - 1);
 
         // Build set of signed-out session IDs (recent rows only — avoids full history scan)
         const signedOutIds = new Set();
@@ -200,7 +199,7 @@ function getMentorList() {
           if (lastSignOut > 1) {
             const rowsToRead = Math.min(lastSignOut - 1, 500);
             const startRow = Math.max(2, lastSignOut - rowsToRead + 1);
-            const recentData = signOutSheet.getRange(startRow, 1, rowsToRead, signOutSheet.getLastColumn()).getValues();
+            const recentData = readSheetData(signOutSheet, signOutSheet.getLastColumn(), startRow, 1, rowsToRead);
             for (const row of recentData) {
               const outId = row[CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim();
               if (outId) signedOutIds.add(outId);
@@ -251,8 +250,7 @@ function findAssignmentRow(assignSheet, volunteer, clientID) {
   const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, lastRow - 1);
   const startRow = Math.max(2, lastRow - checkRows + 1);
 
-  const assignData = assignSheet.getRange(startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1,
-                                           checkRows, 4).getValues();
+  const assignData = readSheetData(assignSheet, 4, startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, checkRows);
 
   for (let i = 0; i < assignData.length; i++) {
     const c = assignData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
@@ -265,8 +263,7 @@ function findAssignmentRow(assignSheet, volunteer, clientID) {
 
   if (lastRow > CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK) {
     const olderRows = lastRow - CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK;
-    const olderData = assignSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1,
-                                            olderRows, 4).getValues();
+    const olderData = readSheetData(assignSheet, 4, 2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, olderRows);
     for (let i = 0; i < olderData.length; i++) {
       const c = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
       const vRaw = olderData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim() || '';
@@ -301,7 +298,7 @@ function findTrackerRowByStatus(trackerSheet, clientID, taxYear, preferredStatus
   const statusColIdx = CONFIG.COLUMNS.TAX_RETURN_TRACKER.STATUS;
   const numCols      = statusColIdx + 1; // read through STATUS column
 
-  const allData = trackerSheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+  const allData = readSheetData(trackerSheet, numCols, 2, 1, lastRow - 1);
 
   for (let i = 0; i < allData.length; i++) {
     const rowClient = allData[i][clientColIdx]?.toString().trim();

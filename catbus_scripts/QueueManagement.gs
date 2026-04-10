@@ -19,14 +19,13 @@ function getClientQueue() {
     
     // Read only necessary columns: Timestamp (0), Client ID (5), Priority (7), Documents (8)
     const intakeData = intakeLastRow > 1
-      ? intakeSheet.getRange(2, 1, intakeLastRow - 1, 8).getValues()
+      ? readSheetData(intakeSheet, 8, 2, 1, intakeLastRow - 1)
       : [];
 
     // Build set of actively assigned client IDs - only read if there are assignments
     const assignedClientIds = new Set();
     if (assignmentLastRow > 1) {
-      const assignmentData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1,
-                                                      assignmentLastRow - 1, 3).getValues();
+      const assignmentData = readSheetData(assignmentSheet, 3, 2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1, assignmentLastRow - 1);
       assignmentData.forEach(row => {
         const clientId = row[0]?.toString().trim();
         const completed = row[2]?.toString().trim().toLowerCase();
@@ -92,7 +91,7 @@ function assignClientToVolunteer(clientId, volunteerName) {
       let found = false;
       if (intakeLastRow > 1) {
         const clientIdCol = CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID + 1;
-        const intakeData = intakeSheet.getRange(2, clientIdCol, intakeLastRow - 1, 1).getValues();
+        const intakeData = readSheetData(intakeSheet, 1, 2, clientIdCol, intakeLastRow - 1);
         for (let i = 0; i < intakeData.length; i++) {
           const currentClientId = intakeData[i][0]?.toString().trim();
           if (currentClientId === clientId) {
@@ -111,8 +110,7 @@ function assignClientToVolunteer(clientId, volunteerName) {
       const assignmentLastRow = assignmentSheet.getLastRow();
       if (assignmentLastRow > 1) {
         const numRows = assignmentLastRow - 1;
-        const assignmentData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1,
-                                                         numRows, 3).getValues();
+        const assignmentData = readSheetData(assignmentSheet, 3, 2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1, numRows);
 
         for (let i = assignmentData.length - 1; i >= 0; i--) {
           const assignedClient = assignmentData[i][0]?.toString().trim();
@@ -165,7 +163,7 @@ function buildTodayShiftMap() {
 
     // Row 1: headers ['Time / Day', Day1Label, Day2Label, Day3Label, Day4Label]
     // Rows 2-4: slot A, B, C data (comma-separated volunteer names per day)
-    const data = sheet.getRange(1, 1, 4, 5).getValues();
+    const data = readSheetData(sheet, 5, 1, 1, 4);
     const headers = data[0];
 
     // Find which column matches today
@@ -238,12 +236,12 @@ function getAvailableVolunteers() {
 
     // Read columns: Timestamp (0), Name (1), Station (2), SessionId (3), ON_BREAK (4)
     const volunteerData = volunteerLastRow > 1
-      ? volunteerSheet.getRange(2, 1, volunteerLastRow - 1, 5).getValues()
+      ? readSheetData(volunteerSheet, 5, 2, 1, volunteerLastRow - 1)
       : [];
 
     // Read only SESSION_ID column from sign-out
     const signOutData = signOutLastRow > 1
-      ? signOutSheet.getRange(2, CONFIG.COLUMNS.SIGNOUT.SESSION_ID + 1, signOutLastRow - 1, 1).getValues()
+      ? readSheetData(signOutSheet, 1, 2, CONFIG.COLUMNS.SIGNOUT.SESSION_ID + 1, signOutLastRow - 1)
       : [];
 
     // Build busy-volunteer set from recent assignment rows.
@@ -255,7 +253,7 @@ function getAvailableVolunteers() {
       const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, assignmentLastRow - 1);
       const startRow = Math.max(2, assignmentLastRow - checkRows + 1);
       // Read from col 1 (Timestamp) through col 4 (Completed)
-      const assignmentData = assignmentSheet.getRange(startRow, 1, checkRows, 4).getValues();
+      const assignmentData = readSheetData(assignmentSheet, 4, startRow, 1, checkRows);
 
       assignmentData.forEach(row => {
         const label     = row[CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString() || '';
@@ -276,7 +274,7 @@ function getAvailableVolunteers() {
     if (trackerLastRow > 1) {
       // Read Timestamp, Volunteer, and up to Incomplete in one batch read
       const numCols = CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE + 1;
-      const trackerData = trackerSheet.getRange(2, 1, trackerLastRow - 1, numCols).getValues();
+      const trackerData = readSheetData(trackerSheet, numCols, 2, 1, trackerLastRow - 1);
       for (let i = 0; i < trackerData.length; i++) {
         const ts         = trackerData[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.TIMESTAMP];
         const name       = trackerData[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.VOLUNTEER]?.toString().trim();
@@ -366,10 +364,10 @@ function setVolunteerBreakStatus(volunteerName, isOnBreak) {
     if (lastRow <= 1) throw new Error('No volunteers found');
 
     const today = new Date().toDateString();
-    const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    const data = readSheetData(sheet, 5, 2, 1, lastRow - 1);
 
     const signOutData = signOutSheet.getLastRow() > 1
-      ? signOutSheet.getRange(2, 1, signOutSheet.getLastRow() - 1, 3).getValues()
+      ? readSheetData(signOutSheet, 3, 2, 1, signOutSheet.getLastRow() - 1)
       : [];
     const signedOutSessions = new Set(signOutData.map(r => r[CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim()));
 
@@ -391,7 +389,7 @@ function setVolunteerBreakStatus(volunteerName, isOnBreak) {
     if (targetRowIndex === -1) throw new Error(`No active sign-in found for ${volunteerName}`);
 
     const sheetRow = targetRowIndex + 2; // +1 for 0-index, +1 for header row
-    sheet.getRange(sheetRow, CONFIG.COLUMNS.VOLUNTEER_LIST.ON_BREAK + 1).setValue(isOnBreak ? 'yes' : '');
+    setCellValue(sheet, sheetRow, CONFIG.COLUMNS.VOLUNTEER_LIST.ON_BREAK, isOnBreak ? 'yes' : '');
 
     // Invalidate caches so queue and control sheet reflect the change immediately
     invalidateMultiple([CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS, CACHE_CONFIG.KEYS.VOLUNTEER_LIST]);
@@ -421,9 +419,9 @@ function getActiveAssignments() {
     const volunteerLastRow = volunteerSheet.getLastRow();
     const signOutLastRow = signOutSheet.getLastRow();
     if (volunteerLastRow > 1) {
-      const volunteerData = volunteerSheet.getRange(2, 1, volunteerLastRow - 1, 4).getValues();
+      const volunteerData = readSheetData(volunteerSheet, 4, 2, 1, volunteerLastRow - 1);
       const signOutData = signOutLastRow > 1
-        ? signOutSheet.getRange(2, 1, signOutLastRow - 1, 3).getValues()
+        ? readSheetData(signOutSheet, 3, 2, 1, signOutLastRow - 1)
         : [];
       const signedOutIds = new Set(signOutData.map(r => r[2]?.toString().trim()).filter(Boolean));
 
@@ -444,7 +442,7 @@ function getActiveAssignments() {
     const priorityMap = {};
     const intakeLastRow = intakeSheet.getLastRow();
     if (intakeLastRow > 1) {
-      const intakeData = intakeSheet.getRange(2, 1, intakeLastRow - 1, 8).getValues();
+      const intakeData = readSheetData(intakeSheet, 8, 2, 1, intakeLastRow - 1);
       intakeData.forEach(row => {
         const cId = row[CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID]?.toString().trim();
         const isPriority = row[CONFIG.COLUMNS.CLIENT_INTAKE.IS_HIGH_PRIORITY] === true ||
@@ -455,7 +453,7 @@ function getActiveAssignments() {
 
     const now = new Date();
     const active = [];
-    const assignmentData = assignmentSheet.getRange(2, 1, assignmentLastRow - 1, 4).getValues();
+    const assignmentData = readSheetData(assignmentSheet, 4, 2, 1, assignmentLastRow - 1);
     assignmentData.forEach(row => {
       const ts        = row[CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP];
       const clientId  = row[CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
@@ -511,7 +509,7 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
         return { success: false, message: `Client ${clientId} is not currently assigned` };
       }
 
-      const assignmentData = assignmentSheet.getRange(2, 1, assignmentLastRow - 1, 4).getValues();
+      const assignmentData = getSheetData(CONFIG.SHEETS.CLIENT_ASSIGNMENT, 4, 2, 1);
 
       // Find the active assignment row for this client
       let activeRowIndex = -1;
@@ -542,7 +540,7 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
       // timestamp. This keeps the graph's time-series accurate (the client has been
       // "in progress" since the original assignment, regardless of which volunteer has them).
       const rowNumber = activeRowIndex + 2; // +2: skip header (row 1) + 0-indexed
-      assignmentSheet.getRange(rowNumber, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER + 1).setValue(newVolunteerName);
+      setCellValue(assignmentSheet, rowNumber, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER, newVolunteerName);
     } finally {
       lock.releaseLock();
     }
@@ -586,7 +584,7 @@ function unassignClient(clientId) {
         return { success: false, message: `Client ${clientId} is not currently assigned` };
       }
 
-      const assignmentData = assignmentSheet.getRange(2, 1, assignmentLastRow - 1, 4).getValues();
+      const assignmentData = getSheetData(CONFIG.SHEETS.CLIENT_ASSIGNMENT, 4, 2, 1);
 
       // Find the active assignment row for this client
       let activeRowIndex = -1;
@@ -651,7 +649,7 @@ function removeClientFromQueue(clientId, reason) {
 
     if (intakeLastRow > 1) {
       const clientIdCol = CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID + 1;
-      const intakeData = intakeSheet.getRange(2, clientIdCol, intakeLastRow - 1, 1).getValues();
+      const intakeData = readSheetData(intakeSheet, 1, 2, clientIdCol, intakeLastRow - 1);
       for (let i = 0; i < intakeData.length; i++) {
         const currentClientId = intakeData[i][0]?.toString().trim();
         if (currentClientId === clientId) {
@@ -668,8 +666,7 @@ function removeClientFromQueue(clientId, reason) {
     // Check if client is already assigned
     const assignmentLastRow = assignmentSheet.getLastRow();
     if (assignmentLastRow > 1) {
-      const assignmentData = assignmentSheet.getRange(2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1,
-                                                      assignmentLastRow - 1, 2).getValues();
+      const assignmentData = readSheetData(assignmentSheet, 2, 2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID + 1, assignmentLastRow - 1);
       for (let i = 0; i < assignmentData.length; i++) {
         const assignedClient = assignmentData[i][0]?.toString().trim();
         const completed = assignmentData[i][1]?.toString().trim().toLowerCase();

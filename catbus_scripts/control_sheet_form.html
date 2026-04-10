@@ -1529,8 +1529,7 @@
     let selectedFilesEmail = []; // Store files for email attachment
     let currentEmailRowId = null; // Store current row ID for email receipt
     let currentEmailRowCount = null; // Store current row count for email receipt
-    let isPageVisible = true;
-    let pollingInterval = null;
+    let controlSheetPoller = null;
     let clientsRefreshPending = false;
     let lastClientRefreshTime = 0;
     const CLIENT_REFRESH_COOLDOWN = 10000; // ms — max one background refresh per 10 s
@@ -1779,16 +1778,6 @@
       }).getVolunteersAndClients();
       setupVolunteerAutocomplete();
       startPolling();
-      // Pause polling when page is not visible
-      document.addEventListener('visibilitychange', function() {
-        isPageVisible = !document.hidden;
-        if (isPageVisible) {
-          startPolling();
-          pollVolunteerStatus(); // Refresh immediately when page becomes visible
-        } else {
-          if (pollingInterval) clearInterval(pollingInterval);
-        }
-      });
       // Wire up auto-save on any meaningful form change
       document.addEventListener('change', function(e) {
         if (!isRestoring) scheduleSaveDraft();
@@ -2141,9 +2130,9 @@
     }
 
     function startPolling() {
-      if (pollingInterval) clearInterval(pollingInterval);
-      var jitter = Math.floor(Math.random() * 2000);
-      pollingInterval = setInterval(pollVolunteerStatus, 10000 + jitter);
+      if (controlSheetPoller) controlSheetPoller.stop();
+      controlSheetPoller = createVisibilityAwarePoller(pollVolunteerStatus, 10000, { jitterMs: 2000 });
+      controlSheetPoller.start();
     }
 
     function pollVolunteerStatus() {

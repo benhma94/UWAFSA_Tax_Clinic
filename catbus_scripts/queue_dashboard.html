@@ -424,8 +424,7 @@
   let activeAssignments = [];
   let lastSerializedData = "";  // used to detect changes
   let clientToReassign = null;
-  let refreshInterval = null;
-  let isPageVisible = true;
+  let queueAutoPoller = null;
   let lastUpdateTime = null;
 
 
@@ -465,22 +464,11 @@
     loadQueue();
   }
 
-  // Auto-refresh every 30 seconds
   function startAutoRefresh() {
-    if (refreshInterval) clearInterval(refreshInterval);
-    refreshInterval = setInterval(loadQueue, 30000); // 30 seconds
+    if (queueAutoPoller) queueAutoPoller.stop();
+    queueAutoPoller = createVisibilityAwarePoller(loadQueue, 30000, { jitterMs: 2000 });
+    queueAutoPoller.start();
   }
-
-  // Pause refresh when page is not visible
-  document.addEventListener('visibilitychange', function() {
-    isPageVisible = !document.hidden;
-    if (isPageVisible) {
-      startAutoRefresh();
-      loadQueue(); // Refresh immediately when page becomes visible
-    } else {
-      if (refreshInterval) clearInterval(refreshInterval);
-    }
-  });
 
   // Start auto-refresh on page load
   startAutoRefresh();

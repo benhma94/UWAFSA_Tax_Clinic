@@ -95,7 +95,7 @@ function buildVolunteerScheduleMap_() {
 
     // Rows 2-4 = slots A/B/C; cols 2-5 = days 1-4 (1-indexed in sheet)
     const numRows = Math.min(3, lastRow - 1);
-    const data = sheet.getRange(2, 1, numRows, 5).getValues();
+    const data = readSheetData(sheet, 5, 2, 1, numRows);
     const slotKeys = ['A', 'B', 'C'];
 
     for (let r = 0; r < data.length; r++) {

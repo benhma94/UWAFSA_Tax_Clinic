@@ -55,7 +55,21 @@ function getCachedOrFetch(cacheKey, fetchFunction, ttl = null) {
 
   // Store in cache
   try {
-    const ttlSeconds = ttl || CACHE_CONFIG.TTL[cacheKey] || 30;
+    // Resolve TTL: callers pass the literal cache key (eg 'volunteer_list') while
+    // CACHE_CONFIG.TTL is keyed by token names (eg 'VOLUNTEER_LIST'). Try to map
+    // the provided cacheKey back to the TTL map; fall back to a sensible default.
+    let ttlSeconds = ttl || 0;
+    if (!ttlSeconds) {
+      // Look up the matching key name in CACHE_CONFIG.KEYS
+      for (var k in CACHE_CONFIG.KEYS) {
+        if (CACHE_CONFIG.KEYS[k] === cacheKey) {
+          ttlSeconds = CACHE_CONFIG.TTL[k] || 30;
+          break;
+        }
+      }
+    }
+    if (!ttlSeconds) ttlSeconds = 30;
+
     cache.put(cacheKey, JSON.stringify(freshData), ttlSeconds);
     Logger.log(`Cached ${cacheKey} for ${ttlSeconds}s`);
   } catch (e) {

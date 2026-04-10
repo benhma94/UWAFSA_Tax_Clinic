@@ -7,21 +7,55 @@
     /* Override: narrower max-width for intake form */
     body { max-width: 800px; }
 
+    header {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 20px 24px 12px 180px;
+      border-bottom: 1px solid var(--border-light);
+      margin-bottom: 20px;
+      min-height: 96px;
+    }
+
+    body.dark header {
+      border-bottom-color: var(--border-dark);
+    }
+
     header h3 {
       font-family: Verdana, sans-serif;
       color: var(--accent-color);
       font-size: 1.8rem;
-      margin: 0 auto;
-      text-align: center;
+      margin: 0;
+      text-align: left;
       font-weight: 600;
       letter-spacing: -0.5px;
+      flex: 1 1 auto;
+      min-width: 220px;
     }
 
     header img {
       height: 60px;
     }
 
-    .toggle-theme { margin-left: auto; }
+    .header-actions,
+    #receptionHelpArea {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #receptionHelpArea {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      margin: 0;
+      z-index: 2;
+    }
+
+    .toggle-theme { margin: 0; }
 
     .form-wrapper {
       max-width: 600px;
@@ -771,17 +805,16 @@
 </head>
 <body class="light">
   <header>
+    <div id="receptionHelpArea">
+      <button id="receptionHelpBtn" onclick="toggleReceptionHelp()">📞 Call for Help</button>
+      <button id="receptionEscalateBtn" onclick="escalateReceptionHelp()" style="display: none;">🚨 Escalate to Senior Mentor</button>
+    </div>
     <h3>AFSA Tax Clinic Client Intake Form</h3>
-    <div style="display:flex; gap:12px; align-items:center;">
+    <div class="header-actions">
       <a href="<?= websiteUrl ?>" style="font-size:0.85em; color:var(--accent-color); text-decoration:none; font-weight:600; opacity:0.8;">🏠 Home</a>
       <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
   </header>
-
-  <div id="receptionHelpArea">
-    <button id="receptionHelpBtn" onclick="toggleReceptionHelp()">📞 Call for Help</button>
-    <button id="receptionEscalateBtn" onclick="escalateReceptionHelp()" style="display: none;">🚨 Escalate to Senior Mentor</button>
-  </div>
 
   <div class="form-wrapper">
     <div class="form-section">
