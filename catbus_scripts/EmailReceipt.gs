@@ -85,7 +85,7 @@ function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
       emailOptions.attachments = attachments;
     }
 
-    MailApp.sendEmail(emailOptions);
+    sendEmail(emailOptions, 'sendReceiptEmail');
 
     Logger.log(`Receipt email sent successfully to ${clientEmail}${attachments.length > 0 ? ' with ' + attachments.length + ' attachment(s)' : ''}`);
 
@@ -95,12 +95,12 @@ function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
         ? `Tax Year ${taxYearDisplay} — UFILE Password`
         : `UFILE Password`;
       const passwordBody = buildPasswordEmailBody(emailData.ufilePassword, taxYearDisplay);
-      MailApp.sendEmail({
+      sendEmail({
         to: clientEmail,
         subject: passwordSubject,
         htmlBody: passwordBody,
         name: 'AFSA Tax Clinic'
-      });
+      }, 'sendPasswordEmail');
       Logger.log(`UFILE password email sent to ${clientEmail}`);
     }
 

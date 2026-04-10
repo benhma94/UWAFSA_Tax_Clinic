@@ -152,12 +152,12 @@ function sendQuizResult(data) {
 
     const recipients = email2 ? `${email1},${email2}` : email1;
 
-    MailApp.sendEmail({
+    sendEmail({
       to: recipients,
       subject: 'Training Quiz Results',
       body: body,
       name: 'UW AFSA Tax Clinic'
-    });
+    }, 'sendQuizResult');
 
     sheet.getRange(data.rowIndex, cols.STATUS + 1).setValue(data.verdict);
 

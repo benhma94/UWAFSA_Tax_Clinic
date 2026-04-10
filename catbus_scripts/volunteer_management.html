@@ -149,6 +149,95 @@
     .role-pill.drop        { background: #f9ebea; color: #922b21; }
     .role-pill.blacklisted { background: #1a1a1a; color: #fff; }
 
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filter-dropdown {
+      position: relative;
+      min-width: 140px;
+    }
+
+    .filter-dropdown-button {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      background: #fff;
+      color: #1a1a1a;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      text-align: left;
+    }
+
+    .filter-dropdown-button:hover {
+      background: #f6f6f6;
+    }
+
+    .filter-summary {
+      font-size: 0.78rem;
+      color: #555;
+      margin-left: 12px;
+      white-space: nowrap;
+    }
+
+    .filter-dropdown-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      min-width: 180px;
+      max-width: 260px;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+      padding: 12px;
+      z-index: 20;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    .filter-dropdown-panel label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .filter-dropdown-panel label:last-child {
+      margin-bottom: 0;
+    }
+
+    .filter-dropdown-panel input {
+      margin-right: 8px;
+      vertical-align: middle;
+      accent-color: var(--accent);
+    }
+
+    .filter-row input[type="search"],
+    .filter-row select {
+      flex: 1 0 180px;
+      min-width: 180px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.88rem;
+      background: #fff;
+      color: #1a1a1a;
+    }
+
+    .filter-row button {
+      padding: 7px 12px;
+    }
+
     .btn-danger { background: #c0392b; color: #fff; }
     .btn-danger:hover:not(:disabled) { background: #96281b; }
 
@@ -217,19 +306,30 @@
       <button class="btn-muted" onclick="loadRoster()">Refresh</button>
     </div>
 
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:0.88rem;">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <strong style="color:#555;">Role:</strong>
-        <label><input type="checkbox" class="rosterRoleFilter" value="Mentor" onchange="renderRoster()"> Mentor</label>
-        <label><input type="checkbox" class="rosterRoleFilter" value="Filer" onchange="renderRoster()"> Filer</label>
-        <label><input type="checkbox" class="rosterRoleFilter" value="Frontline" onchange="renderRoster()"> Frontline</label>
-        <label><input type="checkbox" class="rosterRoleFilter" value="Drop" onchange="renderRoster()"> Drop</label>
-        <label><input type="checkbox" class="rosterRoleFilter" value="__none__" onchange="renderRoster()"> No Role</label>
+    <div class="filter-row">
+      <div class="filter-dropdown">
+        <button type="button" class="filter-dropdown-button" onclick="toggleRosterDropdown('role')">
+          Role
+          <span class="filter-summary" id="roleFilterSummary">All</span>
+        </button>
+        <div class="filter-dropdown-panel" id="roleFilterPanel">
+          <label><input type="checkbox" id="roleSelectAll" onchange="toggleAllRoles(this.checked)"> <strong>Select All</strong></label>
+          <label><input type="checkbox" class="rosterRoleFilter" value="mentor" onchange="renderRoster(); updateRosterFilterSummary()"> Mentor</label>
+          <label><input type="checkbox" class="rosterRoleFilter" value="filer" onchange="renderRoster(); updateRosterFilterSummary()"> Filer</label>
+          <label><input type="checkbox" class="rosterRoleFilter" value="frontline" onchange="renderRoster(); updateRosterFilterSummary()"> Frontline</label>
+          <label><input type="checkbox" class="rosterRoleFilter" value="drop" onchange="renderRoster(); updateRosterFilterSummary()"> Drop</label>
+          <label><input type="checkbox" class="rosterRoleFilter" value="__none__" onchange="renderRoster(); updateRosterFilterSummary()"> No Role</label>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <strong style="color:#555;">Training:</strong>
-        <label><input type="checkbox" class="rosterTrainingFilter" value="yes" onchange="renderRoster()"> Trained</label>
-        <label><input type="checkbox" class="rosterTrainingFilter" value="no" onchange="renderRoster()"> Not Trained</label>
+      <div class="filter-dropdown">
+        <button type="button" class="filter-dropdown-button" onclick="toggleRosterDropdown('training')">
+          Training
+          <span class="filter-summary" id="trainingFilterSummary">All</span>
+        </button>
+        <div class="filter-dropdown-panel" id="trainingFilterPanel">
+          <label><input type="checkbox" class="rosterTrainingFilter" value="yes" onchange="renderRoster(); updateRosterFilterSummary()"> Trained</label>
+          <label><input type="checkbox" class="rosterTrainingFilter" value="no" onchange="renderRoster(); updateRosterFilterSummary()"> Not Trained</label>
+        </div>
       </div>
       <input type="search" id="rosterSearch" oninput="renderRoster()" placeholder="Search name or email..." style="padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:0.88rem;min-width:180px;">
       <button class="btn-muted" onclick="clearRosterFilters()" style="padding:5px 10px;">Clear</button>
@@ -513,6 +613,7 @@
         setRosterStatus('', '');
         rosterData = (volunteers || []).slice().sort(function(a, b) { return a.name.localeCompare(b.name); });
         renderRoster();
+        updateRosterFilterSummary();
       })
       .withFailureHandler(function(err) {
         setRosterStatus('Failed to load: ' + (err.message || String(err)), 'error');
@@ -535,7 +636,7 @@
 
     var filtered = rosterData.filter(function(v) {
       if (roleFilterActive) {
-        var roleKey = v.role ? v.role : '__none__';
+        var roleKey = v.role ? v.role.toString().trim().toLowerCase() : '__none__';
         if (!selectedRoles[roleKey]) return false;
       }
       if (trainingFilterActive) {
@@ -581,11 +682,102 @@
   }
 
   function clearRosterFilters() {
-    var boxes = document.querySelectorAll('.rosterRoleFilter, .rosterTrainingFilter');
-    for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
+    var roleBoxes = document.querySelectorAll('.rosterRoleFilter');
+    for (var i = 0; i < roleBoxes.length; i++) roleBoxes[i].checked = false;
+    var trainBoxes = document.querySelectorAll('.rosterTrainingFilter');
+    for (var j = 0; j < trainBoxes.length; j++) trainBoxes[j].checked = false;
     document.getElementById('rosterSearch').value = '';
+    closeRosterDropdowns();
+    updateRosterFilterSummary();
     renderRoster();
   }
+
+  function toggleRosterDropdown(menu) {
+    var panel = document.getElementById(menu + 'FilterPanel');
+    if (!panel) return;
+    var isOpen = panel.style.display === 'block';
+    closeRosterDropdowns();
+    panel.style.display = isOpen ? 'none' : 'block';
+  }
+
+  function closeRosterDropdowns() {
+    var panels = ['roleFilterPanel', 'trainingFilterPanel'];
+    for (var i = 0; i < panels.length; i++) {
+      var panel = document.getElementById(panels[i]);
+      if (panel) panel.style.display = 'none';
+    }
+  }
+
+  function updateRosterFilterSummary() {
+        // Update 'Select All' checkbox state
+        var allBoxes = document.querySelectorAll('.rosterRoleFilter');
+        var checkedBoxes = document.querySelectorAll('.rosterRoleFilter:checked');
+        var selectAll = document.getElementById('roleSelectAll');
+        if (selectAll) {
+          selectAll.checked = checkedBoxes.length === allBoxes.length && allBoxes.length > 0;
+          selectAll.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < allBoxes.length;
+        }
+    var roleSummary = document.getElementById('roleFilterSummary');
+    if (roleSummary) {
+      var roleBoxes = document.querySelectorAll('.rosterRoleFilter:checked');
+      if (roleBoxes.length === 0) {
+        roleSummary.textContent = 'All';
+      } else if (roleBoxes.length === 1) {
+        var label = roleBoxes[0].parentNode.textContent.trim();
+        roleSummary.textContent = label;
+      } else {
+        roleSummary.textContent = roleBoxes.length + ' selected';
+      }
+    }
+    var trainingCount = document.querySelectorAll('.rosterTrainingFilter:checked').length;
+    document.getElementById('trainingFilterSummary').textContent = trainingCount ? trainingCount + ' selected' : 'All';
+  }
+
+  // Select All handler for role filter (must be global — referenced by inline onchange)
+  function toggleAllRoles(checked) {
+    var boxes = document.querySelectorAll('.rosterRoleFilter');
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = checked;
+    renderRoster();
+    updateRosterFilterSummary();
+  }
+
+  // One-time keyboard accessibility wiring
+  (function wireRosterFilterA11y() {
+    var rolePanel = document.getElementById('roleFilterPanel');
+    if (rolePanel) {
+      rolePanel.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          closeRosterDropdowns();
+          e.preventDefault();
+        }
+        if ((e.key === ' ' || e.key === 'Enter') && e.target.tagName === 'LABEL') {
+          var input = e.target.querySelector('input[type="checkbox"]');
+          if (input) {
+            input.checked = !input.checked;
+            input.dispatchEvent(new Event('change'));
+            e.preventDefault();
+          }
+        }
+      });
+    }
+    var dropdownButtons = document.querySelectorAll('.filter-dropdown-button');
+    dropdownButtons.forEach(function(btn) {
+      btn.setAttribute('tabindex', '0');
+      btn.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          btn.click();
+          e.preventDefault();
+        }
+      });
+    });
+  })();
+
+  // Click outside any filter-dropdown closes open panels
+  document.addEventListener('click', function(event) {
+    if (!event.target.closest('.filter-dropdown')) {
+      closeRosterDropdowns();
+    }
+  });
 
   // ── UI helpers ─────────────────────────────────────────────────────────────
   function setAcceptedStatus(msg, type) {

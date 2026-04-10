@@ -107,11 +107,11 @@ function sendScheduleChangeNotifications(oldAssignments, newAssignments, volunte
       const subject = 'Your Tax Clinic Schedule Has Changed';
       const htmlBody = buildScheduleChangeEmailBody(name, oldShifts, newShifts, dayLabels);
 
-      MailApp.sendEmail({
+      sendEmail({
         to: email,
         subject: subject,
         htmlBody: htmlBody
-      });
+      }, 'sendScheduleChangeNotifications');
 
       Logger.log(`Schedule change notification sent to ${name} (${email})`);
       emailsSent++;
