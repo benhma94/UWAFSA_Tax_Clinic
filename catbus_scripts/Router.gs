@@ -97,6 +97,8 @@ function doGet(e) {
       return loadPage('archive_rollforward', 'Archive & Rollforward', {});
     case 'raffledraw':
       return loadPage('raffle_draw', 'Raffle Draw', { xframe: ALLOW });
+    case 'massemail':
+      return loadPage('mass_email', 'Mass Email', {});
     case 'volunteermgmt':
       return loadPage('volunteer_management', 'Volunteer Management', {});
     default:

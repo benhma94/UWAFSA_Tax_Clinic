@@ -61,6 +61,7 @@ function saveClinicDates(config) {
     'CLINIC_DATES_OVERRIDE',
     JSON.stringify(dates)
   );
+  CacheService.getScriptCache().remove('CLINIC_DATES_OVERRIDE');
   return { success: true };
 }
 
@@ -81,6 +82,7 @@ function rollforwardData() {
     CONFIG.SHEETS.TAX_RETURN_TRACKER,
     CONFIG.SHEETS.VOLUNTEER_LIST,
     CONFIG.SHEETS.SIGNOUT,
+    CONFIG.SHEETS.CONSOLIDATED_VOLUNTEER_LIST,
     CONFIG.SHEETS.SCHEDULE_AVAILABILITY,
     CONFIG.SHEETS.SCHEDULE_OUTPUT,
     CONFIG.SHEETS.MESSAGES,

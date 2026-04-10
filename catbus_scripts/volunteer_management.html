@@ -29,24 +29,17 @@
       margin-bottom: 20px;
     }
 
-    .card h2 { margin: 0 0 14px; font-size: 1.1rem; }
-
-    /* Role filter */
-    .role-filter-grid {
+    .card-header {
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px 24px;
-      margin-bottom: 12px;
-    }
-
-    .role-filter-grid label {
-      display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 6px;
-      font-size: 0.95rem;
-      cursor: pointer;
-      font-weight: 600;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
+
+    .card-header h2 { margin: 0; }
+    .card h2 { margin: 0 0 14px; font-size: 1.1rem; }
 
     .btn-row {
       display: flex;
@@ -57,7 +50,7 @@
     /* Table */
     .table-wrap {
       overflow-x: auto;
-      max-height: 480px;
+      max-height: 420px;
       overflow-y: auto;
       margin-top: 12px;
     }
@@ -84,6 +77,9 @@
 
     tr:hover td { background: #fafafa; }
 
+    tr.already-on-list td { color: #999; }
+    tr.already-on-list td:first-child { color: #999; }
+
     /* Buttons */
     button {
       padding: 7px 14px;
@@ -98,11 +94,11 @@
     button:disabled { opacity: 0.4; cursor: not-allowed; }
     button:hover:not(:disabled) { opacity: 0.8; }
 
-    .btn-muted { background: #7f8c8d; color: #fff; }
-    .btn-blue  { background: #3498db; color: #fff; }
-    .btn-send  { background: var(--accent); color: #fff; font-size: 0.95rem; padding: 10px 22px; }
+    .btn-muted    { background: #7f8c8d; color: #fff; }
+    .btn-blue     { background: #3498db; color: #fff; }
+    .btn-primary  { background: var(--accent); color: #fff; font-size: 0.95rem; padding: 10px 22px; }
 
-    /* Count badge */
+    /* Badge */
     .badge {
       display: inline-block;
       background: var(--accent);
@@ -115,17 +111,9 @@
       vertical-align: middle;
     }
 
-    /* Table card header row */
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-      gap: 8px;
+    .badge-grey {
+      background: #7f8c8d;
     }
-
-    .card-header h2 { margin: 0; }
 
     /* Status messages */
     .status {
@@ -140,37 +128,25 @@
     .status.success { background: #d5f5e3; color: #1e8449; display: block; }
     .status.error   { background: #fadbd8; color: #922b21; display: block; }
 
-    /* Compose */
-    .compose-field {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 8px 10px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-family: inherit;
-      font-size: 0.9rem;
-      margin-bottom: 10px;
-    }
-
-    textarea.compose-field {
-      min-height: 140px;
-      resize: vertical;
-    }
-
-    label.field-label {
-      display: block;
-      font-weight: 600;
+    .inline-status {
       font-size: 0.88rem;
-      margin-bottom: 4px;
+      margin-left: 10px;
     }
 
-    .send-row {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      flex-wrap: wrap;
-      margin-top: 4px;
+    .role-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: #ddd;
+      color: #444;
     }
+
+    .role-pill.mentor    { background: #d6eaf8; color: #1a5276; }
+    .role-pill.filer     { background: #d5f5e3; color: #1e6b3a; }
+    .role-pill.frontline { background: #fdebd0; color: #935116; }
+    .role-pill.drop      { background: #f9ebea; color: #922b21; }
 
     @media (max-width: 600px) {
       .card-header { flex-direction: column; align-items: flex-start; }
@@ -182,260 +158,462 @@
 
   <h1>Volunteer Management</h1>
 
-  <!-- Role Filter -->
-  <div class="card">
-    <h2>Filter by Role</h2>
-    <div class="role-filter-grid" id="roleFilterGrid">
-      <span style="color:#999; font-size:0.9rem;">Loading...</span>
-    </div>
-    <div class="btn-row">
-      <button class="btn-muted" onclick="selectAllRoles()">Select All Roles</button>
-      <button class="btn-muted" onclick="deselectAllRoles()">Deselect All Roles</button>
-    </div>
-  </div>
-
-  <!-- Volunteer Table -->
+  <!-- Section A: Transfer Accepted Applicants -->
   <div class="card">
     <div class="card-header">
-      <h2>Volunteers <span class="badge" id="selectedCount">0 selected</span></h2>
+      <h2>Transfer Accepted Applicants <span class="badge" id="acceptedCount" style="display:none">0</span></h2>
       <div class="btn-row">
-        <button class="btn-blue" onclick="selectAllVisible()">Select All Visible</button>
-        <button class="btn-muted" onclick="deselectAllVisible()">Deselect All</button>
+        <button class="btn-blue" onclick="loadAccepted()">Load Accepted Applicants</button>
+        <button class="btn-muted" onclick="selectAllNew()">Select All New</button>
+        <button class="btn-muted" onclick="deselectAll()">Deselect All</button>
       </div>
     </div>
 
-    <div id="tableStatus" class="status loading">Loading volunteer data...</div>
+    <p style="margin: 0 0 10px; color: #555; font-size: 0.88rem;">
+      Applicants marked as <strong>Accepted</strong> in Application Review. Greyed-out rows are already on the Consolidated Volunteer List.
+    </p>
+
+    <div id="acceptedStatus" class="status loading" style="display:none"></div>
 
     <div class="table-wrap">
-      <table id="volunteerTable">
+      <table id="acceptedTable">
         <thead>
           <tr>
-            <th style="width:36px;">
-              <input type="checkbox" id="checkAll" onchange="toggleAllVisible(this.checked)" title="Toggle all visible">
-            </th>
-            <th>Name</th>
+            <th style="width:36px;"><input type="checkbox" id="checkAllAccepted" onchange="toggleAllAccepted(this.checked)" title="Toggle all new"></th>
             <th>Role</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="acceptedBody">
+          <tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">Click "Load Accepted Applicants" to fetch data.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <button class="btn-primary" id="btnTransfer" onclick="transferSelected()" disabled>
+        Transfer Selected (<span id="transferCount">0</span>)
+      </button>
+      <span id="transferStatus" class="status" style="margin-top:0;display:none;"></span>
+    </div>
+  </div>
+
+  <!-- Section B: Consolidated Volunteer List -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Consolidated Volunteer List <span class="badge badge-grey" id="rosterCount">...</span></h2>
+      <button class="btn-muted" onclick="loadRoster()">Refresh</button>
+    </div>
+
+    <div id="rosterStatus" class="status loading">Loading volunteer list...</div>
+
+    <div class="table-wrap">
+      <table id="rosterTable">
+        <thead>
+          <tr>
+            <th>Role</th>
+            <th>Name</th>
             <th>Email</th>
             <th>E-file #</th>
             <th>Training</th>
           </tr>
         </thead>
-        <tbody id="volunteerBody"></tbody>
+        <tbody id="rosterBody"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- Compose & Send -->
+  <!-- Section C: No-Show Volunteers -->
   <div class="card">
-    <h2>Compose Email</h2>
-    <p style="margin: 0 0 14px; color: #555; font-size: 0.9rem;">
-      Email will be sent from the clinic account. Selected volunteers will be BCC'd — they will not see each other's addresses.
+    <div class="card-header">
+      <h2>No-Show Volunteers <span class="badge badge-grey" id="noShowCount" style="display:none">0</span></h2>
+      <div class="btn-row">
+        <button class="btn-blue" onclick="loadNoShows()">Load No-Shows</button>
+        <button class="btn-muted" onclick="selectAllNoShows()">Select All</button>
+        <button class="btn-muted" onclick="deselectAllNoShows()">Deselect All</button>
+      </div>
+    </div>
+    <p style="margin:0 0 10px;color:#555;font-size:0.88rem;">
+      Volunteers on the roster who have not signed in or out at any clinic shift.
     </p>
-
-    <label class="field-label" for="emailSubject">Subject</label>
-    <input type="text" id="emailSubject" class="compose-field" placeholder="Email subject..." oninput="updateSendButton()">
-
-    <label class="field-label" for="emailBody">Body</label>
-    <textarea id="emailBody" class="compose-field" placeholder="Email body..." oninput="updateSendButton()"></textarea>
-
-    <div class="send-row">
-      <button class="btn-send" id="btnSend" onclick="sendEmail()" disabled>
-        Send BCC Email (<span id="sendCount">0</span> volunteers)
+    <div id="noShowStatus" class="status" style="display:none"></div>
+    <div class="table-wrap">
+      <table id="noShowTable">
+        <thead>
+          <tr>
+            <th style="width:36px;"><input type="checkbox" id="checkAllNoShows" onchange="toggleAllNoShows(this.checked)" title="Toggle all"></th>
+            <th>Role</th>
+            <th>Name</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody id="noShowBody">
+          <tr><td colspan="4" style="text-align:center;color:#999;padding:20px;">Click "Load No-Shows" to fetch data.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <button class="btn-primary" id="btnMarkDrop" onclick="markSelectedDrop()" disabled>
+        Mark as Drop (<span id="noShowDropCount">0</span>)
       </button>
-      <span id="sendStatus" class="status" style="margin-top:0;"></span>
+      <span id="noShowActionStatus" class="status" style="margin-top:0;display:none;"></span>
     </div>
   </div>
 
 <script>
   // ── State ─────────────────────────────────────────────────────────────────
-  var allVolunteers = [];
-  var activeRoles = {};    // role -> true/false
-  var selectedEmails = {}; // email -> true (using object as Set for IE compat)
+  var accepted = [];          // {role, email, firstName, preferredName, lastName, alreadyOnList}
+  var selected = {};          // email -> true
 
   // ── Boot ──────────────────────────────────────────────────────────────────
-  google.script.run
-    .withSuccessHandler(onDataLoaded)
-    .withFailureHandler(onDataError)
-    .getVolunteerManagementData();
+  loadRoster();
 
-  function onDataLoaded(volunteers) {
-    allVolunteers = volunteers || [];
+  // ── Section A: Accepted Applicants ────────────────────────────────────────
+  function loadAccepted() {
+    setAcceptedStatus('Loading accepted applicants...', 'loading');
+    document.getElementById('acceptedBody').innerHTML =
+      '<tr><td colspan="5" style="text-align:center;color:#999;padding:16px;">Loading...</td></tr>';
+    document.getElementById('acceptedCount').style.display = 'none';
 
-    // Count per role
-    var roleCounts = {};
-    for (var i = 0; i < allVolunteers.length; i++) {
-      var r = allVolunteers[i].role || 'Unknown';
-      roleCounts[r] = (roleCounts[r] || 0) + 1;
+    google.script.run
+      .withSuccessHandler(onAcceptedLoaded)
+      .withFailureHandler(function(err) {
+        setAcceptedStatus('Failed to load: ' + (err.message || String(err)), 'error');
+      })
+      .getAcceptedApplications();
+  }
+
+  function onAcceptedLoaded(data) {
+    accepted = data || [];
+    selected = {};
+
+    // Pre-select new entries only
+    for (var i = 0; i < accepted.length; i++) {
+      if (!accepted[i].alreadyOnList) selected[accepted[i].email] = true;
     }
 
-    // Canonical order first, then extras alphabetically
-    var canonical = ['Mentor', 'Filer', 'Frontline', 'Internal Services'];
-    var extras = Object.keys(roleCounts).filter(function(r) {
-      return canonical.indexOf(r) === -1;
-    }).sort();
-    var orderedRoles = canonical.filter(function(r) { return roleCounts[r]; }).concat(extras);
+    var badge = document.getElementById('acceptedCount');
+    badge.textContent = accepted.length;
+    badge.style.display = accepted.length ? '' : 'none';
 
-    // Build checkboxes — all checked by default
-    var grid = document.getElementById('roleFilterGrid');
-    grid.innerHTML = '';
-    for (var j = 0; j < orderedRoles.length; j++) {
-      (function(role, count) {
-        activeRoles[role] = true;
-        var lbl = document.createElement('label');
-        var cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.checked = true;
-        cb.value = role;
-        cb.addEventListener('change', function() {
-          activeRoles[role] = this.checked;
-          renderTable();
-        });
-        lbl.appendChild(cb);
-        lbl.appendChild(document.createTextNode('\u00a0' + role + ' (' + count + ')'));
-        grid.appendChild(lbl);
-      })(orderedRoles[j], roleCounts[orderedRoles[j]]);
+    setAcceptedStatus('', '');
+    renderAccepted();
+    updateTransferButton();
+  }
+
+  function renderAccepted() {
+    var tbody = document.getElementById('acceptedBody');
+    if (accepted.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">No accepted applicants found.</td></tr>';
+      return;
     }
 
-    setTableStatus('', '');
-    renderTable();
-  }
-
-  function onDataError(err) {
-    setTableStatus('Failed to load volunteers: ' + (err.message || String(err)), 'error');
-  }
-
-  // ── Table ─────────────────────────────────────────────────────────────────
-  function getVisible() {
-    return allVolunteers.filter(function(v) {
-      return activeRoles[v.role || 'Unknown'];
-    });
-  }
-
-  function renderTable() {
-    var visible = getVisible();
-    var tbody = document.getElementById('volunteerBody');
     var html = '';
+    for (var i = 0; i < accepted.length; i++) {
+      var a = accepted[i];
+      var checked = selected[a.email] ? 'checked' : '';
+      var rowClass = a.alreadyOnList ? ' class="already-on-list"' : '';
+      var displayName = a.preferredName ? a.preferredName + ' ' + a.lastName : a.firstName + ' ' + a.lastName;
+      var roleClass = a.role ? a.role.toLowerCase() : '';
+      var statusText = a.alreadyOnList
+        ? '<span style="color:#999;font-size:0.82rem;">Already on list</span>'
+        : '<span style="color:var(--success);font-weight:600;font-size:0.82rem;">New</span>';
 
-    for (var i = 0; i < visible.length; i++) {
-      var v = visible[i];
-      var checked = selectedEmails[v.email] ? 'checked' : '';
-      html += '<tr>' +
-        '<td><input type="checkbox" data-email="' + esc(v.email) + '" ' + checked + ' onchange="toggleRow(this)"></td>' +
-        '<td>' + esc(v.name) + '</td>' +
-        '<td>' + esc(v.role || '') + '</td>' +
-        '<td style="font-size:0.82rem;">' + esc(v.email) + '</td>' +
-        '<td>' + esc(v.efileNum || '') + '</td>' +
-        '<td>' + (v.attendedTraining ? 'Yes' : '') + '</td>' +
+      html += '<tr' + rowClass + '>' +
+        '<td><input type="checkbox" data-email="' + esc(a.email) + '" ' + checked + ' onchange="toggleAccepted(this)"></td>' +
+        '<td><span class="role-pill ' + roleClass + '">' + esc(a.role) + '</span></td>' +
+        '<td>' + esc(displayName) + '</td>' +
+        '<td style="font-size:0.82rem;">' + esc(a.email) + '</td>' +
+        '<td>' + statusText + '</td>' +
         '</tr>';
     }
 
-    if (visible.length === 0) {
-      html = '<tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">No volunteers match the selected roles.</td></tr>';
-    }
-
     tbody.innerHTML = html;
-    syncHeaderCheckbox(visible);
-    updateCounts();
+    syncAcceptedHeader();
   }
 
-  function syncHeaderCheckbox(visible) {
-    var checkAll = document.getElementById('checkAll');
-    if (!visible) visible = getVisible();
+  function toggleAccepted(cb) {
+    if (cb.checked) selected[cb.dataset.email] = true;
+    else delete selected[cb.dataset.email];
+    syncAcceptedHeader();
+    updateTransferButton();
+  }
+
+  function toggleAllAccepted(checked) {
+    for (var i = 0; i < accepted.length; i++) {
+      if (checked && !accepted[i].alreadyOnList) selected[accepted[i].email] = true;
+      else if (!checked) delete selected[accepted[i].email];
+    }
+    renderAccepted();
+    updateTransferButton();
+  }
+
+  function selectAllNew() {
+    for (var i = 0; i < accepted.length; i++) {
+      if (!accepted[i].alreadyOnList) selected[accepted[i].email] = true;
+    }
+    renderAccepted();
+    updateTransferButton();
+  }
+
+  function deselectAll() {
+    selected = {};
+    renderAccepted();
+    updateTransferButton();
+  }
+
+  function syncAcceptedHeader() {
+    var newEntries = accepted.filter(function(a) { return !a.alreadyOnList; });
     var selCount = 0;
-    for (var i = 0; i < visible.length; i++) {
-      if (selectedEmails[visible[i].email]) selCount++;
+    for (var i = 0; i < newEntries.length; i++) {
+      if (selected[newEntries[i].email]) selCount++;
     }
-    checkAll.checked = visible.length > 0 && selCount === visible.length;
-    checkAll.indeterminate = selCount > 0 && selCount < visible.length;
+    var hdr = document.getElementById('checkAllAccepted');
+    hdr.checked = newEntries.length > 0 && selCount === newEntries.length;
+    hdr.indeterminate = selCount > 0 && selCount < newEntries.length;
   }
 
-  // ── Selection ─────────────────────────────────────────────────────────────
-  function toggleRow(cb) {
-    if (cb.checked) selectedEmails[cb.dataset.email] = true;
-    else delete selectedEmails[cb.dataset.email];
-    syncHeaderCheckbox();
-    updateCounts();
+  function updateTransferButton() {
+    var n = Object.keys(selected).length;
+    document.getElementById('transferCount').textContent = n;
+    document.getElementById('btnTransfer').disabled = (n === 0);
   }
 
-  function toggleAllVisible(checked) {
-    var visible = getVisible();
-    for (var i = 0; i < visible.length; i++) {
-      if (checked) selectedEmails[visible[i].email] = true;
-      else delete selectedEmails[visible[i].email];
-    }
-    renderTable();
-  }
+  function transferSelected() {
+    var emails = Object.keys(selected);
+    if (emails.length === 0) return;
 
-  function selectAllVisible()   { document.getElementById('checkAll').checked = true;  toggleAllVisible(true);  }
-  function deselectAllVisible() { document.getElementById('checkAll').checked = false; toggleAllVisible(false); }
+    var toTransfer = accepted.filter(function(a) { return selected[a.email]; });
 
-  function selectAllRoles() {
-    var cbs = document.querySelectorAll('#roleFilterGrid input[type="checkbox"]');
-    for (var i = 0; i < cbs.length; i++) { cbs[i].checked = true; activeRoles[cbs[i].value] = true; }
-    renderTable();
-  }
-
-  function deselectAllRoles() {
-    var cbs = document.querySelectorAll('#roleFilterGrid input[type="checkbox"]');
-    for (var i = 0; i < cbs.length; i++) { cbs[i].checked = false; activeRoles[cbs[i].value] = false; }
-    renderTable();
-  }
-
-  // ── Send ──────────────────────────────────────────────────────────────────
-  function sendEmail() {
-    var emails = Object.keys(selectedEmails);
-    var subject = document.getElementById('emailSubject').value.trim();
-    var body = document.getElementById('emailBody').value.trim();
-
-    if (emails.length === 0 || !subject || !body) return;
-
-    var btn = document.getElementById('btnSend');
+    var btn = document.getElementById('btnTransfer');
     btn.disabled = true;
-    setSendStatus('Sending...', 'loading');
+    setTransferStatus('Transferring ' + toTransfer.length + ' volunteer(s)...', 'loading');
 
     google.script.run
-      .withSuccessHandler(function() {
-        setSendStatus('Email sent to ' + emails.length + ' volunteer' + (emails.length === 1 ? '' : 's') + '.', 'success');
-        btn.disabled = false;
-        updateSendButton();
+      .withSuccessHandler(function(result) {
+        var msg = result.added + ' added';
+        if (result.skipped > 0) msg += ', ' + result.skipped + ' skipped (already on list)';
+        setTransferStatus(msg + '.', 'success');
+        // Reload both sections
+        loadAccepted();
+        loadRoster();
       })
       .withFailureHandler(function(err) {
-        setSendStatus('Error: ' + (err.message || String(err)), 'error');
+        setTransferStatus('Error: ' + (err.message || String(err)), 'error');
         btn.disabled = false;
+        updateTransferButton();
       })
-      .sendVolunteerBccEmail(emails, subject, body);
+      .transferToConsolidatedList(toTransfer);
+  }
+
+  // ── Section B: Consolidated Volunteer List ────────────────────────────────
+  function loadRoster() {
+    setRosterStatus('Loading...', 'loading');
+
+    google.script.run
+      .withSuccessHandler(function(volunteers) {
+        setRosterStatus('', '');
+        volunteers = (volunteers || []).slice().sort(function(a, b) { return a.name.localeCompare(b.name); });
+        document.getElementById('rosterCount').textContent = volunteers.length;
+
+        var tbody = document.getElementById('rosterBody');
+        if (volunteers.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px;">No volunteers on list.</td></tr>';
+          return;
+        }
+
+        var html = '';
+        for (var i = 0; i < volunteers.length; i++) {
+          var v = volunteers[i];
+          var roleClass = v.role ? v.role.replace(/\s+/g, '').toLowerCase() : '';
+          html += '<tr>' +
+            '<td><span class="role-pill ' + roleClass + '">' + esc(v.role || '') + '</span></td>' +
+            '<td>' + esc(v.name) + '</td>' +
+            '<td style="font-size:0.82rem;">' + esc(v.email) + '</td>' +
+            '<td>' + esc(v.efileNum || '') + '</td>' +
+            '<td>' + (v.attendedTraining ? 'Yes' : '') + '</td>' +
+            '</tr>';
+        }
+        tbody.innerHTML = html;
+      })
+      .withFailureHandler(function(err) {
+        setRosterStatus('Failed to load: ' + (err.message || String(err)), 'error');
+      })
+      .getVolunteerManagementData();
   }
 
   // ── UI helpers ─────────────────────────────────────────────────────────────
-  function updateCounts() {
-    var n = Object.keys(selectedEmails).length;
-    document.getElementById('selectedCount').textContent = n + ' selected';
-    document.getElementById('sendCount').textContent = n;
-    updateSendButton();
-  }
-
-  function updateSendButton() {
-    var n = Object.keys(selectedEmails).length;
-    var subject = document.getElementById('emailSubject').value.trim();
-    var body = document.getElementById('emailBody').value.trim();
-    document.getElementById('btnSend').disabled = (n === 0 || !subject || !body);
-  }
-
-  function setTableStatus(msg, type) {
-    var el = document.getElementById('tableStatus');
+  function setAcceptedStatus(msg, type) {
+    var el = document.getElementById('acceptedStatus');
     el.textContent = msg;
     el.className = 'status' + (type ? ' ' + type : '');
+    el.style.display = msg ? 'block' : 'none';
   }
 
-  function setSendStatus(msg, type) {
-    var el = document.getElementById('sendStatus');
+  function setTransferStatus(msg, type) {
+    var el = document.getElementById('transferStatus');
     el.textContent = msg;
     el.className = 'status ' + type;
-    el.style.display = 'block';
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function setRosterStatus(msg, type) {
+    var el = document.getElementById('rosterStatus');
+    el.textContent = msg;
+    el.className = 'status' + (type ? ' ' + type : '');
+    el.style.display = msg ? 'block' : 'none';
   }
 
   function esc(str) {
     return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Section C: No-Show Volunteers ─────────────────────────────────────────
+  var noShows = [];
+  var noShowSelected = {};
+
+  function loadNoShows() {
+    setNoShowStatus('Loading no-show volunteers...', 'loading');
+    document.getElementById('noShowBody').innerHTML =
+      '<tr><td colspan="4" style="text-align:center;color:#999;padding:16px;">Loading...</td></tr>';
+    document.getElementById('noShowCount').style.display = 'none';
+    noShowSelected = {};
+    updateDropButton();
+
+    google.script.run
+      .withSuccessHandler(onNoShowsLoaded)
+      .withFailureHandler(function(err) {
+        setNoShowStatus('Failed to load: ' + (err.message || String(err)), 'error');
+      })
+      .getNoShowVolunteers();
+  }
+
+  function onNoShowsLoaded(data) {
+    noShows = data || [];
+    noShowSelected = {};
+
+    var badge = document.getElementById('noShowCount');
+    badge.textContent = noShows.length;
+    badge.style.display = noShows.length ? '' : 'none';
+
+    setNoShowStatus('', '');
+    renderNoShows();
+    updateDropButton();
+  }
+
+  function renderNoShows() {
+    var tbody = document.getElementById('noShowBody');
+    if (noShows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;padding:20px;">No no-show volunteers found.</td></tr>';
+      syncNoShowHeader();
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < noShows.length; i++) {
+      var v = noShows[i];
+      var checked = noShowSelected[v.email] ? 'checked' : '';
+      var roleClass = v.role ? v.role.replace(/\s+/g, '').toLowerCase() : '';
+      html += '<tr>' +
+        '<td><input type="checkbox" data-email="' + esc(v.email) + '" ' + checked +
+          ' onchange="toggleNoShow(this)"></td>' +
+        '<td><span class="role-pill ' + roleClass + '">' + esc(v.role || '') + '</span></td>' +
+        '<td>' + esc(v.name) + '</td>' +
+        '<td style="font-size:0.82rem;">' + esc(v.email) + '</td>' +
+        '</tr>';
+    }
+    tbody.innerHTML = html;
+    syncNoShowHeader();
+  }
+
+  function toggleNoShow(cb) {
+    if (cb.checked) noShowSelected[cb.dataset.email] = true;
+    else delete noShowSelected[cb.dataset.email];
+    syncNoShowHeader();
+    updateDropButton();
+  }
+
+  function toggleAllNoShows(checked) {
+    for (var i = 0; i < noShows.length; i++) {
+      if (checked) noShowSelected[noShows[i].email] = true;
+      else delete noShowSelected[noShows[i].email];
+    }
+    renderNoShows();
+    updateDropButton();
+  }
+
+  function selectAllNoShows() {
+    for (var i = 0; i < noShows.length; i++) {
+      noShowSelected[noShows[i].email] = true;
+    }
+    renderNoShows();
+    updateDropButton();
+  }
+
+  function deselectAllNoShows() {
+    noShowSelected = {};
+    renderNoShows();
+    updateDropButton();
+  }
+
+  function syncNoShowHeader() {
+    var total = noShows.length;
+    var selCount = Object.keys(noShowSelected).length;
+    var hdr = document.getElementById('checkAllNoShows');
+    hdr.checked = total > 0 && selCount === total;
+    hdr.indeterminate = selCount > 0 && selCount < total;
+  }
+
+  function updateDropButton() {
+    var n = Object.keys(noShowSelected).length;
+    document.getElementById('noShowDropCount').textContent = n;
+    document.getElementById('btnMarkDrop').disabled = (n === 0);
+  }
+
+  function markSelectedDrop() {
+    var emails = Object.keys(noShowSelected);
+    if (!emails.length) return;
+
+    document.getElementById('btnMarkDrop').disabled = true;
+    setNoShowActionStatus('Updating ' + emails.length + ' volunteer(s)...', 'loading');
+
+    var remaining = emails.slice();
+    var errorCount = 0;
+
+    function processNext() {
+      if (!remaining.length) {
+        var updated = emails.length - errorCount;
+        var msg = updated + ' role(s) updated to Drop';
+        if (errorCount > 0) msg += ', ' + errorCount + ' error(s)';
+        setNoShowActionStatus(msg + '.', errorCount > 0 ? 'error' : 'success');
+        loadNoShows();
+        loadRoster();
+        return;
+      }
+      var email = remaining.shift();
+      google.script.run
+        .withSuccessHandler(processNext)
+        .withFailureHandler(function() { errorCount++; processNext(); })
+        .updateVolunteerRole(email, 'Drop');
+    }
+
+    processNext();
+  }
+
+  function setNoShowStatus(msg, type) {
+    var el = document.getElementById('noShowStatus');
+    el.textContent = msg;
+    el.className = 'status' + (type ? ' ' + type : '');
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function setNoShowActionStatus(msg, type) {
+    var el = document.getElementById('noShowActionStatus');
+    el.textContent = msg;
+    el.className = 'status ' + (type || '');
+    el.style.display = msg ? 'block' : 'none';
   }
 </script>
 </body>

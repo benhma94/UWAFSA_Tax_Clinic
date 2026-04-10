@@ -381,7 +381,12 @@ const SCHEDULE_CONFIG = {
 // ELIGIBILITY_CONFIG clinic dates/locations and SCHEDULE_CONFIG day labels.
 (function applyClinicDatesOverride_() {
   try {
-    var raw = PropertiesService.getScriptProperties().getProperty('CLINIC_DATES_OVERRIDE');
+    var cache = CacheService.getScriptCache();
+    var raw = cache.get('CLINIC_DATES_OVERRIDE');
+    if (raw === null) {
+      raw = PropertiesService.getScriptProperties().getProperty('CLINIC_DATES_OVERRIDE');
+      cache.put('CLINIC_DATES_OVERRIDE', raw || '', 600); // 10-min TTL
+    }
     if (!raw) return;
     var entries = JSON.parse(raw); // [{date, room, mapsUrl}]
     if (!Array.isArray(entries) || entries.length !== 4) return;
