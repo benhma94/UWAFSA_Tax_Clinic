@@ -579,27 +579,19 @@
     document.getElementById('btnMarkDrop').disabled = true;
     setNoShowActionStatus('Updating ' + emails.length + ' volunteer(s)...', 'loading');
 
-    var remaining = emails.slice();
-    var errorCount = 0;
-
-    function processNext() {
-      if (!remaining.length) {
-        var updated = emails.length - errorCount;
-        var msg = updated + ' role(s) updated to Drop';
-        if (errorCount > 0) msg += ', ' + errorCount + ' error(s)';
-        setNoShowActionStatus(msg + '.', errorCount > 0 ? 'error' : 'success');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        var msg = result.updated + ' role(s) updated to Drop';
+        if (result.notFound.length > 0) msg += ', ' + result.notFound.length + ' not found';
+        setNoShowActionStatus(msg + '.', result.notFound.length > 0 ? 'error' : 'success');
         loadNoShows();
         loadRoster();
-        return;
-      }
-      var email = remaining.shift();
-      google.script.run
-        .withSuccessHandler(processNext)
-        .withFailureHandler(function() { errorCount++; processNext(); })
-        .updateVolunteerRole(email, 'Drop');
-    }
-
-    processNext();
+      })
+      .withFailureHandler(function(err) {
+        setNoShowActionStatus('Error: ' + err.message, 'error');
+        document.getElementById('btnMarkDrop').disabled = false;
+      })
+      .updateVolunteerRolesBatch(emails, 'Drop');
   }
 
   function setNoShowStatus(msg, type) {

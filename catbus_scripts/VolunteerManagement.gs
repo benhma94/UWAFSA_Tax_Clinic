@@ -50,10 +50,42 @@ function getNoShowVolunteers() {
     });
   }
 
-  return getConsolidatedVolunteerList_()
-    .filter(v => !appearedNames.has(v.name.toLowerCase()))
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map(v => ({ name: v.name, email: v.email, role: v.role }));
+  // Read consolidated list directly to get both legal and preferred first names,
+  // since a volunteer may have signed in under either variant.
+  const cols = CONFIG.COLUMNS.CONSOLIDATED_VOLUNTEER_LIST;
+  const rosterSheet = ss.getSheetByName(CONFIG.SHEETS.CONSOLIDATED_VOLUNTEER_LIST);
+  if (!rosterSheet || rosterSheet.getLastRow() <= 1) return [];
+  const numCols = cols.ATTENDED_TRAINING + 1;
+  const rosterData = rosterSheet.getRange(2, 1, rosterSheet.getLastRow() - 1, numCols).getValues();
+
+  const noShows = [];
+  rosterData.forEach(row => {
+    const legal    = (row[cols.FIRST_NAME_LEGAL]  || '').toString().trim();
+    const preferred = (row[cols.PREFERRED_NAME]   || '').toString().trim();
+    const last     = (row[cols.LAST_NAME]         || '').toString().trim();
+    const email    = (row[cols.EMAIL]             || '').toString().trim().toLowerCase();
+    const role     = (row[cols.ROLE]              || '').toString().trim();
+
+    if (!email) return;
+
+    // Build all plausible name variants this volunteer might have used at sign-in
+    const firstName = preferred || legal;
+    const displayName = `${firstName} ${last}`.trim();
+    if (!displayName) return;
+
+    const variants = new Set([displayName.toLowerCase()]);
+    if (preferred && legal && preferred !== legal) {
+      variants.add(`${legal} ${last}`.trim().toLowerCase());   // legal first name variant
+      variants.add(`${preferred} ${last}`.trim().toLowerCase()); // preferred first name variant (already in via displayName, but explicit)
+    }
+
+    const appeared = [...variants].some(v => appearedNames.has(v));
+    if (!appeared) {
+      noShows.push({ name: displayName, email, role });
+    }
+  });
+
+  return noShows.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
@@ -86,6 +118,45 @@ function updateVolunteerRole(email, newRole) {
     }
   }
   throw new Error('Volunteer not found: ' + email);
+}
+
+/**
+ * Updates the role of multiple volunteers in the Consolidated Volunteer List in one call.
+ * Much faster than calling updateVolunteerRole() once per volunteer.
+ *
+ * @param {string[]} emails  - Volunteer emails to update (matched case-insensitively)
+ * @param {string}   newRole - New role value (e.g. 'Drop')
+ * @returns {{ success: true, updated: number, notFound: string[] }}
+ */
+function updateVolunteerRolesBatch(emails, newRole) {
+  if (!emails || !emails.length) throw new Error('No emails provided.');
+  if (!newRole || !newRole.trim()) throw new Error('New role is required.');
+
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.SHEETS.CONSOLIDATED_VOLUNTEER_LIST);
+  if (!sheet) throw new Error('Consolidated Volunteer List sheet not found.');
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { success: true, updated: 0, notFound: emails };
+
+  const emailColSheet = CONFIG.COLUMNS.CONSOLIDATED_VOLUNTEER_LIST.EMAIL + 1;
+  const roleColSheet  = CONFIG.COLUMNS.CONSOLIDATED_VOLUNTEER_LIST.ROLE + 1;
+  const emailData = sheet.getRange(2, emailColSheet, lastRow - 1, 1).getValues();
+
+  const targets = new Set(emails.map(e => e.trim().toLowerCase()));
+  const notFound = new Set(targets);
+  let updated = 0;
+
+  for (let i = 0; i < emailData.length; i++) {
+    const rowEmail = (emailData[i][0] || '').toString().trim().toLowerCase();
+    if (targets.has(rowEmail)) {
+      sheet.getRange(i + 2, roleColSheet).setValue(newRole.trim());
+      notFound.delete(rowEmail);
+      updated++;
+    }
+  }
+
+  return { success: true, updated: updated, notFound: [...notFound] };
 }
 
 /**
