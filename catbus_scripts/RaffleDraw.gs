@@ -34,20 +34,41 @@ function getRaffleVolunteerData() {
       }
     }
 
-    // Get all volunteers from Consolidated Volunteer List
-    const volunteers = getConsolidatedVolunteerList_();
+    // Get all volunteers from Consolidated Volunteer List (raw data for both name variants)
+    const rosterSheet = getSheet(CONFIG.SHEETS.CONSOLIDATED_VOLUNTEER_LIST);
+    const rosterLastRow = rosterSheet.getLastRow();
+    const cols = CONFIG.COLUMNS.CONSOLIDATED_VOLUNTEER_LIST;
+    const rosterData = rosterLastRow > 1
+      ? rosterSheet.getRange(2, 1, rosterLastRow - 1, cols.ATTENDED_TRAINING + 1).getValues()
+      : [];
 
-    const result = volunteers.map(v => {
-      const totalMinutes = minutesByVolunteer[v.name.toLowerCase()] || 0;
-      const draws = Math.ceil(totalMinutes / 60);
-      return {
-        name: v.name,
-        role: v.role,
-        draws: draws
-      };
-    });
+    const result = rosterData
+      .filter(row => {
+        const email    = (row[cols.EMAIL]            || '').toString().trim();
+        const preferred = (row[cols.PREFERRED_NAME]  || '').toString().trim();
+        const legal    = (row[cols.FIRST_NAME_LEGAL] || '').toString().trim();
+        const last     = (row[cols.LAST_NAME]        || '').toString().trim();
+        return email && (preferred || legal) && last;
+      })
+      .map(row => {
+        const preferred = (row[cols.PREFERRED_NAME]  || '').toString().trim();
+        const legal    = (row[cols.FIRST_NAME_LEGAL] || '').toString().trim();
+        const last     = (row[cols.LAST_NAME]        || '').toString().trim();
+        const role     = (row[cols.ROLE]             || '').toString().trim();
+        const firstName = preferred || legal;
+        const displayName = `${firstName} ${last}`.trim();
+
+        // Try both preferred+last and legal+last variants to handle sign-in name mismatches
+        const nameVariants = new Set([displayName.toLowerCase()]);
+        if (preferred && legal && preferred !== legal) {
+          nameVariants.add(`${legal} ${last}`.trim().toLowerCase());
+        }
+        const totalMinutes = [...nameVariants].reduce((sum, n) => sum + (minutesByVolunteer[n] || 0), 0);
+        const draws = Math.ceil(totalMinutes / 60);
+        return { name: displayName, role, draws };
+      });
 
     result.sort((a, b) => a.name.localeCompare(b.name));
-    return result;
+    return result.filter(v => v.draws >= 3);
   }, 'getRaffleVolunteerData');
 }

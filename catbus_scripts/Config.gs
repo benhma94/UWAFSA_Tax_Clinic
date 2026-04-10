@@ -29,7 +29,8 @@ const CONFIG = {
     VOLUNTEER_TAGS: 'Volunteer Tags', // Custom display tags for volunteers
     MESSAGES: 'Messages', // Internal messaging between managers and volunteers
     TRAINING_LOG: 'Training Log', // Training session log (T-prefix clients)
-    QUIZ_SUBMISSIONS: 'Quiz Submissions' // Quiz session submissions
+    QUIZ_SUBMISSIONS: 'Quiz Submissions', // Quiz session submissions
+    VOLUNTEER_ALUMNI: 'Volunteer Alumni' // Permanent alumni roster (survives rollforward)
   },
 
   // Clinic contact info (used in emails and public pages)
@@ -47,6 +48,19 @@ const CONFIG = {
       EFILE_NUM: 5,
       PASSWORD: 6,
       ATTENDED_TRAINING: 7
+    },
+    VOLUNTEER_ALUMNI: {
+      EMAIL: 0,
+      FIRST_NAME_LEGAL: 1,
+      PREFERRED_NAME: 2,
+      LAST_NAME: 3,
+      TOTAL_RETURNS: 4,
+      TOTAL_HOURS: 5,
+      BLACKLISTED: 6,
+      BLACKLIST_REASON: 7,
+      LAST_UPDATED: 8
+      // Columns 9+ are dynamic year pairs: {YEAR}_RETURNS, {YEAR}_HOURS
+      // Column positions derived at runtime by scanning the header row
     },
     CLIENT_INTAKE: {
       TIMESTAMP: 0,
@@ -381,7 +395,12 @@ const SCHEDULE_CONFIG = {
 // ELIGIBILITY_CONFIG clinic dates/locations and SCHEDULE_CONFIG day labels.
 (function applyClinicDatesOverride_() {
   try {
-    var raw = PropertiesService.getScriptProperties().getProperty('CLINIC_DATES_OVERRIDE');
+    var cache = CacheService.getScriptCache();
+    var raw = cache.get('CLINIC_DATES_OVERRIDE');
+    if (raw === null) {
+      raw = PropertiesService.getScriptProperties().getProperty('CLINIC_DATES_OVERRIDE');
+      cache.put('CLINIC_DATES_OVERRIDE', raw || '', 600); // 10-min TTL
+    }
     if (!raw) return;
     var entries = JSON.parse(raw); // [{date, room, mapsUrl}]
     if (!Array.isArray(entries) || entries.length !== 4) return;
