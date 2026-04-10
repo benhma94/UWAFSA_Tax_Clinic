@@ -217,20 +217,20 @@
       <button class="btn-muted" onclick="loadRoster()">Refresh</button>
     </div>
 
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-      <select id="rosterRoleFilter" onchange="renderRoster()" style="padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:0.88rem;">
-        <option value="">All Roles</option>
-        <option value="Mentor">Mentor</option>
-        <option value="Filer">Filer</option>
-        <option value="Frontline">Frontline</option>
-        <option value="Drop">Drop</option>
-        <option value="__none__">No Role</option>
-      </select>
-      <select id="rosterTrainingFilter" onchange="renderRoster()" style="padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:0.88rem;">
-        <option value="">All Training</option>
-        <option value="yes">Trained</option>
-        <option value="no">Not Trained</option>
-      </select>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:0.88rem;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <strong style="color:#555;">Role:</strong>
+        <label><input type="checkbox" class="rosterRoleFilter" value="Mentor" onchange="renderRoster()"> Mentor</label>
+        <label><input type="checkbox" class="rosterRoleFilter" value="Filer" onchange="renderRoster()"> Filer</label>
+        <label><input type="checkbox" class="rosterRoleFilter" value="Frontline" onchange="renderRoster()"> Frontline</label>
+        <label><input type="checkbox" class="rosterRoleFilter" value="Drop" onchange="renderRoster()"> Drop</label>
+        <label><input type="checkbox" class="rosterRoleFilter" value="__none__" onchange="renderRoster()"> No Role</label>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <strong style="color:#555;">Training:</strong>
+        <label><input type="checkbox" class="rosterTrainingFilter" value="yes" onchange="renderRoster()"> Trained</label>
+        <label><input type="checkbox" class="rosterTrainingFilter" value="no" onchange="renderRoster()"> Not Trained</label>
+      </div>
       <input type="search" id="rosterSearch" oninput="renderRoster()" placeholder="Search name or email..." style="padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:0.88rem;min-width:180px;">
       <button class="btn-muted" onclick="clearRosterFilters()" style="padding:5px 10px;">Clear</button>
     </div>
@@ -521,18 +521,27 @@
   }
 
   function renderRoster() {
-    var roleFilter = document.getElementById('rosterRoleFilter').value;
-    var trainingFilter = document.getElementById('rosterTrainingFilter').value;
+    var roleBoxes = document.querySelectorAll('.rosterRoleFilter:checked');
+    var selectedRoles = {};
+    for (var i = 0; i < roleBoxes.length; i++) selectedRoles[roleBoxes[i].value] = true;
+    var roleFilterActive = roleBoxes.length > 0;
+
+    var trainBoxes = document.querySelectorAll('.rosterTrainingFilter:checked');
+    var selectedTraining = {};
+    for (var j = 0; j < trainBoxes.length; j++) selectedTraining[trainBoxes[j].value] = true;
+    var trainingFilterActive = trainBoxes.length > 0;
+
     var searchTerm = document.getElementById('rosterSearch').value.trim().toLowerCase();
 
     var filtered = rosterData.filter(function(v) {
-      if (roleFilter === '__none__') {
-        if (v.role) return false;
-      } else if (roleFilter) {
-        if (v.role !== roleFilter) return false;
+      if (roleFilterActive) {
+        var roleKey = v.role ? v.role : '__none__';
+        if (!selectedRoles[roleKey]) return false;
       }
-      if (trainingFilter === 'yes' && !v.attendedTraining) return false;
-      if (trainingFilter === 'no' && v.attendedTraining) return false;
+      if (trainingFilterActive) {
+        var trainKey = v.attendedTraining ? 'yes' : 'no';
+        if (!selectedTraining[trainKey]) return false;
+      }
       if (searchTerm) {
         var name = (v.name || '').toLowerCase();
         var email = (v.email || '').toLowerCase();
@@ -543,7 +552,7 @@
 
     var total = rosterData.length;
     var count = filtered.length;
-    var anyActive = roleFilter || trainingFilter || searchTerm;
+    var anyActive = roleFilterActive || trainingFilterActive || searchTerm;
     document.getElementById('rosterCount').textContent = anyActive ? (count + ' / ' + total) : total;
 
     var tbody = document.getElementById('rosterBody');
@@ -572,8 +581,8 @@
   }
 
   function clearRosterFilters() {
-    document.getElementById('rosterRoleFilter').value = '';
-    document.getElementById('rosterTrainingFilter').value = '';
+    var boxes = document.querySelectorAll('.rosterRoleFilter, .rosterTrainingFilter');
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
     document.getElementById('rosterSearch').value = '';
     renderRoster();
   }
