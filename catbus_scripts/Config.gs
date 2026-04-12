@@ -30,7 +30,9 @@ const CONFIG = {
     MESSAGES: 'Messages', // Internal messaging between managers and volunteers
     TRAINING_LOG: 'Training Log', // Training session log (T-prefix clients)
     QUIZ_SUBMISSIONS: 'Quiz Submissions', // Quiz session submissions
-    VOLUNTEER_ALUMNI: 'Volunteer Alumni' // Permanent alumni roster (survives rollforward)
+    VOLUNTEER_ALUMNI: 'Volunteer Alumni', // Permanent alumni roster (survives rollforward)
+    ACTION_ITEMS: 'Action Items',
+    COORDINATORS: 'Coordinators',
   },
 
   // Clinic contact info (used in emails and public pages)
@@ -474,6 +476,15 @@ function getWebAppUrl() {
 const VOLUNTEER_TAGS = {
   // Example: 'John Smith': 'The Tax Wizard',
   'Ben Ma': "Unpaid Tax Slave"
+};
+
+/**
+ * Configuration for the coordinator To-Do List feature.
+ */
+const ACTION_ITEM_CONFIG = {
+  REMINDER_THRESHOLDS: [14, 7, 1],   // days before due date (calendar days)
+  SHEET_NAME: 'Action Items',
+  COORDINATORS_SHEET_NAME: 'Coordinators'
 };
 
 
