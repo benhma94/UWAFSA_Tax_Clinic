@@ -176,7 +176,11 @@ function sendTaskReminders() {
     return;
   }
 
-  const recipientEmails = coordinators.map(c => c.email).join(', ');
+  const recipientEmails = coordinators.map(c => c.email).filter(Boolean).join(', ');
+  if (!recipientEmails) {
+    Logger.log('sendTaskReminders: no valid coordinator emails, skipping.');
+    return;
+  }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -185,8 +189,7 @@ function sendTaskReminders() {
   const byThreshold = {};  // e.g. { 14: [...], 7: [...], 1: [...] }
 
   const sheet = getOrCreateActionItemsSheet_();
-  const headers = sheet.getRange(1, 1, 1, ACTION_ITEM_HEADERS_.length).getValues()[0];
-  const remindersSentColNum = headers.indexOf('Reminders Sent') + 1;
+  const remindersSentColNum = ACTION_ITEM_HEADERS_.indexOf('Reminders Sent') + 1;
 
   items.forEach(item => {
     if (!item.dueDate) return;
@@ -194,7 +197,9 @@ function sendTaskReminders() {
     due.setHours(0, 0, 0, 0);
     const daysUntil = Math.round((due - today) / (1000 * 60 * 60 * 24));
 
-    const alreadySent = (item.remindersSent || '').toString().split(',').map(s => parseInt(s.trim(), 10));
+    const alreadySent = (item.remindersSent || '').toString().split(',')
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !isNaN(n));
 
     ACTION_ITEM_CONFIG.REMINDER_THRESHOLDS.forEach(threshold => {
       if (daysUntil === threshold && !alreadySent.includes(threshold)) {
@@ -204,15 +209,18 @@ function sendTaskReminders() {
     });
   });
 
-  // Collect all tasks to remind and update Reminders Sent
+  // Collect all tasks to remind — defer sheet writes until after email send
   const allReminders = [];
-  Object.keys(byThreshold).sort((a, b) => a - b).forEach(threshold => {
-    byThreshold[threshold].forEach(({ item, daysUntil }) => {
+  const sheetUpdates = [];
+
+  Object.keys(byThreshold).sort((a, b) => parseInt(a, 10) - parseInt(b, 10)).forEach(threshold => {
+    byThreshold[threshold].forEach(({ item }) => {
       allReminders.push({ item, daysUntil: parseInt(threshold, 10) });
-      // Update Reminders Sent in sheet
       const current = (item.remindersSent || '').toString().trim();
-      const updated = current ? current + ',' + threshold : String(threshold);
-      sheet.getRange(item.rowIndex, remindersSentColNum).setValue(updated);
+      sheetUpdates.push({
+        rowIndex: item.rowIndex,
+        updated: current ? current + ',' + threshold : String(threshold)
+      });
     });
   });
 
@@ -256,6 +264,11 @@ function sendTaskReminders() {
     htmlBody: htmlBody,
     name: 'CATBUS'
   }, 'sendTaskReminders');
+
+  // Persist Reminders Sent only after successful send
+  sheetUpdates.forEach(({ rowIndex, updated }) => {
+    sheet.getRange(rowIndex, remindersSentColNum).setValue(updated);
+  });
 
   Logger.log(`sendTaskReminders: sent reminder for ${allReminders.length} task(s) to ${recipientEmails}`);
 }
