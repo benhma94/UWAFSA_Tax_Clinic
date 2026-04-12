@@ -25,6 +25,8 @@
     .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
     .btn-add { margin-left: auto; padding: 8px 18px; background: var(--accent); color: #fff; border: none; border-radius: 4px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
     .btn-add:hover { opacity: 0.85; }
+    .toggle-theme { padding: 8px 14px; border: 1px solid var(--border); border-radius: 4px; background: #fff; color: var(--text); cursor: pointer; }
+    .toggle-theme:hover { opacity: 0.9; }
 
     /* ── Table ── */
     table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
@@ -80,9 +82,77 @@
     .status-msg { font-size: 0.85rem; margin-top: 8px; min-height: 18px; }
     .status-msg.error { color: var(--red); }
     .status-msg.success { color: var(--green); }
+
+    body.dark {
+      --bg: #121318;
+      --text: #eef2f7;
+      --card-bg: #1f2530;
+      --border: #3d4758;
+      --red: #ff7b7b;
+      --orange: #e7a25f;
+      --yellow: #e5d47f;
+      --green: #86d99d;
+    }
+
+    body.dark {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body.dark h1,
+    body.dark .subtitle,
+    body.dark label,
+    body.dark .people-toggle,
+    body.dark .status-msg { color: #e5e9f0; }
+
+    body.dark .toolbar,
+    body.dark .people-section,
+    body.dark .modal,
+    body.dark .form-group input,
+    body.dark .form-group textarea,
+    body.dark .form-group select,
+    body.dark .add-person-form input,
+    body.dark table,
+    body.dark thead th,
+    body.dark tbody td {
+      background: var(--card-bg);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    body.dark .toolbar { border: 1px solid var(--border); }
+    body.dark .filter-btn { background: #2b3345; border-color: var(--border); color: #d8dee9; }
+    body.dark .filter-btn.active { background: var(--accent); color: #fff; }
+    body.dark .btn-add,
+    body.dark .btn-add-person,
+    body.dark .btn-save,
+    body.dark .btn-cancel,
+    body.dark .btn-delete,
+    body.dark .btn-delete-task,
+    body.dark .refresh-btn {
+      box-shadow: none;
+    }
+
+    body.dark .btn-add { background: var(--accent); color: #fff; }
+    body.dark .btn-add-person { background: #2c8c5f; }
+    body.dark .btn-save { background: var(--accent); }
+    body.dark .btn-cancel { background: #2a2f3b; color: #e5e9f0; }
+    body.dark .btn-delete,
+    body.dark .btn-delete-task { background: #c94a4a; }
+
+    body.dark .modal { box-shadow: 0 10px 32px rgba(0,0,0,0.35); }
+    body.dark .tbody tr:hover,
+    body.dark tbody tr:hover { background: #282f3d; }
+    body.dark .empty-state { color: #a0a8ba; }
+    body.dark .people-table th { background: #242b39; }
+    body.dark .people-table td { border-color: var(--border); }
+    body.dark .checkboxes label { color: #d9e1ed; }
+    body.dark .form-group input,
+    body.dark .form-group textarea,
+    body.dark .form-group select { border-color: var(--border); }
   </style>
 </head>
-<body>
+<body class="light">
 
 <h1>To-Do List</h1>
 <p class="subtitle">Clinic action items and deadlines for coordinators.</p>
@@ -100,6 +170,7 @@
     <button class="filter-btn" data-status="In Progress" onclick="setFilter('status','In Progress',this)">In Progress</button>
     <button class="filter-btn" data-status="Done" onclick="setFilter('status','Done',this)">Done</button>
   </div>
+  <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
   <button class="btn-add" onclick="openAddModal()">+ Add Task</button>
 </div>
 
@@ -455,5 +526,6 @@
 
   init();
 </script>
+<?!= include('shared_scripts') ?>
 </body>
 </html>
