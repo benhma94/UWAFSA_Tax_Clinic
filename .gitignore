@@ -10,8 +10,5 @@ catbus_scripts/.clasp.json
 webpage/config.js
 
 # Graphify generated outputs (large/binary-like, rebuilt on demand)
-graphify-out/
-graph.html
-graph.json
-GRAPH_REPORT.md
+.graphify_*
 
