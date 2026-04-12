@@ -96,7 +96,8 @@ function getTodoItems() {
     remindersSent:          row[6],
     createdAt:              row[7] ? row[7].toString() : '',
     updatedAt:              row[8] ? row[8].toString() : ''
-  }));
+  }))
+  .filter(item => item.title || item.status);
 }
 
 /**
@@ -104,6 +105,7 @@ function getTodoItems() {
  * @param {Object} data - { title, description, category, dueDate, responsibleIndividuals, status }
  */
 function createTodoItem(data) {
+  if (!data) throw new Error('data is required.');
   if (!data.title) throw new Error('Title is required.');
   if (!data.dueDate) throw new Error('Due date is required.');
   const sheet = getOrCreateActionItemsSheet_();
@@ -113,7 +115,7 @@ function createTodoItem(data) {
     (data.description || '').trim(),
     data.category || 'Clinic Prep',
     new Date(data.dueDate),
-    (data.responsibleIndividuals || ''),
+    (data.responsibleIndividuals || '').trim(),
     data.status || 'Not Started',
     '',   // Reminders Sent — starts empty
     now,  // Created At
@@ -127,6 +129,7 @@ function createTodoItem(data) {
  * @param {Object} data - { title, description, category, dueDate, responsibleIndividuals, status }
  */
 function updateTodoItem(rowIndex, data) {
+  if (rowIndex < 2) throw new Error('rowIndex must be >= 2 (row 1 is the header).');
   if (!data.title) throw new Error('Title is required.');
   if (!data.dueDate) throw new Error('Due date is required.');
   const sheet = getOrCreateActionItemsSheet_();
@@ -138,7 +141,7 @@ function updateTodoItem(rowIndex, data) {
     (data.description || '').trim(),
     data.category || 'Clinic Prep',
     new Date(data.dueDate),
-    (data.responsibleIndividuals || ''),
+    (data.responsibleIndividuals || '').trim(),
     data.status || 'Not Started',
     current[6],  // Preserve Reminders Sent
     current[7],  // Preserve Created At
@@ -151,6 +154,7 @@ function updateTodoItem(rowIndex, data) {
  * @param {number} rowIndex
  */
 function deleteTodoItem(rowIndex) {
+  if (rowIndex < 2) throw new Error('rowIndex must be >= 2 (row 1 is the header).');
   const sheet = getOrCreateActionItemsSheet_();
   sheet.deleteRow(rowIndex);
 }
