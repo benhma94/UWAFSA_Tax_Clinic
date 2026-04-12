@@ -3,6 +3,7 @@
 <head>
   <base target="_top">
   <?!= include('shared_styles') ?>
+  <?!= include('shared_scripts') ?>
   <style>
     body {
       max-width: 860px;
@@ -212,7 +213,7 @@
       <h1>Raffle Draw</h1>
       <p class="subtitle">Draw 10 winners weighted by volunteer hours. 1 partial hour = 1 entry.</p>
     </div>
-    <button class="toggle-theme" id="themeToggle" title="Toggle theme">🌙</button>
+    <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()"></button>
   </header>
 
   <div id="status">
@@ -241,19 +242,6 @@
   </div>
 
   <script>
-    // ---- Theme ----
-    (function() {
-      var t = localStorage.getItem('theme');
-      document.body.classList.add(
-        (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) ? 'dark' : 'light'
-      );
-    })();
-    document.getElementById('themeToggle').addEventListener('click', function() {
-      var isDark = document.body.classList.toggle('dark');
-      document.body.classList.toggle('light', !isDark);
-      localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    });
-
     // ---- State ----
     var allVolunteers = [];   // { name, role, draws }
     var excluded = new Set(); // lowercase names currently excluded

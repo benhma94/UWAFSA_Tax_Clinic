@@ -280,6 +280,10 @@ footer svg {
   color: inherit;
 }
 
+.tool-card-wide {
+  grid-column: span 2;
+}
+
 /* Dark mode button */
 .dark-mode-btn {
   position: fixed;

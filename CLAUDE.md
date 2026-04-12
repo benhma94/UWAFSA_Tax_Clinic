@@ -29,7 +29,7 @@ From GRAPH_REPORT.md:
 
 ### Key Workflows (Pre-Documented)
 
-All major flows documented in `Obsidian - Tax Clinic Website/wiki/workflows/`:
+All major flows documented in `Obsidian - Tax Clinic Website/wiki/workflows/` (20 total). Key ones:
 1. Day-of Clinic Operations
 2. Appointment Booking Pathway
 3. Volunteer Scheduling
@@ -38,51 +38,32 @@ All major flows documented in `Obsidian - Tax Clinic Website/wiki/workflows/`:
 
 **Don't ask me to explain them — read the wiki!**
 
+### Python Environment
+
+Always invoke Python via the `.venv` in the project root:
+
+```bash
+.venv/Scripts/python -c "..."
+.venv/Scripts/python -m graphify ...
+```
+
+Never use bare `python`, `python3`, or `py` — they resolve to the wrong interpreter.
+
 ### Keeping Graph Updated
 
 After modifying code, rebuild the graph:
 
 ```bash
-python3 -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"
+.venv/Scripts/python -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"
 ```
 
 Or use the graphify CLI:
 
 ```bash
-graphify query "what calls AdminDashboard.gs?"
+.venv/Scripts/python -m graphify query "what calls AdminDashboard.gs?"
 ```
 
 ---
-
-## 📚 Obsidian Vault Integration
-
-The knowledge graph is available as an **Obsidian vault** for visual exploration (optional).
-
-### Setup
-
-Folder structure in your Obsidian vault:
-```
-YourVault/
-├── .obsidian/                   (Obsidian config - auto-created)
-├── wiki/                        (Knowledge graph)
-│   ├── _index.md               (Start here!)
-│   ├── nodes/                  (235 component files)
-│   └── workflows/              (20 architecture patterns)
-├── graph.json                  (For visualization plugins)
-└── GRAPH_REPORT.md            (Analysis summary)
-```
-
-### Quick Start
-
-1. Wiki files are already in `Obsidian - Tax Clinic Website/` (no copy needed)
-2. Point your Obsidian vault to `Obsidian - Tax Clinic Website/` as the vault root
-3. Open `wiki/_index.md` as navigation hub
-4. Click blue wikilinks to explore relationships
-5. (Optional) Install **Graph View** or **Force-Directed Graph** plugin for visualization
-
-Install plugins:
-- Open Obsidian Settings → Community Plugins → Browse
-- Search for "Graph View" (enable) or install "Force-Directed Graph"
 
 ---
 
@@ -221,6 +202,7 @@ On-demand dashboard data bundled to minimize Sheets API calls and maintain fast 
 
 ## Key Development Notes
 
+- **Shared stylesheet:** `shared_styles.html` is included by all HTML pages in `catbus_scripts/` — dark mode and global style changes go here
 - **Changing clinic dates/times:** Update `SCHEDULE_CONFIG` + `ELIGIBILITY_CONFIG` in `Config.gs`
 - **Changing income limits:** Update `ELIGIBILITY_CONFIG` in `Config.gs` AND `appointment_screening.html`
 - **HTML charts:** Use HTML/CSS charts (not Google Sheets embedded)
