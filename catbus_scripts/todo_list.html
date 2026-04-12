@@ -255,7 +255,7 @@
         '<td>' + esc(item.responsibleIndividuals || '—') + '</td>' +
         '<td><span class="badge ' + badgeClass + '">' + esc(item.status) + '</span></td>' +
         '<td><span class="days-chip ' + daysColorClass(item, days) + '">' + daysLabel + '</span></td>' +
-        '<td><span class="link-edit" onclick="openEditModal(' + item.rowIndex + ')">Edit</span></td>' +
+        '<td><span class="link-edit" onclick="openEditModal(' + parseInt(item.rowIndex, 10) + ')">Edit</span></td>' +
         '</tr>';
     }).join('');
   }
@@ -263,7 +263,8 @@
   function daysUntil(dateStr) {
     if (!dateStr) return 9999;
     var today = new Date(); today.setHours(0,0,0,0);
-    var due = new Date(dateStr); due.setHours(0,0,0,0);
+    var parts = dateStr.split('-');
+    var due = new Date(+parts[0], +parts[1] - 1, +parts[2]);
     return Math.round((due - today) / 86400000);
   }
 
@@ -386,7 +387,7 @@
   }
 
   function deleteTask() {
-    if (!editingRowIndex) return;
+    if (editingRowIndex === null) return;
     if (!confirm('Delete this task? This cannot be undone.')) return;
     google.script.run
       .withSuccessHandler(function() { closeModal(); loadTasks(); })
@@ -412,7 +413,7 @@
       return '<tr>' +
         '<td>' + esc(c.name) + '</td>' +
         '<td>' + esc(c.email) + '</td>' +
-        '<td><button class="btn-delete" onclick="deletePerson(' + c.rowIndex + ')">Remove</button></td>' +
+        '<td><button class="btn-delete" onclick="deletePerson(' + parseInt(c.rowIndex, 10) + ')">Remove</button></td>' +
         '</tr>';
     }).join('');
   }
