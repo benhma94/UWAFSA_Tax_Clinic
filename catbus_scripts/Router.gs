@@ -101,6 +101,8 @@ function doGet(e) {
       return loadPage('mass_email', 'Mass Email', {});
     case 'volunteermgmt':
       return loadPage('volunteer_management', 'Volunteer Management', {});
+    case 'todo':
+      return doGetTodoList();
     default:
       return loadPage('catbus_intake_form', 'AFSA Tax Clinic Intake Form', { xframe: ALLOW });
   }
