@@ -21,7 +21,7 @@ function getAlreadyDistributedEmails(year) {
 
   // Columns: 0=Timestamp, 1=Year, 2=Code, 3=V1Email, 4=V1Name, 5=V1Status,
   //          6=V2Email, 7=V2Name, 8=V2Status, 9=V3Email, 10=V3Name, 11=V3Status
-  const data = sheet.getRange(2, 1, lastRow - 1, 12).getValues();
+  const data = readSheetData(sheet, 12);
 
   for (const row of data) {
     const logYear = parseInt(row[1], 10);
@@ -239,12 +239,12 @@ function sendCodeEmail(email, name, code, year) {
     var subject = PRODUCT_CODE_CONFIG.EMAIL_SUBJECT || 'Your Tax Clinic Product Code';
     var body = buildCodeEmailBody(name, code, year);
 
-    MailApp.sendEmail({
+    sendEmail({
       to: email,
       subject: subject,
       htmlBody: body,
       name: 'UW AFSA Tax Clinic'
-    });
+    }, 'sendCodeEmail');
 
     Logger.log('Sent code to ' + email);
     return true;
@@ -269,12 +269,12 @@ function sendTestCodeEmail() {
     var testYear = new Date().getFullYear();
     var body = buildCodeEmailBody(testName, testCode, testYear);
 
-    MailApp.sendEmail({
+    sendEmail({
       to: testEmail,
       subject: subject,
       htmlBody: body,
       name: 'UW AFSA Tax Clinic'
-    });
+    }, 'sendTestCodeEmail');
 
     return { success: true, message: 'Test email sent to ' + testEmail };
   } catch (error) {

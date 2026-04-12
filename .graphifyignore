@@ -1,0 +1,17 @@
+# Deployment/tooling batch scripts - no logic to graph
+catbus_scripts/upload.bat
+catbus_scripts/download.bat
+catbus_scripts/deploy.bat
+catbus_scripts/setup-clasp.bat
+
+# Secrets template - no real logic, excluded for safety
+catbus_scripts/_Secrets.example.gs
+
+# Public-facing website - separate concern from GAS backend
+webpage/
+
+# Setup scripts - one-time CLI tool, not part of the runtime graph
+setup/
+
+# GitHub templates
+.github/

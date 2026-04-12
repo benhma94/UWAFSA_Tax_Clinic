@@ -122,11 +122,11 @@ function saveVolunteerScheduleEdits(volunteerName, shiftUpdates, sendEmail) {
           const htmlBody = buildScheduleChangeEmailBody(
             volunteerName, futureOldShifts, futureNewShifts, SCHEDULE_CONFIG.DEFAULT_DAY_LABELS
           );
-          MailApp.sendEmail({
+          sendEmail({
             to: email,
             subject: 'Your Tax Clinic Schedule Has Changed',
             htmlBody: htmlBody
-          });
+          }, 'sendScheduleChangeEmail');
           result.emailSent = true;
         }
       } catch (e) {

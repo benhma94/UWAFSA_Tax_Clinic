@@ -146,12 +146,12 @@ function sendAppointmentConfirmation(data) {
     const emailBody = buildConfirmationEmailBody(data);
     const subject = `Tax Clinic Appointment Confirmation - ${data.clientId}`;
 
-    MailApp.sendEmail({
+    sendEmail({
       to: data.email,
       subject: subject,
       htmlBody: emailBody,
       name: 'UW AFSA Tax Clinic'
-    });
+    }, 'sendAppointmentConfirmation');
 
     Logger.log(`Confirmation email sent to ${data.email} for ${data.clientId}`);
 
@@ -324,12 +324,12 @@ function sendAppointmentReminders() {
 function sendAppointmentReminderEmail(data) {
   const emailBody = buildReminderEmailBody(data);
   const subject = `Reminder: Your Tax Clinic Appointment is in 2 Days – ${data.clientId}`;
-  MailApp.sendEmail({
+  sendEmail({
     to: data.email,
     subject: subject,
     htmlBody: emailBody,
     name: 'UW AFSA Tax Clinic'
-  });
+  }, 'sendAppointmentReminderEmail');
 }
 
 /**
