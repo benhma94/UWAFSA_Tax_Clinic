@@ -8,16 +8,13 @@
     body { max-width: 800px; }
 
     header {
-      position: relative;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
       gap: 16px;
-      flex-wrap: wrap;
-      padding: 20px 24px 12px 180px;
+      padding: 20px 24px;
       border-bottom: 1px solid var(--border-light);
       margin-bottom: 20px;
-      min-height: 96px;
     }
 
     body.dark header {
@@ -29,7 +26,7 @@
       color: var(--accent-color);
       font-size: 1.8rem;
       margin: 0;
-      text-align: left;
+      text-align: center;
       font-weight: 600;
       letter-spacing: -0.5px;
       flex: 1 1 auto;
@@ -45,14 +42,9 @@
       display: flex;
       align-items: center;
       gap: 12px;
-    }
-
-    #receptionHelpArea {
-      position: absolute;
-      top: 16px;
-      left: 16px;
-      margin: 0;
-      z-index: 2;
+      flex-shrink: 0;
+      height: 100%;
+      line-height: 1;
     }
 
     .toggle-theme { margin: 0; }
@@ -214,8 +206,11 @@
     }
 
     #receptionHelpArea button {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       margin: 0;
+      vertical-align: middle;
     }
     .tooltip {
       display: inline-block;
@@ -809,7 +804,7 @@
       <button id="receptionHelpBtn" onclick="toggleReceptionHelp()">📞 Call for Help</button>
       <button id="receptionEscalateBtn" onclick="escalateReceptionHelp()" style="display: none;">🚨 Escalate to Senior Mentor</button>
     </div>
-    <h3>AFSA Tax Clinic Client Intake Form</h3>
+    <h3>Client Intake Form</h3>
     <div class="header-actions">
       <a href="<?= websiteUrl ?>" style="font-size:0.85em; color:var(--accent-color); text-decoration:none; font-weight:600; opacity:0.8;">🏠 Home</a>
       <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
