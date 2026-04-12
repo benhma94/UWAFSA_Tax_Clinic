@@ -8,37 +8,461 @@
     <script>(function(){var t=localStorage.getItem('theme');if(t==='dark'||(t===null&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark-mode');})();</script>
     <link rel="stylesheet" href="shared.css?v=2">
     <script src="config.js"></script>
+    <style>
+      /* Wiki-style layout */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background-color: #f8f9fa;
+        display: flex;
+        min-height: 100vh;
+      }
+
+      .dark-mode {
+        background-color: #1a1a1a;
+        color: #f0f0f0;
+      }
+
+      .wiki-container {
+        display: flex;
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      /* Sidebar styles */
+      .wiki-sidebar {
+        width: 280px;
+        background-color: #ffffff;
+        border-right: 1px solid #e0e0e0;
+        padding: 20px;
+        overflow-y: auto;
+        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 100;
+      }
+
+      .dark-mode .wiki-sidebar {
+        background-color: #2d2d2d;
+        border-right: 1px solid #444;
+      }
+
+      .sidebar-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .dark-mode .sidebar-header {
+        border-bottom: 1px solid #444;
+      }
+
+      .sidebar-header h2 {
+        font-size: 1.4rem;
+        margin: 0;
+        color: #2c3e50;
+      }
+
+      .dark-mode .sidebar-header h2 {
+        color: #f0f0f0;
+      }
+
+      .search-container {
+        margin-bottom: 20px;
+      }
+
+      .search-container input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      .dark-mode .search-container input {
+        background-color: #3a3a3a;
+        border: 1px solid #444;
+        color: #f0f0f0;
+      }
+
+      .sidebar-nav {
+        list-style: none;
+      }
+
+      .sidebar-nav li {
+        margin-bottom: 8px;
+      }
+
+      .sidebar-nav a {
+        text-decoration: none;
+        color: #2c3e50;
+        padding: 8px 12px;
+        border-radius: 4px;
+        display: block;
+        transition: background-color 0.2s;
+      }
+
+      .dark-mode .sidebar-nav a {
+        color: #f0f0f0;
+      }
+
+      .sidebar-nav a:hover {
+        background-color: #f0f0f0;
+      }
+
+      .dark-mode .sidebar-nav a:hover {
+        background-color: #3a3a3a;
+      }
+
+      .sidebar-nav a.active {
+        background-color: #3498db;
+        color: white;
+      }
+
+      /* Main content styles */
+      .wiki-main {
+        flex: 1;
+        margin-left: 280px;
+        padding: 30px;
+        background-color: #ffffff;
+        min-height: 100vh;
+      }
+
+      .dark-mode .wiki-main {
+        background-color: #1a1a1a;
+      }
+
+      .wiki-content {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .wiki-content h1 {
+        margin-bottom: 20px;
+        color: #2c3e50;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 10px;
+      }
+
+      .dark-mode .wiki-content h1 {
+        color: #f0f0f0;
+      }
+
+      .wiki-content h2 {
+        margin-top: 30px;
+        margin-bottom: 15px;
+        color: #2c3e50;
+      }
+
+      .dark-mode .wiki-content h2 {
+        color: #f0f0f0;
+      }
+
+      .wiki-content h3 {
+        margin-top: 20px;
+        margin-bottom: 10px;
+        color: #3498db;
+      }
+
+      .dark-mode .wiki-content h3 {
+        color: #5dade2;
+      }
+
+      .wiki-content p {
+        margin-bottom: 15px;
+        font-size: 16px;
+      }
+
+      .wiki-content ul, .wiki-content ol {
+        margin-left: 30px;
+        margin-bottom: 20px;
+      }
+
+      .wiki-content li {
+        margin-bottom: 8px;
+      }
+
+      /* Collapsible sections */
+      .collapsible {
+        background-color: #f8f9fa;
+        color: #2c3e50;
+        cursor: pointer;
+        padding: 18px;
+        width: 100%;
+        border: none;
+        text-align: left;
+        outline: none;
+        font-size: 15px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .dark-mode .collapsible {
+        background-color: #2d2d2d;
+        color: #f0f0f0;
+      }
+
+      .collapsible:hover {
+        background-color: #e9e9e9;
+      }
+
+      .dark-mode .collapsible:hover {
+        background-color: #3a3a3a;
+      }
+
+      .collapsible:after {
+        content: '\002B';
+        color: #3498db;
+        font-weight: bold;
+        float: right;
+        margin-left: 5px;
+        transition: transform 0.3s;
+      }
+
+      .dark-mode .collapsible:after {
+        color: #5dade2;
+      }
+
+      .collapsible.active:after {
+        content: "\2212";
+        transform: rotate(180deg);
+      }
+
+      .collapsible-content {
+        padding: 0 18px;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+        background-color: #ffffff;
+        border-radius: 0 0 4px 4px;
+        margin-bottom: 10px;
+      }
+
+      .dark-mode .collapsible-content {
+        background-color: #1a1a1a;
+      }
+
+      .collapsible-content p, .collapsible-content ul {
+        margin-bottom: 15px;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .wiki-container {
+          flex-direction: column;
+        }
+        
+        .wiki-sidebar {
+          width: 100%;
+          height: auto;
+          position: relative;
+          border-right: none;
+          border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .wiki-main {
+          margin-left: 0;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div class="wiki-container">
+      <!-- Sidebar Navigation -->
+      <div class="wiki-sidebar">
+        <div class="sidebar-header">
+          <h2>Training Wiki</h2>
+        </div>
+        
+        <div class="search-container">
+          <input type="text" id="wiki-search" placeholder="Search training topics...">
+        </div>
+        
+        <ul class="sidebar-nav">
+          <li><a href="#overview" class="nav-link active">Overview</a></li>
+          <li><a href="#getting-started" class="nav-link">Getting Started</a></li>
+          <li><a href="#training-documents" class="nav-link">Training Documents</a></li>
+          <li><a href="#quiz" class="nav-link">Quiz</a></li>
+          <li><a href="#resources" class="nav-link">Resources</a></li>
+          <li><a href="#contact" class="nav-link">Contact</a></li>
+        </ul>
+      </div>
 
-  <div id="site-header"></div>
-  <div id="site-nav"></div>
+      <!-- Main Content -->
+      <div class="wiki-main">
+        <div class="wiki-content">
+          <h1>Volunteer Training</h1>
+          
+          <!-- Collapsible Section: Overview -->
+          <button class="collapsible" data-target="overview">Overview</button>
+          <div class="collapsible-content" id="overview">
+            <p>Welcome to the volunteer training section. This wiki contains all the information you need to become a successful volunteer in our accounting and finance student association.</p>
+            <p>Our training program is designed to provide you with the necessary skills and knowledge to assist our members and contribute to our organization's success.</p>
+          </div>
 
-  <div id="content">
-    <div class="sqs-html-content">
+          <!-- Collapsible Section: Getting Started -->
+          <button class="collapsible" data-target="getting-started">Getting Started</button>
+          <div class="collapsible-content" id="getting-started">
+            <p>Before you begin your volunteer journey, please ensure you have:</p>
+            <ul>
+              <li>Completed the online orientation</li>
+              <li>Read our code of conduct</li>
+              <li>Attended the initial training session</li>
+              <li>Understood our organization's mission and values</li>
+            </ul>
+            <p>For more information about our organization, please visit our main website.</p>
+          </div>
 
-      <h2><strong>Training Documents</strong></h2>
-      <ul>
-        <li><a href="training_slides.pptx">Slides</a></li>
-      </ul>
+          <!-- Collapsible Section: Training Documents -->
+          <button class="collapsible" data-target="training-documents">Training Documents</button>
+          <div class="collapsible-content" id="training-documents">
+            <h3>Available Documents</h3>
+            <p>Access the following training materials:</p>
+            <ul>
+              <li><a href="training_slides.pptx">Training Slides</a></li>
+              <li><a href="training_manual.pdf">Volunteer Manual</a></li>
+              <li><a href="faq.pdf">Frequently Asked Questions</a></li>
+            </ul>
+            <p>These documents provide detailed information about our training program and volunteer responsibilities.</p>
+          </div>
 
-      <h2><strong>Quiz</strong></h2>
-      <ul>
-        <li><a href="https://www.dropbox.com/scl/fo/oo058z9hocivgq8nch2f4/AHpmYAqcu-WUk8stlcJu3Zo?rlkey=zwg953mtrz8bgi6x37cypzfif&st=82124usi&dl=0">Quiz Documents</a></li>
-        <li><a href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=quiz">Quiz Submission</a></li>
-      </ul>
+          <!-- Collapsible Section: Quiz -->
+          <button class="collapsible" data-target="quiz">Quiz</button>
+          <div class="collapsible-content" id="quiz">
+            <h3>Training Assessment</h3>
+            <p>Complete the following quiz to demonstrate your understanding of the training materials:</p>
+            <ul>
+              <li><a href="https://www.dropbox.com/scl/fo/oo058z9hocivgq8nch2f4/AHpmYAqcu-WUk8stlcJu3Zo?rlkey=zwg953mtrz8bgi6x37cypzfif&st=82124usi&dl=0">Quiz Documents</a></li>
+              <li><a href="https://script.google.com/macros/s/AKfycbxoTK4G2ZaGCUGZQBeWiw2BuoFkGOh7SaLlL2EgRhhhe4slTKMJ4SmH29q8On0-Fmlw2A/exec?app=quiz">Quiz Submission</a></li>
+            </ul>
+            <p>The quiz must be completed before you can begin your volunteer work.</p>
+          </div>
 
+          <!-- Collapsible Section: Resources -->
+          <button class="collapsible" data-target="resources">Resources</button>
+          <div class="collapsible-content" id="resources">
+            <h3>Additional Resources</h3>
+            <p>Check out these helpful resources for volunteers:</p>
+            <ul>
+              <li>Training schedule and calendar</li>
+              <li>Volunteer handbook</li>
+              <li>Communication guidelines</li>
+              <li>Feedback and evaluation forms</li>
+            </ul>
+            <p>More resources will be added to this section as they become available.</p>
+          </div>
+
+          <!-- Collapsible Section: Contact -->
+          <button class="collapsible" data-target="contact">Contact</button>
+          <div class="collapsible-content" id="contact">
+            <h3>Get in Touch</h3>
+            <p>If you have any questions about the training program, please contact:</p>
+            <p><strong>Training Coordinator:</strong> Jane Smith</p>
+            <p><strong>Email:</strong> training@association.org</p>
+            <p><strong>Phone:</strong> (555) 123-4567</p>
+            <p>We're happy to help you succeed in your volunteer role!</p>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div id="site-footer"></div>
+    <script>
+      // Collapsible sections functionality
+      document.querySelectorAll('.collapsible').forEach(button => {
+        button.addEventListener('click', function() {
+          this.classList.toggle('active');
+          const content = document.getElementById(this.getAttribute('data-target'));
+          
+          if (content.style.maxHeight) {
+            content.style.maxHeight = null;
+          } else {
+            content.style.maxHeight = content.scrollHeight + "px";
+          }
+        });
+      });
 
-  <script src="shared.js?v=2"></script>
-  <script>
-    document.querySelectorAll('a[href*="script.google.com/macros/s/"]').forEach(function(a) {
-      var app = new URL(a.href).searchParams.get('app');
-      a.href = CATBUS_CONFIG.WEBAPP_URL + (app ? '?app=' + app : '');
-    });
-  </script>
+      // Search functionality
+      const searchInput = document.getElementById('wiki-search');
+      const navLinks = document.querySelectorAll('.nav-link');
+      const collapsibleSections = document.querySelectorAll('.collapsible-content');
+
+      searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        
+        // Filter sidebar navigation
+        navLinks.forEach(link => {
+          const text = link.textContent.toLowerCase();
+          const parentLi = link.parentElement;
+          
+          if (text.includes(searchTerm)) {
+            parentLi.style.display = 'block';
+          } else {
+            parentLi.style.display = 'none';
+          }
+        });
+        
+        // Filter collapsible sections
+        collapsibleSections.forEach(section => {
+          const text = section.textContent.toLowerCase();
+          const targetId = section.id;
+          const button = document.querySelector(`[data-target="${targetId}"]`);
+          
+          if (text.includes(searchTerm)) {
+            section.style.display = 'block';
+            if (button) button.style.display = 'block';
+          } else {
+            section.style.display = 'none';
+            if (button) button.style.display = 'none';
+          }
+        });
+      });
+
+      // Smooth scrolling for navigation links
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          e.preventDefault();
+          
+          const targetId = this.getAttribute('href').substring(1);
+          const targetElement = document.getElementById(targetId);
+          
+          if (targetElement) {
+            // Scroll to the section
+            targetElement.scrollIntoView({
+              behavior: 'smooth'
+            });
+            
+            // Highlight active link
+            document.querySelectorAll('.nav-link').forEach(link => {
+              link.classList.remove('active');
+            });
+            this.classList.add('active');
+          }
+        });
+      });
+
+      // Initialize first collapsible section as open
+      document.addEventListener('DOMContentLoaded', function() {
+        const firstSection = document.querySelector('.collapsible-content');
+        if (firstSection) {
+          firstSection.style.maxHeight = firstSection.scrollHeight + "px";
+          document.querySelector('.collapsible').classList.add('active');
+        }
+      });
+    </script>
   </body>
 </html>
