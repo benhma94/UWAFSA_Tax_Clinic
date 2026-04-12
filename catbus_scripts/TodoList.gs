@@ -158,3 +158,124 @@ function deleteTodoItem(rowIndex) {
   const sheet = getOrCreateActionItemsSheet_();
   sheet.deleteRow(rowIndex);
 }
+
+// ─── Email Reminders ─────────────────────────────────────────────────────────
+
+/**
+ * Daily trigger function. Scans all non-Done action items and sends
+ * consolidated reminder emails for tasks hitting a threshold today.
+ * Run setupTodoReminderTrigger() once to register this as a daily 9 AM trigger.
+ */
+function sendTaskReminders() {
+  const items = getTodoItems().filter(item => item.status !== 'Done');
+  if (!items.length) return;
+
+  const coordinators = getCoordinators();
+  if (!coordinators.length) {
+    Logger.log('sendTaskReminders: no coordinators configured, skipping.');
+    return;
+  }
+
+  const recipientEmails = coordinators.map(c => c.email).join(', ');
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Group tasks by threshold hit today
+  const byThreshold = {};  // e.g. { 14: [...], 7: [...], 1: [...] }
+
+  const sheet = getOrCreateActionItemsSheet_();
+  const headers = sheet.getRange(1, 1, 1, ACTION_ITEM_HEADERS_.length).getValues()[0];
+  const remindersSentColNum = headers.indexOf('Reminders Sent') + 1;
+
+  items.forEach(item => {
+    if (!item.dueDate) return;
+    const due = new Date(item.dueDate);
+    due.setHours(0, 0, 0, 0);
+    const daysUntil = Math.round((due - today) / (1000 * 60 * 60 * 24));
+
+    const alreadySent = (item.remindersSent || '').toString().split(',').map(s => parseInt(s.trim(), 10));
+
+    ACTION_ITEM_CONFIG.REMINDER_THRESHOLDS.forEach(threshold => {
+      if (daysUntil === threshold && !alreadySent.includes(threshold)) {
+        if (!byThreshold[threshold]) byThreshold[threshold] = [];
+        byThreshold[threshold].push({ item, daysUntil });
+      }
+    });
+  });
+
+  // Collect all tasks to remind and update Reminders Sent
+  const allReminders = [];
+  Object.keys(byThreshold).sort((a, b) => a - b).forEach(threshold => {
+    byThreshold[threshold].forEach(({ item, daysUntil }) => {
+      allReminders.push({ item, daysUntil: parseInt(threshold, 10) });
+      // Update Reminders Sent in sheet
+      const current = (item.remindersSent || '').toString().trim();
+      const updated = current ? current + ',' + threshold : String(threshold);
+      sheet.getRange(item.rowIndex, remindersSentColNum).setValue(updated);
+    });
+  });
+
+  if (!allReminders.length) return;
+
+  // Build consolidated email
+  const taskRows = allReminders
+    .sort((a, b) => a.daysUntil - b.daysUntil)
+    .map(({ item, daysUntil }) => {
+      const urgencyLabel = daysUntil === 1 ? '⚠️ Due Tomorrow' : `Due in ${daysUntil} days`;
+      return `<tr>
+        <td style="padding:8px;border:1px solid #ddd;">${escapeHtmlServer(item.title)}</td>
+        <td style="padding:8px;border:1px solid #ddd;">${escapeHtmlServer(item.category)}</td>
+        <td style="padding:8px;border:1px solid #ddd;">${escapeHtmlServer(item.dueDate)}</td>
+        <td style="padding:8px;border:1px solid #ddd;">${escapeHtmlServer(item.responsibleIndividuals || '—')}</td>
+        <td style="padding:8px;border:1px solid #ddd;font-weight:bold;">${urgencyLabel}</td>
+      </tr>`;
+    }).join('');
+
+  const htmlBody = `
+    <h2 style="color:#8e0000;">CATBUS: Upcoming Task Deadlines</h2>
+    <p>The following tasks have deadlines approaching:</p>
+    <table style="border-collapse:collapse;width:100%;font-family:sans-serif;">
+      <thead>
+        <tr style="background:#f2f2f2;">
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">Task</th>
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">Category</th>
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">Due Date</th>
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">Responsible</th>
+          <th style="padding:8px;border:1px solid #ddd;text-align:left;">Urgency</th>
+        </tr>
+      </thead>
+      <tbody>${taskRows}</tbody>
+    </table>
+    <p style="color:#666;font-size:0.9em;">This is an automated reminder from CATBUS.</p>
+  `;
+
+  sendEmail({
+    to: recipientEmails,
+    subject: `[CATBUS] Task Reminders — ${allReminders.length} task(s) due soon`,
+    htmlBody: htmlBody,
+    name: 'CATBUS'
+  }, 'sendTaskReminders');
+
+  Logger.log(`sendTaskReminders: sent reminder for ${allReminders.length} task(s) to ${recipientEmails}`);
+}
+
+/**
+ * One-time setup: registers sendTaskReminders() as a daily 9 AM trigger.
+ * Run this once from the Apps Script editor.
+ */
+function setupTodoReminderTrigger() {
+  const existing = ScriptApp.getProjectTriggers().find(
+    t => t.getHandlerFunction() === 'sendTaskReminders'
+  );
+  if (existing) {
+    Logger.log('Todo reminder trigger already exists — skipping.');
+    return;
+  }
+  ScriptApp.newTrigger('sendTaskReminders')
+    .timeBased()
+    .everyDays(1)
+    .atHour(9)
+    .create();
+  Logger.log('Daily todo reminder trigger created — will run at 9 AM each day.');
+}
