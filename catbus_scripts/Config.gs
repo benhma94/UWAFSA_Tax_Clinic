@@ -31,8 +31,8 @@ const CONFIG = {
     TRAINING_LOG: 'Training Log', // Training session log (T-prefix clients)
     QUIZ_SUBMISSIONS: 'Quiz Submissions', // Quiz session submissions
     VOLUNTEER_ALUMNI: 'Volunteer Alumni', // Permanent alumni roster (survives rollforward)
-    ACTION_ITEMS: 'Action Items',
-    COORDINATORS: 'Coordinators',
+    ACTION_ITEMS: 'Action Items',          // Coordinator to-do list and task tracking
+    COORDINATORS: 'Coordinators',          // Coordinator contact list for reminders
   },
 
   // Clinic contact info (used in emails and public pages)
