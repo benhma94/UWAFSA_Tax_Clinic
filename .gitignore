@@ -1,4 +1,6 @@
-.claude
+# Claude Code session data (session-specific, not shared)
+.claude/*
+!.claude/settings.json
 
 # Secrets — instance-specific values, never commit
 catbus_scripts/_Secrets.gs
@@ -6,4 +8,10 @@ catbus_scripts/.clasp.json
 
 # Webpage runtime config — upload to server manually, never commit
 webpage/config.js
+
+# Graphify generated outputs (large/binary-like, rebuilt on demand)
+graphify-out/
+graph.html
+graph.json
+GRAPH_REPORT.md
 
