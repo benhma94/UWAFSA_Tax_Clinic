@@ -12,10 +12,9 @@
     }
 
     body {
-      margin: 0 auto;
+      margin: 0;
       font-family: 'Segoe UI', Verdana, sans-serif;
-      padding: 20px;
-      max-width: 980px;
+      padding: 0;
       color: #1a1a1a;
     }
 
@@ -249,16 +248,175 @@
 
     @media (max-width: 600px) {
       .card-header { flex-direction: column; align-items: flex-start; }
+      .vm-layout { flex-direction: column; }
+      .vm-sidebar {
+        width: 100%;
+        height: auto;
+        position: static;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        border-right: none;
+        border-bottom: 2px solid var(--accent);
+        padding: 0;
+      }
+      .vm-sidebar-header { display: none; }
+      .vm-nav-item {
+        flex-direction: column;
+        align-items: center;
+        padding: 8px 10px;
+        font-size: 0.72rem;
+        min-width: 70px;
+        border-left: none;
+        border-bottom: 3px solid transparent;
+        white-space: nowrap;
+      }
+      .vm-nav-item.active {
+        border-left: none;
+        border-bottom: 3px solid var(--accent);
+        background: rgba(142,0,0,0.06);
+      }
+      .vm-nav-icon { font-size: 1.2rem; margin-bottom: 2px; }
+      .vm-main { padding: 16px; }
     }
+
+    /* ── Sidebar layout ──────────────────────────────────────────── */
+    .vm-layout {
+      display: flex;
+      align-items: stretch;
+      min-height: 100vh;
+    }
+
+    .vm-sidebar {
+      width: 210px;
+      flex-shrink: 0;
+      background: #1a1a1a;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      box-sizing: border-box;
+      padding: 0 0 20px 0;
+      z-index: 100;
+    }
+
+    .vm-sidebar-header {
+      padding: 18px 16px 14px;
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+      border-bottom: 1px solid #333;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .vm-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 16px;
+      cursor: pointer;
+      color: #ccc;
+      font-size: 0.84rem;
+      font-weight: 500;
+      border-left: 3px solid transparent;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      user-select: none;
+      line-height: 1.3;
+    }
+
+    .vm-nav-item:hover {
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+    }
+
+    .vm-nav-item.active {
+      background: rgba(142,0,0,0.18);
+      color: #fff;
+      border-left-color: var(--accent);
+      font-weight: 700;
+    }
+
+    .vm-nav-icon {
+      font-size: 1.05rem;
+      width: 22px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .vm-nav-label { flex: 1; }
+
+    .vm-nav-badge {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 10px;
+      padding: 1px 7px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      display: none;
+    }
+
+    .vm-main {
+      flex: 1;
+      min-width: 0;
+      padding: 24px 28px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+
+    .vm-main > h1 { margin: 0 0 20px; color: var(--accent); }
+
+    .vm-main .card:last-child { margin-bottom: 0; }
   </style>
 </head>
 <body>
   <?!= include('_PasswordGate') ?>
 
-  <h1>Volunteer Management</h1>
+  <div class="vm-layout">
+    <!-- Sidebar Navigation -->
+    <nav class="vm-sidebar" role="navigation" aria-label="Volunteer Management sections">
+      <div class="vm-sidebar-header">Volunteer<br>Management</div>
 
-  <!-- Section A: Transfer Accepted Applicants -->
-  <div class="card">
+      <div class="vm-nav-item" data-section="section-transfer" onclick="vmShowSection('section-transfer')">
+        <span class="vm-nav-icon">&#128257;</span>
+        <span class="vm-nav-label">Transfer Applicants</span>
+        <span class="vm-nav-badge" id="nav-badge-transfer"></span>
+      </div>
+
+      <div class="vm-nav-item active" data-section="section-roster" onclick="vmShowSection('section-roster')">
+        <span class="vm-nav-icon">&#128101;</span>
+        <span class="vm-nav-label">Volunteer List</span>
+        <span class="vm-nav-badge" id="nav-badge-roster"></span>
+      </div>
+
+      <div class="vm-nav-item" data-section="section-noshow" onclick="vmShowSection('section-noshow')">
+        <span class="vm-nav-icon">&#10060;</span>
+        <span class="vm-nav-label">No-Shows</span>
+        <span class="vm-nav-badge" id="nav-badge-noshow"></span>
+      </div>
+
+      <div class="vm-nav-item" data-section="section-audit" onclick="vmShowSection('section-audit')">
+        <span class="vm-nav-icon">&#128270;</span>
+        <span class="vm-nav-label">Name Audit</span>
+        <span class="vm-nav-badge" id="nav-badge-audit"></span>
+      </div>
+
+      <div class="vm-nav-item" data-section="section-alumni" onclick="vmShowSection('section-alumni')">
+        <span class="vm-nav-icon">&#127891;</span>
+        <span class="vm-nav-label">Alumni &amp; Blacklist</span>
+        <span class="vm-nav-badge" id="nav-badge-alumni"></span>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="vm-main">
+      <h1>Volunteer Management</h1>
+
+      <!-- Section A: Transfer Accepted Applicants -->
+      <div class="card" id="section-transfer">
     <div class="card-header">
       <h2>Transfer Accepted Applicants <span class="badge" id="acceptedCount" style="display:none">0</span></h2>
       <div class="btn-row">
@@ -300,7 +458,7 @@
   </div>
 
   <!-- Section B: Consolidated Volunteer List -->
-  <div class="card">
+  <div class="card" id="section-roster">
     <div class="card-header">
       <h2>Consolidated Volunteer List <span class="badge badge-grey" id="rosterCount">...</span></h2>
       <button class="btn-muted" onclick="loadRoster()">Refresh</button>
@@ -354,7 +512,7 @@
   </div>
 
   <!-- Section C: No-Show Volunteers -->
-  <div class="card">
+  <div class="card" id="section-noshow">
     <div class="card-header">
       <h2>No-Show Volunteers <span class="badge badge-grey" id="noShowCount" style="display:none">0</span></h2>
       <div class="btn-row">
@@ -391,7 +549,7 @@
   </div>
 
   <!-- Section D: Unmatched Name Audit -->
-  <div class="card">
+  <div class="card" id="section-audit">
     <div class="card-header">
       <h2>Unmatched Name Audit <span class="badge badge-grey" id="unmatchedCount" style="display:none">0</span></h2>
       <div class="btn-row">
@@ -423,7 +581,7 @@
   </div>
 
   <!-- Section E: Volunteer Alumni & Blacklist -->
-  <div class="card">
+  <div class="card" id="section-alumni">
     <div class="card-header">
       <h2>Volunteer Alumni <span class="badge badge-grey" id="alumniCount" style="display:none">0</span></h2>
       <div class="btn-row">
@@ -455,8 +613,105 @@
       </table>
     </div>
   </div>
+    </main>
+  </div><!-- .vm-layout -->
 
 <script>
+  // ── Sidebar Navigation ────────────────────────────────────────
+  var VM_SECTIONS = [
+    'section-transfer',
+    'section-roster',
+    'section-noshow',
+    'section-audit',
+    'section-alumni'
+  ];
+
+  var VM_BADGE_MAP = {
+    'section-transfer': 'acceptedCount',
+    'section-roster':   'rosterCount',
+    'section-noshow':   'noShowCount',
+    'section-audit':    'unmatchedCount',
+    'section-alumni':   'alumniCount'
+  };
+
+  function vmShowSection(sectionId) {
+    // 1. Hide all sections
+    for (var i = 0; i < VM_SECTIONS.length; i++) {
+      var el = document.getElementById(VM_SECTIONS[i]);
+      if (el) el.style.display = 'none';
+    }
+
+    // 2. Show requested section
+    var target = document.getElementById(sectionId);
+    if (target) target.style.display = '';
+
+    // 3. Update nav item active states
+    var navItems = document.querySelectorAll('.vm-nav-item');
+    for (var j = 0; j < navItems.length; j++) {
+      var item = navItems[j];
+      if (item.getAttribute('data-section') === sectionId) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    }
+
+    // 4. Update URL hash
+    try {
+      history.replaceState(null, '', '#' + sectionId);
+    } catch(e) { /* replaceState may be blocked in some iframe contexts */ }
+
+    // 5. Sync nav badges
+    vmSyncNavBadges();
+  }
+
+  function vmSyncNavBadges() {
+    var keys = Object.keys(VM_BADGE_MAP);
+    for (var i = 0; i < keys.length; i++) {
+      var sectionId = keys[i];
+      var sourceBadge = document.getElementById(VM_BADGE_MAP[sectionId]);
+      var navBadgeId  = 'nav-badge-' + sectionId.replace('section-', '');
+      var navBadge    = document.getElementById(navBadgeId);
+      if (!sourceBadge || !navBadge) continue;
+      var text = sourceBadge.textContent.trim();
+      var visible = sourceBadge.style.display !== 'none' && text !== '' && text !== '...';
+      if (visible) {
+        navBadge.textContent = text;
+        navBadge.style.display = '';
+      } else {
+        navBadge.style.display = 'none';
+      }
+    }
+  }
+
+  // ── Boot: initialise nav on page load ─────────────────────────
+  (function vmInit() {
+    var hash = window.location.hash.replace('#', '');
+    var startSection = (VM_SECTIONS.indexOf(hash) !== -1) ? hash : 'section-roster';
+
+    for (var i = 0; i < VM_SECTIONS.length; i++) {
+      var el = document.getElementById(VM_SECTIONS[i]);
+      if (el) el.style.display = 'none';
+    }
+
+    vmShowSection(startSection);
+
+    window.addEventListener('hashchange', function() {
+      var h = window.location.hash.replace('#', '');
+      if (VM_SECTIONS.indexOf(h) !== -1) vmShowSection(h);
+    });
+
+    if (typeof MutationObserver !== 'undefined') {
+      var badgeIds = Object.keys(VM_BADGE_MAP).map(function(k){ return VM_BADGE_MAP[k]; });
+      badgeIds.forEach(function(badgeId) {
+        var badge = document.getElementById(badgeId);
+        if (!badge) return;
+        var obs = new MutationObserver(vmSyncNavBadges);
+        obs.observe(badge, { characterData: true, childList: true, attributes: true, subtree: true });
+      });
+    }
+  })();
+
   // ── State ─────────────────────────────────────────────────────────────────
   var accepted = [];          // {role, email, firstName, preferredName, lastName, alreadyOnList}
   var selected = {};          // email -> true
