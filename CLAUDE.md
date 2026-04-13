@@ -4,6 +4,8 @@
 
 **Always use graphify before exploring code** — reads wiki instead of raw files (5-10K vs 100K+ tokens).
 
+Instead of using grep, when you need to gain an understanding of how the codebase is structured, use graphify instead.
+
 1. Read `Obsidian - Tax Clinic Website/GRAPH_REPORT.md` (god nodes, clusters, risks)
 2. Navigate `Obsidian - Tax Clinic Website/wiki/nodes/` for components
 3. Navigate `Obsidian - Tax Clinic Website/wiki/workflows/` for 20 pre-documented workflows
