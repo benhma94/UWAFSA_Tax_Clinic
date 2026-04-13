@@ -26,6 +26,36 @@ const REQUEST_TYPES = {
   }
 };
 
+function getRequestSnapshotForVolunteer_(requestType, volunteer) {
+  volunteer = sanitizeInput(volunteer, 100);
+  if (!volunteer) return null;
+
+  const config = REQUEST_TYPES[requestType];
+  const sheet = getSheet(config.sheet);
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return null;
+
+  const checkRows = Math.min(config.checkLimit, lastRow - 1);
+  const startRow = Math.max(2, lastRow - checkRows + 1);
+  const numCols = requestType === 'REVIEW' ? 6 : 3;
+  const data = sheet.getRange(startRow, 1, checkRows, numCols).getValues();
+
+  for (let i = data.length - 1; i >= 0; i--) {
+    const rowVolunteer = data[i][config.columns.VOLUNTEER]?.toString().trim();
+    if (rowVolunteer !== volunteer) continue;
+
+    return {
+      rowNum: startRow + i,
+      status: data[i][config.columns.STATUS]?.toString().trim() || '',
+      clientId: config.columns.CLIENT_ID !== undefined ? (data[i][config.columns.CLIENT_ID]?.toString().trim() || '') : '',
+      taxYear: config.columns.TAX_YEAR !== undefined ? (data[i][config.columns.TAX_YEAR]?.toString().trim() || '') : '',
+      reviewerOrReason: config.columns.REVIEWER_OR_REASON !== undefined ? (data[i][config.columns.REVIEWER_OR_REASON]?.toString().trim() || '') : ''
+    };
+  }
+
+  return null;
+}
+
 /**
  * Sends a request for a volunteer
  * Generic function that works for both help and review requests

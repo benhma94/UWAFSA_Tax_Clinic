@@ -3,6 +3,16 @@
  * Provides functions for volunteers to view their schedules
  */
 
+const SCHEDULE_SHEET_CACHE_KEY = 'schedule_sheet_name';
+
+function readScheduleGrid_() {
+  const sheet = getScheduleSheet();
+  return {
+    sheet,
+    data: readSheetData(sheet, 5, 1, 1, 4)
+  };
+}
+
 /**
  * Gets volunteer tags from the Volunteer Tags sheet (3-column format)
  * Column A: Name, Column B: Role Override (e.g., "Senior Mentor" or blank), Column C: Display Flair
@@ -73,8 +83,7 @@ function getVolunteerTagsFromSheet() {
  */
 function getAllVolunteerNames() {
   return safeExecute(() => {
-    const sheet = getScheduleSheet();
-    const data = sheet.getDataRange().getValues();
+    const data = readScheduleGrid_().data;
 
     // Extract unique volunteer names from the schedule grid (rows 2-4, columns B-E)
     // Each cell contains comma-separated volunteer names
@@ -104,8 +113,7 @@ function getAllVolunteerNames() {
  */
 function getDayLabels() {
   return safeExecute(() => {
-    const sheet = getScheduleSheet();
-    const data = sheet.getDataRange().getValues();
+    const data = readScheduleGrid_().data;
 
     if (data.length === 0) {
       return ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
@@ -141,14 +149,21 @@ function getScheduleSheet() {
   // Helper: verify a sheet is a schedule sheet by checking for "Time / Day" header
   function isScheduleSheet(sheet) {
     try {
-      const data = sheet.getDataRange().getValues();
-      if (data.length > 0 && data[0][0] && data[0][0].toString().trim() === 'Time / Day') {
-        return true;
-      }
+      const value = sheet.getRange(1, 1).getValue();
+      return value && value.toString().trim() === 'Time / Day';
     } catch (e) {
       // Ignore read errors
     }
     return false;
+  }
+
+  const cache = CacheService.getScriptCache();
+  const cachedName = cache.get(SCHEDULE_SHEET_CACHE_KEY);
+  if (cachedName) {
+    const cachedSheet = ss.getSheetByName(cachedName);
+    if (cachedSheet && isScheduleSheet(cachedSheet)) {
+      return cachedSheet;
+    }
   }
 
   // First, try common schedule sheet names
@@ -157,6 +172,7 @@ function getScheduleSheet() {
     try {
       const sheet = ss.getSheetByName(name);
       if (sheet && isScheduleSheet(sheet)) {
+        cache.put(SCHEDULE_SHEET_CACHE_KEY, name, 21600);
         return sheet;
       }
     } catch (e) {
@@ -168,6 +184,7 @@ function getScheduleSheet() {
   const sheets = ss.getSheets();
   for (const sheet of sheets) {
     if (isScheduleSheet(sheet)) {
+      cache.put(SCHEDULE_SHEET_CACHE_KEY, sheet.getName(), 21600);
       return sheet;
     }
   }
@@ -183,8 +200,7 @@ function getScheduleSheet() {
  */
 function getVolunteerScheduleByName(searchTerm) {
   return safeExecute(() => {
-    const sheet = getScheduleSheet();
-    const data = sheet.getDataRange().getValues();
+    const data = readScheduleGrid_().data;
 
     // Get day labels from header row (columns 1-4)
     const headerRow = data[0];
@@ -496,10 +512,7 @@ function simplifyDateFormat(dateString) {
  */
 function getVolunteerScheduleByDay(day, filterRole = '') {
   return safeExecute(() => {
-    const sheet = getScheduleSheet();
-    
-    // Read the schedule grid (first few rows)
-    const data = sheet.getDataRange().getValues();
+    const data = readScheduleGrid_().data;
     
     // Build volunteer role map from the Schedule Availability sheet
     const volunteerRoles = {};

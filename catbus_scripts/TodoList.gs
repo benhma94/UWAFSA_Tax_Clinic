@@ -156,7 +156,7 @@ function updateTodoItem(rowIndex, data) {
 function deleteTodoItem(rowIndex) {
   if (rowIndex < 2) throw new Error('rowIndex must be >= 2 (row 1 is the header).');
   const sheet = getOrCreateActionItemsSheet_();
-  sheet.deleteRow(rowIndex);
+  sheet.getRange(rowIndex, 1, 1, ACTION_ITEM_HEADERS_.length).clearContent();
 }
 
 // ─── Email Reminders ─────────────────────────────────────────────────────────

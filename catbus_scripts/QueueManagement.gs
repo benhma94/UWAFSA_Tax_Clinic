@@ -243,6 +243,7 @@ function getAvailableVolunteers() {
     const signOutData = signOutLastRow > 1
       ? readSheetData(signOutSheet, 1, 2, CONFIG.COLUMNS.SIGNOUT.SESSION_ID + 1, signOutLastRow - 1)
       : [];
+    const signedOutIds = new Set(signOutData.map(row => row[0]?.toString().trim()).filter(Boolean));
 
     // Build busy-volunteer set from recent assignment rows.
     // Read all 4 columns (Timestamp, ClientID, Volunteer, Completed) starting from col A.
@@ -306,13 +307,7 @@ function getAvailableVolunteers() {
       if (nonFilerStations.some(r => stationLower === r)) continue;
       if (signInDate !== today) continue;
 
-      // Check if signed out
-      const signedOut = signOutData.some(row => {
-        const outId = row[0]?.toString().trim();
-        return outId === sessionId;
-      });
-
-      if (signedOut) continue;
+      if (signedOutIds.has(sessionId)) continue;
       if (busyVolunteers.has(name)) continue;
       if (onBreak === 'yes') continue;
 
@@ -557,7 +552,7 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
 
 /**
  * Unassigns a client from their current volunteer and returns them to the queue.
- * Deletes the assignment row so the client reappears in the queue.
+ * Preserves assignment history by marking the row unassigned.
  * @param {string} clientId - Client ID to unassign
  * @returns {Object} {success, message}
  */
@@ -601,9 +596,8 @@ function unassignClient(clientId) {
         return { success: false, message: `Client ${clientId} is not currently assigned` };
       }
 
-      // Delete the assignment row (frees the volunteer, returns client to queue)
       const rowNumber = activeRowIndex + 2;
-      assignmentSheet.deleteRow(rowNumber);
+      setCellValue(assignmentSheet, rowNumber, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED, 'unassigned');
     } finally {
       lock.releaseLock();
     }
