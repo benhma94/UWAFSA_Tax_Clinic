@@ -3,6 +3,35 @@
  * Functions for the volunteer control sheet
  */
 
+function getRequestPollSnapshot_(fullVolunteerLabel, volunteerNameOnly) {
+  const helpSnapshot = getRequestSnapshotForVolunteer_('HELP', fullVolunteerLabel);
+  const reviewSnapshot = getRequestSnapshotForVolunteer_('REVIEW', volunteerNameOnly);
+
+  let reviewResult = null;
+  if (reviewSnapshot && reviewSnapshot.status === CONFIG.REVIEW_STATUS.APPROVED) {
+    reviewResult = {
+      resolved: true,
+      approved: true,
+      reviewerName: reviewSnapshot.reviewerOrReason || '',
+      taxYear: reviewSnapshot.taxYear || ''
+    };
+  } else if (reviewSnapshot && reviewSnapshot.status === CONFIG.REVIEW_STATUS.RETURNED) {
+    reviewResult = {
+      resolved: true,
+      approved: false,
+      reason: reviewSnapshot.reviewerOrReason || '',
+      taxYear: reviewSnapshot.taxYear || ''
+    };
+  }
+
+  return {
+    helpStatus: helpSnapshot
+      ? helpSnapshot.status.toLowerCase()
+      : CONFIG.HELP_STATUS.CLEARED.toLowerCase(),
+    reviewResult
+  };
+}
+
 /**
  * Returns volunteer/client data for the control sheet.
  * Includes all signed-in filer names (not just those with active clients),
@@ -116,10 +145,11 @@ function getVolunteerPollingStatus(volunteer) {
 
     const volunteersData = getVolunteersAndClients();
     const allFilerNames = (volunteersData && volunteersData.allFilerNames) ? volunteersData.allFilerNames : null;
+    const pollSnapshot = getRequestPollSnapshot_(volunteer, volunteerNameOnly);
 
     return {
-      helpStatus: getHelpStatus(volunteer),
-      reviewResult: getReviewApprovalResult(volunteerNameOnly),
+      helpStatus: pollSnapshot.helpStatus,
+      reviewResult: pollSnapshot.reviewResult,
       mentors: getMentorList(),
       allFilerNames: allFilerNames
     };
@@ -318,6 +348,30 @@ function findTrackerRowByStatus(trackerSheet, clientID, taxYear, preferredStatus
   return -1;
 }
 
+function buildTrackerRowIndex_(trackerSheet) {
+  const lastRow = trackerSheet.getLastRow();
+  const index = {};
+  if (lastRow <= 1) return index;
+
+  const statusColIdx = CONFIG.COLUMNS.TAX_RETURN_TRACKER.STATUS;
+  const data = readSheetData(trackerSheet, statusColIdx + 1, 2, 1, lastRow - 1);
+
+  for (let i = 0; i < data.length; i++) {
+    const rowClient = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.CLIENT_ID]?.toString().trim();
+    const rowYear = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.TAX_YEAR]?.toString().trim();
+    if (!rowClient || !rowYear) continue;
+
+    const key = `${rowClient}|${rowYear}`;
+    if (!index[key]) index[key] = [];
+    index[key].push({
+      rowNum: i + 2,
+      status: data[i][statusColIdx]?.toString().trim() || ''
+    });
+  }
+
+  return index;
+}
+
 /**
  * Finalizes returns and stores per-tax-year data to the tracker
  * @param {string} volunteer - Volunteer name
@@ -402,16 +456,19 @@ function finalizeReturnsAndStore(volunteer, client, rows, meta) {
         : volunteer.trim();
 
       const numCols = CONFIG.COLUMNS.TAX_RETURN_TRACKER.STATUS + 1;
+      const trackerIndex = buildTrackerRowIndex_(trackerSheet);
+      const rowsToAppend = [];
 
       try {
         for (const r of incompleteRows) {
           // Skip if an entry already exists for this client+year (e.g. previously recorded)
-          const existingRowNum = findTrackerRowByStatus(trackerSheet, clientID, r.taxYear, null);
-          if (existingRowNum > 0) {
+          const existingRows = trackerIndex[`${clientID}|${r.taxYear}`] || [];
+          const hasOpenEntry = existingRows.some(entry => entry.status !== CONFIG.TRACKER_STATUS.FINALIZED);
+          if (hasOpenEntry) {
             Logger.log(`Tracker entry already exists for client ${clientID}, year ${r.taxYear} — skipping`);
             continue;
           }
-          const rowData = [
+          rowsToAppend.push([
             new Date(),
             sanitizeInput(volunteerNameOnly, 100),
             sanitizeInput(clientID, 10),
@@ -423,10 +480,12 @@ function finalizeReturnsAndStore(volunteer, client, rows, meta) {
             '',  // Paper
             'Yes', // Incomplete
             CONFIG.TRACKER_STATUS.INCOMPLETE
-          ];
-          const newRow = trackerSheet.getLastRow() + 1;
-          Logger.log(`Appending Incomplete tracker row ${newRow} for client ${clientID}, year ${r.taxYear}`);
-          trackerSheet.getRange(newRow, 1, 1, numCols).setValues([rowData]);
+          ]);
+        }
+        if (rowsToAppend.length > 0) {
+          const startRow = trackerSheet.getLastRow() + 1;
+          Logger.log(`Appending ${rowsToAppend.length} Incomplete tracker rows starting at row ${startRow}`);
+          trackerSheet.getRange(startRow, 1, rowsToAppend.length, numCols).setValues(rowsToAppend);
         }
       } catch (writeError) {
         Logger.log(`Error writing to Tax Return Tracker: ${writeError.message}`);

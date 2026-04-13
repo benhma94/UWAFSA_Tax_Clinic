@@ -14,8 +14,7 @@ function getVolunteerShiftMap(volunteerName) {
       throw new Error('Volunteer name is required');
     }
 
-    const sheet = getScheduleSheet();
-    const data = sheet.getDataRange().getValues();
+    const data = readScheduleGrid_().data;
     const slotKeys = ['A', 'B', 'C'];
     const shiftMap = {};
 
@@ -55,27 +54,29 @@ function saveVolunteerScheduleEdits(volunteerName, shiftUpdates, sendEmail) {
     }
 
     const sheet = getScheduleSheet();
+    const gridRange = sheet.getRange(2, 2, 3, 4);
+    const gridData = gridRange.getValues();
     let changeCount = 0;
     const oldShifts = [];
     const newShifts = [];
+    const volunteerNameTrimmed = volunteerName.trim();
+    const volunteerNameLower = volunteerNameTrimmed.toLowerCase();
 
     for (const [shiftId, shouldBeAssigned] of Object.entries(shiftUpdates)) {
       if (!SCHEDULE_CONFIG.isValidShiftId(shiftId)) continue;
 
       const shift = SCHEDULE_CONFIG.SHIFTS[shiftId];
       // Sheet is 1-indexed: row = slotIndex + 2 (skip header), col = dayIndex + 2 (skip time label col)
-      const row = shift.slotIndex + 2;
-      const col = shift.dayIndex + 2;
-
-      const cell = sheet.getRange(row, col);
-      const currentValue = cell.getValue()?.toString().trim() || '';
+      const row = shift.slotIndex;
+      const col = shift.dayIndex;
+      const currentValue = gridData[row][col]?.toString().trim() || '';
 
       let names = [];
       if (currentValue && currentValue !== '(unfilled)') {
         names = currentValue.split(',').map(n => n.trim()).filter(n => n);
       }
 
-      const nameIndex = names.findIndex(n => n.toLowerCase() === volunteerName.trim().toLowerCase());
+      const nameIndex = names.findIndex(n => n.toLowerCase() === volunteerNameLower);
 
       // Track old state for email notification
       if (nameIndex !== -1) {
@@ -85,7 +86,7 @@ function saveVolunteerScheduleEdits(volunteerName, shiftUpdates, sendEmail) {
       let changed = false;
 
       if (shouldBeAssigned && nameIndex === -1) {
-        names.push(volunteerName.trim());
+        names.push(volunteerNameTrimmed);
         changed = true;
       } else if (!shouldBeAssigned && nameIndex !== -1) {
         names.splice(nameIndex, 1);
@@ -93,8 +94,7 @@ function saveVolunteerScheduleEdits(volunteerName, shiftUpdates, sendEmail) {
       }
 
       if (changed) {
-        const newValue = names.length > 0 ? names.join(', ') : '(unfilled)';
-        cell.setValue(newValue);
+        gridData[row][col] = names.length > 0 ? names.join(', ') : '(unfilled)';
         changeCount++;
       }
 
@@ -102,6 +102,10 @@ function saveVolunteerScheduleEdits(volunteerName, shiftUpdates, sendEmail) {
       if (shouldBeAssigned) {
         newShifts.push(shiftId);
       }
+    }
+
+    if (changeCount > 0) {
+      gridRange.setValues(gridData);
     }
 
     const result = { success: true, changesApplied: changeCount, emailSent: false, emailError: null };

@@ -98,9 +98,61 @@
     .btn-save { padding: 9px 22px; background: var(--accent); color: #fff; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; }
     .btn-cancel { padding: 9px 22px; background: #eee; color: #333; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; }
     .btn-delete-task { padding: 9px 18px; background: var(--red); color: #fff; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; margin-right: auto; }
+    .btn-delete-task:disabled,
+    .btn-save:disabled,
+    .btn-cancel:disabled,
+    .btn-delete:disabled,
+    .btn-add-person:disabled { opacity: 0.65; cursor: wait; }
     .status-msg { font-size: 0.85rem; margin-top: 8px; min-height: 18px; }
     .status-msg.error { color: var(--red); }
     .status-msg.success { color: var(--green); }
+    .toast-stack {
+      position: fixed; top: 18px; right: 18px; z-index: 250;
+      display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+    }
+    .toast {
+      min-width: 260px; max-width: 360px; pointer-events: auto;
+      background: rgba(255,255,255,0.96); color: var(--text);
+      border: 1px solid rgba(26,26,26,0.08); border-left: 4px solid var(--accent);
+      border-radius: 14px; box-shadow: 0 14px 32px rgba(0,0,0,0.18);
+      padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start;
+      animation: toastIn 0.2s ease;
+    }
+    .toast.success { border-left-color: var(--green); }
+    .toast.error { border-left-color: var(--red); }
+    .toast-title { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #666; margin-bottom: 3px; }
+    .toast-message { font-size: 0.92rem; line-height: 1.35; }
+    .toast-close {
+      margin-left: auto; border: none; background: transparent; color: #777;
+      font-size: 1rem; line-height: 1; cursor: pointer; padding: 2px;
+    }
+    .confirm-overlay {
+      display: none; position: fixed; inset: 0; z-index: 220;
+      background: rgba(16, 20, 28, 0.48); align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .confirm-overlay.open { display: flex; }
+    .confirm-card {
+      width: min(420px, calc(100vw - 32px)); background: rgba(255,255,255,0.98);
+      color: var(--text); border: 1px solid rgba(26,26,26,0.08); border-radius: 18px;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.22); padding: 22px 22px 18px;
+    }
+    .confirm-eyebrow {
+      display: inline-block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--accent); background: rgba(142,0,0,0.08);
+      border-radius: 999px; padding: 5px 9px; margin-bottom: 10px;
+    }
+    .confirm-card h3 { margin: 0 0 8px; font-size: 1.15rem; }
+    .confirm-card p { margin: 0; color: #555; line-height: 1.45; }
+    .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    .btn-confirm-danger {
+      padding: 9px 18px; background: var(--red); color: #fff; border: none;
+      border-radius: 10px; font-weight: 600; cursor: pointer;
+    }
+    .btn-confirm-cancel {
+      padding: 9px 18px; background: #f1f1f1; color: #333; border: none;
+      border-radius: 10px; font-weight: 600; cursor: pointer;
+    }
 
     body.dark {
       --bg: #121318;
@@ -158,6 +210,20 @@
     body.dark .btn-cancel { background: #2a2f3b; color: #e5e9f0; }
     body.dark .btn-delete,
     body.dark .btn-delete-task { background: #c94a4a; }
+    body.dark .toast {
+      background: rgba(30, 36, 48, 0.96);
+      border-color: rgba(255,255,255,0.08);
+      box-shadow: 0 18px 34px rgba(0,0,0,0.38);
+    }
+    body.dark .toast-title { color: #adb7c8; }
+    body.dark .toast-close { color: #c9d3e3; }
+    body.dark .confirm-card {
+      background: rgba(27, 32, 43, 0.98);
+      border-color: rgba(255,255,255,0.08);
+      box-shadow: 0 26px 54px rgba(0,0,0,0.42);
+    }
+    body.dark .confirm-card p { color: #b8c2d3; }
+    body.dark .btn-confirm-cancel { background: #2a2f3b; color: #e5e9f0; }
 
     body.dark .modal { box-shadow: 0 10px 32px rgba(0,0,0,0.35); }
     body.dark .tbody tr:hover,
@@ -252,6 +318,10 @@
       from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
   </style>
 </head>
 <body class="light">
@@ -263,6 +333,8 @@
   </div>
   <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
 </header>
+
+<div class="toast-stack" id="toastStack"></div>
 
 <!-- Toolbar -->
 <div class="toolbar">
@@ -397,6 +469,18 @@
   </div>
 </div>
 
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <span class="confirm-eyebrow" id="confirmEyebrow">Confirm</span>
+    <h3 id="confirmTitle">Are you sure?</h3>
+    <p id="confirmMessage">This action cannot be undone.</p>
+    <div class="confirm-actions">
+      <button class="btn-confirm-cancel" id="confirmCancelBtn" type="button">Cancel</button>
+      <button class="btn-confirm-danger" id="confirmActionBtn" type="button">Delete</button>
+    </div>
+  </div>
+</div>
+
 <script>
   var allItems = [];
   var coordinators = [];
@@ -405,6 +489,7 @@
   var filterStatus = 'All';
   var currentView = 'kanban';
   var draggingItem = null;
+  var pendingConfirm = null;
 
   // ── Init ──────────────────────────────────────────────────────────────────
   function init() {
@@ -607,11 +692,37 @@
 
   function deleteTask() {
     if (editingRowIndex === null) return;
-    if (!confirm('Delete this task? This cannot be undone.')) return;
-    google.script.run
-      .withSuccessHandler(function() { closeModal(); loadTasks(); })
-      .withFailureHandler(function(err) { document.getElementById('modalStatus').textContent = 'Error: ' + err.message; })
-      .deleteTodoItem(editingRowIndex);
+    var item = allItems.find(function(i) { return i.rowIndex === editingRowIndex; });
+    if (!item) return;
+    openConfirm({
+      eyebrow: 'Delete Task',
+      title: 'Delete "' + item.title + '"?',
+      message: 'This removes the task from the list immediately.',
+      actionLabel: 'Delete',
+      onConfirm: function() {
+        var statusEl = document.getElementById('modalStatus');
+        var rowIndex = editingRowIndex;
+        var previousItems = allItems.slice();
+        setTaskModalBusy(true);
+        statusEl.textContent = 'Deleting…';
+        statusEl.className = 'status-msg';
+        allItems = allItems.filter(function(entry) { return entry.rowIndex !== rowIndex; });
+        closeModal();
+        renderTable();
+        showToast('Task deleted.', 'success');
+        google.script.run
+          .withSuccessHandler(function() {})
+          .withFailureHandler(function(err) {
+            allItems = previousItems;
+            renderTable();
+            document.getElementById('modalStatus').textContent = 'Error: ' + err.message;
+            document.getElementById('modalStatus').className = 'status-msg error';
+            showToast('Could not delete task: ' + err.message, 'error', 6000);
+          })
+          .deleteTodoItem(rowIndex);
+        setTaskModalBusy(false);
+      }
+    });
   }
 
   // ── Manage People ─────────────────────────────────────────────────────────
@@ -655,11 +766,26 @@
   }
 
   function deletePerson(rowIndex) {
-    if (!confirm('Remove this coordinator?')) return;
-    google.script.run
-      .withSuccessHandler(function() { loadCoordinators(); })
-      .withFailureHandler(function(err) { document.getElementById('peopleStatus').textContent = 'Error: ' + err.message; })
-      .deleteCoordinator(rowIndex);
+    var person = coordinators.find(function(c) { return c.rowIndex === rowIndex; });
+    openConfirm({
+      eyebrow: 'Remove Coordinator',
+      title: 'Remove ' + (person ? person.name : 'this coordinator') + '?',
+      message: 'They will no longer appear in the responsible individuals list.',
+      actionLabel: 'Remove',
+      onConfirm: function() {
+        google.script.run
+          .withSuccessHandler(function() {
+            loadCoordinators();
+            showToast('Coordinator removed.', 'success');
+          })
+          .withFailureHandler(function(err) {
+            document.getElementById('peopleStatus').textContent = 'Error: ' + err.message;
+            document.getElementById('peopleStatus').className = 'status-msg error';
+            showToast('Could not remove coordinator: ' + err.message, 'error', 6000);
+          })
+          .deleteCoordinator(rowIndex);
+      }
+    });
   }
 
   // ── View Toggle ───────────────────────────────────────────────────────────

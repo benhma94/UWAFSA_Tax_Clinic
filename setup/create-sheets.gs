@@ -153,19 +153,7 @@ function createCatbusSheets() {
     'Last Modified',          // 9
   ]);
 
-  // ── 10. Mentor Teams ─────────────────────────────────────────────────────────
-  // Special layout used by MentorTeams.gs:
-  //   Row 1, col F+: senior mentor names
-  //   Row 2, col F+: first-time mentor names
-  // The sheet is generated dynamically — we just create it with the role labels.
-  ensureSheet('Mentor Teams', [], function(sheet) {
-    sheet.getRange(1, 6).setValue('Senior Mentors:');
-    sheet.getRange(2, 6).setValue('First-Time Mentors:');
-    sheet.getRange(1, 6).setFontWeight('bold');
-    sheet.getRange(2, 6).setFontWeight('bold');
-  });
-
-  // ── 11. UFILE Keys ───────────────────────────────────────────────────────────
+  // ── 10. UFILE Keys ───────────────────────────────────────────────────────────
   // Matches Config.gs PRODUCT_CODE_CONFIG.COLUMNS
   ensureSheet('UFILE Keys', [
     'Year',                // 0

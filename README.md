@@ -21,7 +21,6 @@ catbus_scripts/                    # Google Apps Script backend
 ├── ScheduleAutomation.gs          # Automated schedule generation
 ├── ScheduleEditor.gs              # Manual shift editing per volunteer
 ├── ScheduleNotifications.gs       # Email alerts when schedules change
-├── MentorTeams.gs                 # Mentor-to-senior-mentor pairing
 ├── VolunteerScheduleViewer.gs     # Schedule viewing
 ├── VolunteerSignInOut.gs          # Sign in/out tracking
 │
@@ -108,12 +107,6 @@ Shift IDs use format `D{day}{shift}` (e.g., D1A = Day 1 Morning, D3C = Day 3 Eve
 4. System generates a priority Client ID (P001, P002...) and sends a confirmation email with situation-specific document requirements
 
 **Eligibility limits:** $40k individual / $55k couple (+$5k per dependent), waived with tuition credits (T2202).
-
-### Mentor Team Management
-
-1. Admin runs `MentorTeams.gs` after the schedule is generated
-2. First-time mentors are paired with senior mentors based on shared shift availability
-3. Round-robin load balancing distributes first-time mentors evenly across seniors
 
 ### Schedule Editing & Notifications
 
