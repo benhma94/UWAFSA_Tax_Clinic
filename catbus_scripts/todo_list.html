@@ -613,6 +613,7 @@
   // ── Modal ─────────────────────────────────────────────────────────────────
   function openAddModal() {
     editingRowIndex = null;
+    setTaskModalBusy(false);
     document.getElementById('modalTitle').textContent = 'Add Task';
     document.getElementById('fTitle').value = '';
     document.getElementById('fDesc').value = '';
@@ -629,6 +630,7 @@
     var item = allItems.find(function(i) { return i.rowIndex === rowIndex; });
     if (!item) return;
     editingRowIndex = rowIndex;
+    setTaskModalBusy(false);
     document.getElementById('modalTitle').textContent = 'Edit Task';
     document.getElementById('fTitle').value = item.title;
     document.getElementById('fDesc').value = item.description || '';
@@ -895,13 +897,57 @@
     google.script.run
       .withSuccessHandler(function() { /* allItems already updated optimistically — no reload needed */ })
       .withFailureHandler(function(err) {
-        alert('Failed to update status: ' + err.message);
+        showToast('Failed to update status: ' + err.message, 'error', 6000);
         loadTasks(); // revert to server state on failure
       })
       .updateTodoItem(rowIdx, updated);
   }
 
   // ── Utilities ─────────────────────────────────────────────────────────────
+  function setTaskModalBusy(isBusy) {
+    document.getElementById('btnDelete').disabled = isBusy;
+    document.querySelector('#taskModal .btn-save').disabled = isBusy;
+    document.querySelector('#taskModal .btn-cancel').disabled = isBusy;
+  }
+
+  function showToast(message, kind, duration) {
+    var stack = document.getElementById('toastStack');
+    var toast = document.createElement('div');
+    toast.className = 'toast' + (kind ? ' ' + kind : '');
+    toast.innerHTML =
+      '<div>' +
+        '<div class="toast-title">' + (kind === 'error' ? 'Error' : 'Notice') + '</div>' +
+        '<div class="toast-message">' + esc(message) + '</div>' +
+      '</div>' +
+      '<button class="toast-close" type="button" aria-label="Dismiss notification">×</button>';
+    function removeToast() {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }
+    toast.querySelector('.toast-close').addEventListener('click', removeToast);
+    stack.appendChild(toast);
+    window.setTimeout(removeToast, duration || 3200);
+  }
+
+  function openConfirm(options) {
+    pendingConfirm = typeof options.onConfirm === 'function' ? options.onConfirm : null;
+    document.getElementById('confirmEyebrow').textContent = options.eyebrow || 'Confirm';
+    document.getElementById('confirmTitle').textContent = options.title || 'Are you sure?';
+    document.getElementById('confirmMessage').textContent = options.message || 'This action cannot be undone.';
+    document.getElementById('confirmActionBtn').textContent = options.actionLabel || 'Confirm';
+    document.getElementById('confirmOverlay').classList.add('open');
+  }
+
+  function closeConfirm() {
+    document.getElementById('confirmOverlay').classList.remove('open');
+    pendingConfirm = null;
+  }
+
+  function confirmAction() {
+    var action = pendingConfirm;
+    closeConfirm();
+    if (action) action();
+  }
+
   function esc(str) {
     return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
@@ -910,6 +956,11 @@
   document.getElementById('taskModal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
   });
+  document.getElementById('confirmOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeConfirm();
+  });
+  document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirm);
+  document.getElementById('confirmActionBtn').addEventListener('click', confirmAction);
 
   init();
 </script>
