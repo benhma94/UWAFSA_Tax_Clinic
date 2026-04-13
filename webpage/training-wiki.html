@@ -270,60 +270,48 @@
         title: 'Day-of Operations',
         sections: [
           {
-            id: 'volunteer-checkin',
-            title: 'Volunteer Check-in',
-            intro: 'How to sign in at the clinic and get ready for the day.',
+            id: 'admin-ops',
+            title: 'Admin',
+            intro: 'Administrative tasks every volunteer completes at the start and end of each clinic day.',
             steps: [
               'Arrive 10 minutes before your shift starts.',
-              'Sign in at the front table using the sign-in sheet.',
-              'Write your name, role, and arrival time.',
-              'Collect your shift assignment and client queue.',
-              'Review the control sheet instructions and today\'s assignments.',
-              'Ask the coordinator if you have questions.'
+              'Open the CATBUS web app and go to the <strong>Sign In / Sign Out page</strong> (<code>?app=signin</code>). Select your name from the volunteer list, choose your station (e.g., Filer, Mentor, Reception), and click Sign In. This registers you as active for the day.',
+              'If you submitted your availability beforehand, your shift assignment is already in the <strong>Schedule Viewer</strong> (<code>?app=schedule</code>). Check it to confirm your shift slot (e.g., D1B = Day 1, Afternoon).',
+              'If you have not yet submitted availability for an upcoming clinic, complete the <strong>Availability Form</strong> (<code>?app=availability</code>) — the coordinator uses this to build the schedule.',
+              'During the clinic, if you need a break, use the <strong>Break toggle</strong> on your Control Sheet. This removes you from the available-volunteer list so the doorman won\'t assign you a client.',
+              'At the end of your shift, return to the Sign In / Sign Out page and click <strong>Sign Out</strong>. This closes your session, releases your station, and updates attendance records used for metrics.'
             ],
-            tip: 'Keep your name legible — the admin team needs accurate records for metrics and follow-ups.'
+            tip: 'If you forget to sign out at the end of a clinic, your session will be automatically cleared the next morning. But it\'s best practice to sign out yourself — stale sessions can affect the volunteer availability list.'
           },
           {
-            id: 'intake-screening',
-            title: 'Intake Screening',
-            intro: 'Helping receptionist qualify walk-in clients.',
+            id: 'front-desk-ops',
+            title: 'Front Desk',
+            intro: 'The front desk runs the client intake process using the CATBUS Intake Screening Tool.',
             steps: [
-              'Welcome the client and ask their name and phone number.',
-              'Ask about their residency status: "Are you a Canadian resident for tax purposes?"',
-              'Ask about income: "Is your total income under $50,000?"',
-              'Ask about complexity: "Have you had the same employer all year?" (triggers complexity review if no).',
-              'Record answers on the intake form or pass to receptionist.',
-              'If eligible, direct them to the queue. If ineligible, provide referral sheet.'
+              'Open the <strong>Intake Screening Tool</strong> on the public website. This tool walks you through eligibility questions before a client is entered into the system.',
+              'The tool checks income limits (typically under $50,000), residency status, and complexity flags (self-employment, multiple years, foreign income, rental property, etc.). Ineligible clients are shown a referral message — do not enter them into the intake form.',
+              'For eligible clients, open the <strong>Intake Form</strong> (<code>?app=intake</code>) in CATBUS. Enter household size, filing years needed, any special situations (e.g., needs senior review, high priority), and upload any documents the client has brought.',
+              'CATBUS automatically assigns a <strong>Client ID</strong> (e.g., A001, B002). If the client has a pre-booked priority appointment (format P001), enter that ID — it overrides the auto-generated one.',
+              'Once submitted, the client appears in the <strong>Queue Dashboard</strong> (<code>?app=queue</code>) for the doorman to assign. The elapsed wait time is tracked automatically.',
+              'If a client\'s situation changes after intake (e.g., they mention a new filing year), use the <strong>Edit</strong> function on the Intake Form to update their record before they are assigned to a filer.'
             ],
-            tip: 'Eligibility rules change each clinic. Check the posted rules or ask a mentor if unsure.'
+            tip: 'The Intake Screening Tool and the CATBUS Intake Form both check eligibility rules from the same config — they stay in sync. If a client seems borderline, check with a mentor before entering them.'
           },
           {
-            id: 'doorman-dispatch',
-            title: 'Doorman Dispatch',
-            intro: 'Assigning clients to volunteers during the clinic.',
+            id: 'filing-ops',
+            title: 'Filing',
+            intro: 'Volunteers file tax returns using the CATBUS Control Sheet, which manages client assignment, help requests, review, and receipt sending.',
             steps: [
-              'Check the queue dashboard for the next client.',
-              'Find an available volunteer from the list.',
-              'Assign the client to the volunteer.',
-              'Notify the volunteer: "You have a client assigned — see the control sheet."',
-              'Monitor for stuck clients (waiting >15 min) and reassign if needed.',
-              'Keep queue moving smoothly throughout the clinic.'
+              '<strong>Receiving a client:</strong> When a client is assigned to you, your <strong>Control Sheet</strong> (<code>?app=control</code>) automatically updates (it polls every few seconds). You\'ll see the client\'s ID, household size, filing years, and any special notes entered at intake.',
+              '<strong>Filing the return:</strong> Work through the return in your tax software (UFile). The Control Sheet shows all the information collected at intake. Use the <strong>Client Data</strong> view on the Control Sheet to look up prior-year tracker status if the client has filed with the clinic before.',
+              '<strong>Asking for help:</strong> If you need mentor assistance, click <strong>Request Help</strong> on the Control Sheet. A help alert appears on the <strong>Alert Dashboard</strong> (<code>?app=alerts</code>) for all mentors. A mentor will come to you or respond via the dashboard. Your Control Sheet polls for their response automatically.',
+              '<strong>Requesting a review:</strong> When the return is complete, click <strong>Request Review</strong> on the Control Sheet. Select the mentor you want to review the file (the list shows currently signed-in mentors). The mentor sees the request on the Alert Dashboard and can approve or return the file with comments.',
+              '<strong>Escalation:</strong> If a mentor returns your file for corrections, you\'ll see their comments in the Control Sheet polling update. Make the corrections and re-submit the review request. If the issue is complex and beyond your scope, the mentor may take over the file entirely — they will mark it complete from their end.',
+              '<strong>Sending the receipt:</strong> Once a mentor approves the review, CATBUS automatically sends a <strong>receipt confirmation email</strong> to the client and records the filed return in the Tax Return Tracker. You do not need to trigger this manually.',
+              '<strong>Finalizing:</strong> After the receipt email is sent, click <strong>Finalize</strong> on the Control Sheet. This marks the assignment as complete, releases your station for the next client, and writes the return details to the tracker. For married couples, both returns are counted separately in the metrics.',
+              '<strong>Taking a break:</strong> Before stepping away between clients, toggle <strong>On Break</strong> in the Control Sheet. This removes you from the available-volunteer list in the Queue Dashboard so the doorman won\'t assign you a new client while you\'re away. Toggle it off when you return.'
             ],
-            tip: 'Use the control sheet polling to check volunteer availability — it updates every few seconds.'
-          },
-          {
-            id: 'client-handoff',
-            title: 'Client Handoff',
-            intro: 'Transferring a client to the next volunteer (mentors or reviewers).',
-            steps: [
-              'Original volunteer completes the return and initiates a review request.',
-              'Mentor or reviewer sees the alert in their dashboard.',
-              'Review the return — look for errors, omissions, or tax optimization opportunities.',
-              'Approve or return with corrections via the alert dashboard.',
-              'If approved, receipt email is sent automatically.',
-              'Volunteer sign-out, mentor sign-out — records update in the volunteer list.'
-            ],
-            tip: 'Always communicate with the volunteer before returning a file for corrections — they may have missed something.'
+            tip: 'The Control Sheet\'s single polling endpoint bundles help status, review status, and mentor availability into one request — this is why updates feel instant even with many volunteers online simultaneously. If your Control Sheet stops updating, refresh the page and sign back in.'
           }
         ]
       },
