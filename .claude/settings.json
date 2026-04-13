@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/check_bash.py"
+            "command": "python \"C:\\Users\\katma\\Dropbox\\Tax Clinic\\Website\\.claude\\hooks\\check_bash.py\""
           }
         ]
       }

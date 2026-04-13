@@ -479,6 +479,24 @@ const VOLUNTEER_TAGS = {
 };
 
 /**
+ * Configuration for the Expense Tracker feature.
+ */
+const EXPENSE_CONFIG = {
+  SHEET_NAME: 'Expenses',
+  COLUMNS: {
+    TIMESTAMP: 0,
+    EXPENSE_DATE: 1,
+    CATEGORY: 2,
+    VENDOR: 3,
+    DESCRIPTION: 4,
+    AMOUNT: 5,
+    RECEIPT_URL: 6,
+    SUBMITTED_BY: 7
+  },
+  CATEGORIES: ['Office Supplies', 'Food & Refreshments', 'Printing / Photocopying', 'Transportation', 'Other']
+};
+
+/**
  * Configuration for the coordinator To-Do List feature.
  */
 const ACTION_ITEM_CONFIG = {
