@@ -23,6 +23,10 @@ catbus_scripts/                    # Google Apps Script backend
 ├── ScheduleNotifications.gs       # Email alerts when schedules change
 ├── VolunteerScheduleViewer.gs     # Schedule viewing
 ├── VolunteerSignInOut.gs          # Sign in/out tracking
+├── VolunteerApplications.gs       # Volunteer application form processing
+├── VolunteerManagement.gs         # Volunteer data management & operations
+├── VolunteerFeedbackForm.gs       # Volunteer feedback collection
+├── FeedbackForm.gs                # General feedback form handling
 │
 ├── # Client Management
 ├── ClientIntake.gs                # Client intake and eligibility
@@ -31,24 +35,48 @@ catbus_scripts/                    # Google Apps Script backend
 ├── ReviewRequests.gs              # Senior review requests (remote approve/return)
 ├── EmailReceipt.gs                # Post-filing email receipts
 │
-├── # Communication
-├── Messaging.gs                   # Internal manager-to-volunteer messaging
+├── # Communication & Distribution
+├── EmailService.gs                # Email sending wrapper
 ├── ProductCodeDistribution.gs     # UFILE product code distribution to volunteers
 │
-├── # Admin & Support
+├── # Admin & Support Tools
 ├── AdminDashboard.gs              # Analytics and monitoring
 ├── ControlSheet.gs                # Volunteer dashboard
 ├── HelpRequests.gs                # Help request handling
+├── ExpenseTracking.gs             # Volunteer expense and reimbursement tracking
+├── RaffleDraw.gs                  # Raffle entry and winner selection
+├── TodoList.gs                    # To-do list task management backend
+├── QuizSubmission.gs              # Volunteer training quiz submission processing
+├── ArchiveRollforward.gs          # Archive and rollforward functionality
 ├── Utils.gs                       # Shared utilities
 ├── CacheManager.gs                # Cache management
-├── RequestHandler.gs              # Request processing
+├── RequestHandler.gs              # Request routing and processing
 │
-├── # Frontend UI
+├── # Frontend UI - Dashboards & Admin
 ├── shared_styles.html             # Shared CSS (theme vars, role colours, dark mode)
-├── messaging_admin.html           # Manager chat UI with unread badges
-├── reviewer_page.html             # Remote review approval/return dashboard
-├── product_code_dashboard.html    # Product code distribution dashboard
-├── *.html                         # Other frontend UI files
+├── shared_scripts.html            # Shared JavaScript utilities
+├── alert_dashboard.html           # System alerts and notifications
+├── stats_dashboard.html           # Statistics and metrics dashboard
+├── control_sheet_form.html        # Volunteer control sheet interface
+├── volunteer_dashboard.html       # Volunteer main dashboard
+├── volunteer_management.html      # Volunteer management interface
+├── volunteer_schedule_dashboard.html  # Volunteer schedule view
+├── volunteer_signinout.html       # Sign in/out interface
+│
+├── # Frontend UI - Operations & Forms
+├── application_review.html        # Application review interface
+├── catbus_intake_form.html        # Client intake form
+├── appointment_screening.html     # Eligibility screening form
+├── availability_form.html         # Volunteer availability submission form
+├── product_code_dashboard.html    # Product code distribution UI
+├── expense_tracker.html          # Expense tracking interface
+├── raffle_draw.html              # Raffle draw interface
+├── todo_list.html                # To-do list UI
+├── quiz_review.html              # Quiz review interface
+├── archive_rollforward.html      # Archive/rollforward operations UI
+├── mass_email.html               # Mass email sending interface
+├── queue_dashboard.html          # Client queue management
+├── schedule_dashboard.html       # Schedule management
 │
 ├── *App.gs                        # Web app entry points (doGet)
 ├── *.bat                          # Clasp upload/download/deploy scripts
@@ -132,6 +160,48 @@ Shift IDs use format `D{day}{shift}` (e.g., D1A = Day 1 Morning, D3C = Day 3 Eve
 2. Cards display pending review requests: volunteer name, client ID, tax year, and wait time
 3. Reviewer approves or returns the submission with optional correction notes
 4. Client intake details are expandable inline; dashboard auto-refreshes every 15 seconds
+
+### Volunteer Applications & Feedback
+
+1. Prospective volunteers complete the application form via `volunteerapplications.html`
+2. Applications are processed and tracked in `VolunteerApplications.gs`
+3. Existing volunteers provide feedback via `VolunteerFeedbackForm.gs`
+4. Admin reviews feedback and manages volunteer records via `VolunteerManagement.gs`
+
+### Expense Tracking & Reimbursement
+
+1. Volunteers submit expense reports via `expense_tracker.html`
+2. `ExpenseTracking.gs` processes expense entries and generates reimbursement summaries
+3. Admin reviews and approves expenses through the expense dashboard
+4. Reimbursement records are maintained for accounting integration
+
+### Training Quiz System
+
+1. Volunteers complete training quizzes via `quiz_review.html`
+2. `QuizSubmission.gs` validates and grades quiz responses
+3. Admin reviews quiz results and tracks volunteer certification status
+4. Completion status is recorded for volunteer management
+
+### Volunteer Raffle & Incentives
+
+1. Admin opens the raffle dashboard via `raffle_draw.html`
+2. `RaffleDraw.gs` manages raffle entries and winner selection
+3. Raffle draws can be conducted with configurable settings for participant groups
+4. Winner notifications are sent automatically
+
+### To-Do List & Task Management
+
+1. Volunteers and admins access the task dashboard via `todo_list.html`
+2. `TodoList.gs` and `TodoListApp.gs` handle task creation, assignment, and completion tracking
+3. Tasks are organized by priority and due date
+4. Team members receive notifications for assigned tasks
+
+### Archive & Rollforward
+
+1. End-of-season operations are handled via `archive_rollforward.html`
+2. `ArchiveRollforward.gs` manages archiving of completed client records and volunteer data
+3. System can rollforward selected data to the next season while maintaining historical records
+4. Supports batch archival and selective data retention
 
 ---
 

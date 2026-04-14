@@ -381,6 +381,102 @@
         ]
       },
       {
+        id: 'ufile-setup',
+        title: 'UFILE Setup',
+        sections: [
+          {
+            id: 'ufile-return-setup',
+            title: 'Return Setup Checklist',
+            intro: 'Configure each return carefully before you attempt EFILE so client identity, eligibility fields, and credits are correct.',
+            steps: [
+              'Before filing, verify the client\'s <strong>name, SIN/ITN, date of birth, and mailing address</strong> against their slips and prior records.',
+              'Confirm slip years and amounts while the client is present. If details do not match, pause and correct entries before continuing.',
+              'For Ontario renters or residence clients, choose the <strong>2025 OEPTC</strong> prompt correctly in the ON-BEN workflow so they do not miss benefit payments.',
+              'For tuition slips, always enter the <strong>T2202 months</strong>. Missing months can make scholarship income taxable incorrectly in UFILE.',
+              'For direct deposit questions, tell clients CRA no longer accepts direct deposit setup through the return. They must set it up through online banking/CRA tools.',
+              'If the client owes tax, stop before filing and ask a mentor for a review before proceeding.'
+            ],
+            tip: 'Slide deck highlights the same failure points repeatedly: identity fields, OEPTC selection, and T2202 months are the most common setup mistakes.'
+          },
+          {
+            id: 'ufile-efile-flow',
+            title: 'EFILE Flow and Error Handling',
+            intro: 'Use a consistent EFILE process so every return is reviewed, signed, and filed with a clear audit trail.',
+            steps: [
+              'Run a final pre-EFILE check with the client watching the screen: slips, amounts, addresses, and key credits/deductions.',
+              'Complete the <strong>TIS-60</strong> and get signatures in both required sections before transmitting.',
+              'Submit through EFILE and record the confirmation details from the success screen onto TIS-60.',
+              'If EFILE fails, stop and involve a mentor immediately before retrying.',
+              'For common EFILE errors (name/SIN/date of birth/address mismatch), re-verify with client documents and correct the return before another attempt.',
+              'If needed, default to paper filing for edge cases during high-volume clinic periods.'
+            ],
+            tip: 'Once EFILE is submitted, reversal is difficult. Always do client-visible review first, then transmit.'
+          },
+          {
+            id: 'ufile-newcomer-itn',
+            title: 'Newcomers, SIN, and ITN Setup',
+            intro: 'International and first-time filers require extra setup fields that affect credits and downstream CRA processing.',
+            steps: [
+              'Ask whether the client has a SIN or ITN, or has filed before. Use prior Notice of Assessment details when available.',
+              'For first-time international filers, capture date of entry to Canada and pre/post-arrival income fields, even when values are $0.',
+              'Direct newcomer clients to complete the <strong>RC151</strong> webform while you prepare the return.',
+              'If client is not eligible for a SIN, start <strong>T1261 (ITN)</strong> workflow and ensure they understand identity certification requirements.',
+              'When preparing an ITN return in UFILE, use temporary SIN placeholder guidance and confirm mailing address is stable for at least one year.',
+              'Escalate uncertain immigration/residency edge cases to a mentor before filing.'
+            ],
+            tip: 'For newcomer workflows, complete all required circles/fields even if amount is $0 so CRA can calculate benefit eligibility correctly.'
+          }
+        ]
+      },
+      {
+        id: 'tax-items',
+        title: 'Tax Items',
+        sections: [
+          {
+            id: 'tax-items-medical',
+            title: 'Medical Expenses',
+            intro: 'Medical claims are common and valuable, but they have strict eligibility, timing, and transfer rules.',
+            steps: [
+              'Eligible examples include prescriptions, dental, optometry, RMT services, and eligible health plan premiums (including UHIP for eligible students).',
+              'Do not claim over-the-counter drugs that do not require a prescription.',
+              'Choose the best <strong>365-day window ending in the filing year</strong> to maximize eligible expenses without double-claiming.',
+              'Reduce claims by any amount reimbursed through insurance or a health plan.',
+              'For students with low/no income, consider whether expenses should be transferred to parents where permitted by CRA rules.',
+              'Enter medical details when appropriate because the <strong>Medical Expense Supplement</strong> can be a refundable benefit for eligible workers.'
+            ],
+            tip: 'If uncertain about large or unusual receipt stacks, enter cautiously and ask a mentor before final filing.'
+          },
+          {
+            id: 'tax-items-tuition',
+            title: 'Tuition and Student Credits (T2202)',
+            intro: 'Tuition slips are high-impact and must be entered completely to preserve credits and avoid accidental taxable scholarship treatment.',
+            steps: [
+              'Always enter the <strong>T2202</strong> slip when available, even if the client plans to transfer credits to a parent.',
+              'Enter the number of qualifying months from the slip. Missing months can cause incorrect scholarship taxation in UFILE.',
+              'Use prior Notice of Assessment (or Schedule 11) to confirm carryforward tuition amounts.',
+              'If transferring current-year tuition to parents, use the transfer option instructed in training and leave unrelated fields blank.',
+              'Tell the student what documentation/values parents need to claim transferred amounts correctly.',
+              'Student loan interest is deductible only for eligible government student loans; use official statements where possible.'
+            ],
+            tip: 'Textbook receipts are not a substitute for T2202 and are usually not needed for this workflow.'
+          },
+          {
+            id: 'tax-items-deductions-benefits',
+            title: 'Deductions and Benefit Triggers',
+            intro: 'Prioritize deductions that regularly appear at clinic and ensure benefit-trigger fields are selected correctly.',
+            steps: [
+              'Enter RRSP contributions from official receipts and split first-60-days vs remainder periods correctly.',
+              'For FHSA, confirm annual/lifetime room and prior carryforward from Notice of Assessment; request mentor review for complex entries.',
+              'Assess moving expenses with both distance and reason tests before claiming; use simplified method unless detailed receipts justify otherwise.',
+              'For childcare deductions, ensure child profiles and eligible care provider details are entered on the correct taxpayer workflow.',
+              'For donations, confirm receipt legitimacy and classify political vs charitable contributions properly.',
+              'Complete Ontario benefit prompts (especially OEPTC-related choices) when rent/residence/property tax conditions are met so clients do not lose payments.'
+            ],
+            tip: 'When in doubt, verify with source slips and a mentor rather than forcing a deduction that may fail CRA review.'
+          }
+        ]
+      },
+      {
         id: 'client-interaction',
         title: 'Client Interaction',
         sections: [
@@ -550,6 +646,7 @@
         category.sections.forEach(section => {
           const sectionDiv = document.createElement('div');
           sectionDiv.className = 'section';
+          sectionDiv.id = section.id;
           sectionDiv.dataset.category = category.id;
 
           const header = document.createElement('div');

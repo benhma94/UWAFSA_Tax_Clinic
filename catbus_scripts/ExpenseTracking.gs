@@ -16,8 +16,8 @@
  */
 function ocrReceipt_(base64Data, mimeType) {
   var blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, 'receipt_ocr_temp');
-  var resource = { title: 'receipt_ocr_temp', mimeType: MimeType.GOOGLE_DOCS };
-  var file = Drive.Files.insert(resource, blob, { convert: true, ocr: true });
+  var resource = { title: 'receipt_ocr_temp' };
+  var file = Drive.Files.insert(resource, blob, { convert: true });
   try {
     var doc = DocumentApp.openById(file.id);
     var text = doc.getBody().getText();
@@ -38,7 +38,56 @@ function parseReceiptText_(text) {
   var result = { amount: '', date: '', vendor: '', rawText: text };
   if (!text) return result;
 
-  // Amount: find all dollar-like values and pick the largest (likely the total)
+  // Amount: first try to find values explicitly labeled as total/due/balance.
+  // Prefer the last matching total line on the receipt (bottom-most), which is
+  // usually the actual payable total. Ignore subtotal lines.
+  var lines = text.split(/\r?\n/);
+  var strongTotalLabelRegex = /\b(grand\s*total|total\s*due|amount\s*due|balance\s*due|net\s*total)\b/i;
+  var genericTotalLabelRegex = /(^|[^a-z])total([^a-z]|$)/i;
+  var lineAmountRegex = /\$\s*(\d{1,4}(?:[,]\d{3})*(?:[.]\d{2})?|\d{1,4}[.]\d{2})|\b(\d{1,4}(?:[,]\d{3})*[.]\d{2})\b/g;
+  var labeledTotal = null;
+
+  for (var li = 0; li < lines.length; li++) {
+    var line = lines[li] || '';
+    var lowerLine = line.toLowerCase();
+    if (/\bsub\s*total\b/.test(lowerLine)) continue;
+
+    var priority = 0;
+    if (strongTotalLabelRegex.test(line)) {
+      priority = 2;
+    } else if (genericTotalLabelRegex.test(line)) {
+      priority = 1;
+    }
+    if (!priority) continue;
+
+    var amountMatch;
+    var lineAmounts = [];
+    lineAmountRegex.lastIndex = 0;
+    while ((amountMatch = lineAmountRegex.exec(line)) !== null) {
+      var raw = amountMatch[1] || amountMatch[2] || '';
+      var amountVal = parseFloat(raw.replace(/,/g, ''));
+      if (!isNaN(amountVal) && amountVal > 0 && amountVal < 100000) {
+        lineAmounts.push(amountVal);
+      }
+    }
+
+    if (lineAmounts.length === 0) continue;
+
+    // Most receipts place the relevant value at the end of the total line.
+    var lineTotal = lineAmounts[lineAmounts.length - 1];
+    if (!labeledTotal || priority > labeledTotal.priority || (priority === labeledTotal.priority && li > labeledTotal.lineIndex)) {
+      labeledTotal = {
+        amount: lineTotal,
+        priority: priority,
+        lineIndex: li
+      };
+    }
+  }
+
+  if (labeledTotal) {
+    result.amount = labeledTotal.amount.toFixed(2);
+  }
+
   var amounts = [];
   var amountRegex = /\$?\s*(\d{1,4}(?:[,]\d{3})*(?:[.]\d{2})?|\d{1,4}[.]\d{2})/g;
   var match;
@@ -46,7 +95,7 @@ function parseReceiptText_(text) {
     var val = parseFloat(match[1].replace(/,/g, ''));
     if (!isNaN(val) && val > 0 && val < 100000) amounts.push(val);
   }
-  if (amounts.length > 0) {
+  if (!result.amount && amounts.length > 0) {
     result.amount = Math.max.apply(null, amounts).toFixed(2);
   }
 
@@ -62,8 +111,8 @@ function parseReceiptText_(text) {
   }
 
   // Vendor: first meaningful non-empty line (usually the store name)
-  var lines = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 2; });
-  if (lines.length > 0) result.vendor = lines[0].substring(0, 80);
+  var vendorLines = text.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 2; });
+  if (vendorLines.length > 0) result.vendor = vendorLines[0].substring(0, 80);
 
   return result;
 }
@@ -84,6 +133,99 @@ function ocrReceiptForReview(base64Data, mimeType) {
     Logger.log('ocrReceiptForReview error: ' + err.message);
     return { success: false, message: err.message };
   }
+}
+
+/**
+ * Test DocumentApp authorization by creating and removing a temporary doc.
+ * Use this to force the deployer to accept the Documents permission.
+ *
+ * @returns {{success: boolean, message: string}}
+ */
+function ensureDocumentAuthorization() {
+  try {
+    var doc = DocumentApp.create('CATBUS Authorization Test');
+    DriveApp.getFileById(doc.getId()).setTrashed(true);
+    return { success: true, message: 'Documents permission is granted.' };
+  } catch (err) {
+    Logger.log('ensureDocumentAuthorization error: ' + err.message);
+    return { success: false, message: err.message };
+  }
+}
+
+/**
+ * Normalizes text fields for storage/report rendering.
+ *
+ * @param {*} value
+ * @param {number} maxLen
+ * @returns {string}
+ */
+function normalizeExpenseText_(value, maxLen) {
+  var text = (value || '').toString().trim();
+  if (!text) return '';
+  return text.substring(0, maxLen || 255);
+}
+
+/**
+ * Normalizes amount values by stripping currency symbols and commas.
+ *
+ * @param {*} value
+ * @returns {number}
+ */
+function normalizeExpenseAmount_(value) {
+  if (typeof value === 'number') {
+    return isNaN(value) ? 0 : Math.round(value * 100) / 100;
+  }
+  var cleaned = (value || '').toString().replace(/[$,\s]/g, '');
+  var parsed = parseFloat(cleaned);
+  if (isNaN(parsed)) return 0;
+  return Math.round(parsed * 100) / 100;
+}
+
+/**
+ * Normalizes supported date values to yyyy-MM-dd.
+ *
+ * @param {*} value
+ * @returns {string}
+ */
+function normalizeExpenseDate_(value) {
+  if (!value) return '';
+  var dateObj = (value instanceof Date) ? value : new Date(value);
+  if (isNaN(dateObj.getTime())) return '';
+  return Utilities.formatDate(dateObj, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+/**
+ * Accepts new object payload and old 3-argument signature.
+ *
+ * @param {Object|string} startDateOrPayload
+ * @param {string} endDate
+ * @param {string} submitterName
+ * @returns {Object}
+ */
+function normalizeReportPayload_(startDateOrPayload, endDate, submitterName) {
+  if (startDateOrPayload && typeof startDateOrPayload === 'object') {
+    return {
+      startDate: startDateOrPayload.startDate || '',
+      endDate: startDateOrPayload.endDate || '',
+      submitterName: normalizeExpenseText_(startDateOrPayload.submitterName, 120),
+      requestDate: startDateOrPayload.requestDate || '',
+      email: normalizeExpenseText_(startDateOrPayload.email, 120),
+      address: normalizeExpenseText_(startDateOrPayload.address, 200),
+      department: normalizeExpenseText_(startDateOrPayload.department, 120),
+      deliveryNote: normalizeExpenseText_(startDateOrPayload.deliveryNote, 200)
+    };
+  }
+
+  return {
+    startDate: startDateOrPayload || '',
+    endDate: endDate || '',
+    submitterName: normalizeExpenseText_(submitterName, 120),
+    requestDate: '',
+    email: '',
+    address: '',
+    department: '',
+    deliveryNote: ''
+  };
 }
 
 /**
@@ -120,13 +262,29 @@ function submitExpense(data) {
       }
     }
 
+    var normalizedDate = normalizeExpenseDate_(data.expenseDate);
+    var normalizedVendor = normalizeExpenseText_(data.vendor, 120);
+    var normalizedDescription = normalizeExpenseText_(data.description, 300);
+    var normalizedAmount = normalizeExpenseAmount_(data.amount);
+
+    if (normalizedAmount <= 0) {
+      throw new Error('Amount must be greater than zero.');
+    }
+
+    if (!normalizedVendor) {
+      Logger.log('submitExpense warning: vendor was blank after normalization.');
+    }
+    if (!normalizedDate) {
+      Logger.log('submitExpense warning: expenseDate was blank/invalid after normalization.');
+    }
+
     sheet.appendRow([
       new Date(),
-      data.expenseDate || '',
+      normalizedDate,
       data.category || '',
-      data.vendor || '',
-      data.description || '',
-      parseFloat(data.amount) || 0,
+      normalizedVendor,
+      normalizedDescription,
+      normalizedAmount,
       receiptUrl,
       data.submittedBy || ''
     ]);
@@ -210,102 +368,100 @@ function deleteExpense(rowIndex) {
  * Generates a formatted PDF expense report and saves it to Drive.
  * Called via google.script.run.
  *
- * @param {string} startDate - Start date (YYYY-MM-DD)
- * @param {string} endDate - End date (YYYY-MM-DD)
- * @param {string} submitterName - Name for the report header
+ * @param {Object|string} startDateOrPayload - Report payload object or legacy start date
+ * @param {string=} endDate - Legacy end date when using old signature
+ * @param {string=} submitterName - Legacy submitter name when using old signature
  * @returns {Object} { success, url, total, fileName } or { success: false, message }
  */
-function generateExpenseReport(startDate, endDate, submitterName) {
+function generateExpenseReport(startDateOrPayload, endDate, submitterName) {
   try {
-    var result = getExpenses(startDate, endDate);
+    var payload = normalizeReportPayload_(startDateOrPayload, endDate, submitterName);
+    var result = getExpenses(payload.startDate, payload.endDate);
     if (!result.success) return result;
     var expenses = result.expenses;
 
     var total = expenses.reduce(function(sum, e) { return sum + e.amount; }, 0);
+    total = Math.round(total * 100) / 100;
     var tz = Session.getScriptTimeZone();
     var now = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
-    var rangeLabel = (startDate && endDate) ? (startDate + ' to ' + endDate) :
-                     startDate ? ('from ' + startDate) :
-                     endDate ? ('to ' + endDate) : 'All Dates';
-    var docTitle = 'Expense Report - ' + rangeLabel + ' - ' + now;
+    var requestDate = normalizeExpenseDate_(payload.requestDate) || now;
+    var requestDateLong = Utilities.formatDate(new Date(requestDate), tz, 'MMMM d, yyyy');
+    var rangeLabel = (payload.startDate && payload.endDate) ? (payload.startDate + ' to ' + payload.endDate) :
+      payload.startDate ? ('from ' + payload.startDate) :
+      payload.endDate ? ('to ' + payload.endDate) : 'All Dates';
+    var docTitle = 'Cheque Request - ' + (payload.submitterName || 'Unnamed') + ' - ' + now;
 
-    // Build Google Doc
     var doc = DocumentApp.create(docTitle);
     var body = doc.getBody();
     body.setMarginTop(36).setMarginBottom(36).setMarginLeft(54).setMarginRight(54);
 
-    var titlePara = body.appendParagraph('AFSA Tax Clinic');
+    var titlePara = body.appendParagraph('CHEQUE REQUEST');
     titlePara.setHeading(DocumentApp.ParagraphHeading.HEADING1)
       .setAlignment(DocumentApp.HorizontalAlignment.CENTER);
 
-    var subtitlePara = body.appendParagraph('Expense Reimbursement Report');
-    subtitlePara.setHeading(DocumentApp.ParagraphHeading.HEADING2)
-      .setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-
-    body.appendParagraph('').setSpacingAfter(6);
-
-    var meta = [
-      'Submitted by: ' + (submitterName || 'N/A'),
-      'Report Period: ' + rangeLabel,
-      'Generated: ' + now,
-      'Total Expenses: ' + expenses.length
+    var checklist = [
+      '- [ ] Original hard copy itemized AND debit/credit receipt OR full screenshot of bank statement showing transaction',
+      '- [ ] For online purchases, have a confirmation of order AND ALL items above',
+      '- [ ] For Uber, include trip summary with to/from addresses and cost AND ALL items above',
+      '- [ ] If gift or prizes, include recipient names, emails, phone numbers, addresses, and WATIAM ID (if applicable)'
     ];
-    meta.forEach(function(line) {
-      body.appendParagraph(line).setSpacingAfter(2);
+    checklist.forEach(function(item) {
+      body.appendParagraph(item);
     });
 
-    body.appendParagraph('').setSpacingAfter(6);
-
-    // Expense table
-    var tableData = [['Date', 'Category', 'Vendor', 'Description', 'Amount (CAD)']];
-    expenses.forEach(function(e) {
-      tableData.push([
-        e.expenseDate || '',
-        e.category || '',
-        e.vendor || '',
-        e.description || '',
-        '$' + e.amount.toFixed(2)
-      ]);
-    });
-    tableData.push(['', '', '', 'TOTAL', '$' + total.toFixed(2)]);
-
-    var table = body.appendTable(tableData);
-
-    // Style header row
-    var headerRow = table.getRow(0);
-    for (var c = 0; c < 5; c++) {
-      var cell = headerRow.getCell(c);
-      cell.editAsText().setBold(true);
-      cell.setBackgroundColor('#8e0000');
-      cell.editAsText().setForegroundColor('#ffffff');
-    }
-
-    // Style total row
-    var totalRow = table.getRow(tableData.length - 1);
-    for (var c = 0; c < 5; c++) {
-      totalRow.getCell(c).editAsText().setBold(true);
-    }
-
-    body.appendParagraph('').setSpacingAfter(20);
-    body.appendParagraph('Signature: ______________________________    Date: ________________');
     body.appendParagraph('');
-    body.appendParagraph('Please attach original receipts to this report when submitting for reimbursement.')
-      .setItalic(true);
+    body.appendParagraph('DATE: ' + requestDateLong + '    EVENT ID #: _______________    WATIAM ID of Student: ______________');
+    body.appendParagraph('');
+    body.appendParagraph('Cheque Made Payable to (Capital Letters): ' + (payload.submitterName ? payload.submitterName.toUpperCase() : '_____________________________________________'));
+    body.appendParagraph('');
+    body.appendParagraph('Purpose of Cheque: ____________________________________________________________________');
+    body.appendParagraph('                   Reimbursement of AFSA Tax Clinic Costs');
+    body.appendParagraph('');
+    body.appendParagraph('Event: Tax Clinic                        Committee/Club: ' + (payload.department || 'AFSA IS'));
+    body.appendParagraph('Contact Email: ' + (payload.email || '_________________________________________________________________________'));
+    body.appendParagraph('');
+    body.appendParagraph('All Cheques Will be Available for Pick Up at the SLC Turnkey Desk:    [ ] I Understand');
+    body.appendParagraph('');
+    body.appendParagraph('Mailing Address (if unable to pick up at SLC Turnkey Desk): (Put N/A if Picking Up Cheque at SLC Turnkey Desk)');
+    body.appendParagraph((payload.address || '______________________________________________________') + '    _______________________');
+    if (payload.deliveryNote) {
+      body.appendParagraph('Delivery/Pickup Note: ' + payload.deliveryNote);
+    }
+
+    body.appendParagraph('');
+    var expenseRows = Math.max(4, expenses.length);
+    for (var er = 0; er < expenseRows; er++) {
+      var exp = expenses[er];
+      var vendorLabel = exp ? (normalizeExpenseText_(exp.vendor, 40) || '___________________________') : '___________________________';
+      var amountLabel = exp ? ('$' + exp.amount.toFixed(2)) : '$ ________________________';
+      body.appendParagraph('Acc #: 1150 -               Vendor: ' + vendorLabel + '          ' + amountLabel);
+      body.appendParagraph('');
+    }
+
+    var subtotalBeforeTax = total;
+    var taxPaid = 0;
+    body.appendParagraph('                                            Subtotal Before Tax               $ ' + subtotalBeforeTax.toFixed(2));
+    body.appendParagraph('                                              Tax Paid                        $ ' + taxPaid.toFixed(2));
+    body.appendParagraph('                                              Total                           $ ' + total.toFixed(2));
+    body.appendParagraph('');
+    body.appendParagraph('Accounting and Finance Authorization (please leave blank, for office use only)').setBold(true);
+    body.appendParagraph('');
+    body.appendParagraph('VP/Exec Authorization_________________________              VP Finance____________________________');
+    body.appendParagraph('Please note that only original receipts will be accepted and all receipts must be attached to the form.').setItalic(true);
+    body.appendParagraph('Expense Period: ' + rangeLabel);
+    body.appendParagraph('Total Expenses Submitted: ' + expenses.length + ' item(s)');
 
     doc.saveAndClose();
 
-    // Export as PDF
     var pdf = DriveApp.getFileById(doc.getId()).getAs(MimeType.PDF);
     pdf.setName(docTitle + '.pdf');
 
-    // Save PDF alongside receipts if folder exists, otherwise root Drive
     var folderId = PropertiesService.getScriptProperties().getProperty('EXPENSE_RECEIPTS_FOLDER_ID');
     var pdfFile = folderId
       ? DriveApp.getFolderById(folderId).createFile(pdf)
       : DriveApp.createFile(pdf);
     pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
-    // Clean up the intermediate Google Doc
     DriveApp.getFileById(doc.getId()).setTrashed(true);
 
     return { success: true, url: pdfFile.getUrl(), total: total, fileName: docTitle + '.pdf' };
