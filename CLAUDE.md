@@ -4,16 +4,21 @@
 
 **Always use graphify before exploring code** — reads wiki instead of raw files (5-10K vs 100K+ tokens).
 
-1. Read `Obsidian - Tax Clinic Website/GRAPH_REPORT.md` (god nodes, clusters, risks)
-2. Navigate `Obsidian - Tax Clinic Website/wiki/nodes/` for components
-3. Navigate `Obsidian - Tax Clinic Website/wiki/workflows/` for 20 pre-documented workflows
-4. Only open raw `.gs` files for implementation details
+Instead of using grep, when you need to gain an understanding of how the codebase is structured, use graphify instead.
+
+1. Read `graphify-out/GRAPH_REPORT.md` (god nodes, clusters, risks)
+2. Only open raw `.gs` files for implementation details
 
 **Python** — always use venv, never bare `python`/`python3`:
 ```bash
 .venv/Scripts/python -m graphify query "what calls AdminDashboard.gs?"
 .venv/Scripts/python -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"
 ```
+
+**Graphify gotchas:**
+- **`--update` floods with Obsidian nodes** — filter to non-`Obsidian` files before dispatching subagents; wiki nodes are auto-generated and don't need re-extraction
+- **`graphify-out/` must exist first** — run `mkdir -p graphify-out` before any incremental write
+- **Windows encoding** — always pass `encoding='utf-8'` to `write_text()` (reports contain unicode arrows that break cp1252)
 
 ## Architecture
 

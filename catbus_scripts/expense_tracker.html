@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Expense Tracker</title>
+  <style>
+    :root {
+      --accent: rgb(142, 0, 0);
+      --accent-light: #fdf2f2;
+      --card-bg: #f7f7f7;
+      --border: #ddd;
+      --success: #27ae60;
+      --error: #e74c3c;
+      --text: #1a1a1a;
+      --text-muted: #666;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0 auto;
+      font-family: 'Segoe UI', Verdana, sans-serif;
+      padding: 24px 20px 60px;
+      max-width: 960px;
+      color: var(--text);
+      background: #f0f0f0;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      color: var(--accent);
+      font-size: 1.6rem;
+    }
+
+    .page-subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin: 0 0 24px;
+    }
+
+    .card {
+      background: #fff;
+      padding: 22px 24px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .card h2 {
+      margin: 0 0 16px;
+      font-size: 1.05rem;
+      color: var(--accent);
+      border-bottom: 2px solid var(--accent-light);
+      padding-bottom: 8px;
+    }
+
+    /* Drop zone */
+    #drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: var(--card-bg);
+    }
+    #drop-zone:hover, #drop-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    #drop-zone .drop-icon { font-size: 2.4rem; margin-bottom: 8px; }
+    #drop-zone .drop-text { color: var(--text-muted); font-size: 0.95rem; }
+    #drop-zone .drop-link { color: var(--accent); text-decoration: underline; cursor: pointer; }
+    #file-input { display: none; }
+
+    /* OCR preview */
+    #ocr-preview {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: #f9fbe7;
+      border: 1px solid #c5e1a5;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      color: #4a5a1a;
+    }
+    #ocr-preview summary { cursor: pointer; font-weight: 600; }
+    #ocr-raw-text { white-space: pre-wrap; max-height: 120px; overflow-y: auto; margin-top: 6px; }
+
+    /* Form grid */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 20px;
+      margin-top: 16px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 0.85rem; font-weight: 600; color: #444; }
+    input[type="text"], input[type="date"], input[type="number"], select, textarea {
+      padding: 8px 10px;
+      font-size: 0.95rem;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-family: inherit;
+      width: 100%;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(142,0,0,0.12);
+    }
+    textarea { resize: vertical; min-height: 60px; }
+
+    /* Buttons */
+    .btn {
+      padding: 9px 18px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.87; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: #e8e8e8; color: #333; }
+    .btn-danger { background: #fdecea; color: #c0392b; border: 1px solid #f5c6c2; }
+    .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+      align-items: center;
+    }
+
+    /* Status messages */
+    .status-msg {
+      font-size: 0.85rem;
+      padding: 7px 12px;
+      border-radius: 4px;
+      display: none;
+    }
+    .status-msg.success { background: #eafaf1; color: #1e8449; border: 1px solid #a9dfbf; display: block; }
+    .status-msg.error { background: #fdecea; color: var(--error); border: 1px solid #f5c6c2; display: block; }
+    .status-msg.info { background: #eaf4fd; color: #1a6fa0; border: 1px solid #aed6f1; display: block; }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(0,0,0,0.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Expense table */
+    .expense-table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    thead th {
+      background: var(--accent);
+      color: #fff;
+      padding: 9px 10px;
+      text-align: left;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) { background: #fafafa; }
+    tbody tr:hover { background: var(--accent-light); }
+    tbody td { padding: 8px 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
+    .amount-cell { font-weight: 600; white-space: nowrap; }
+    tfoot td { padding: 9px 10px; font-weight: 700; border-top: 2px solid var(--border); }
+    .no-expenses { text-align: center; color: var(--text-muted); padding: 30px; }
+
+    .receipt-link { color: var(--accent); font-size: 0.8rem; text-decoration: none; }
+    .receipt-link:hover { text-decoration: underline; }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .filter-bar .form-group { min-width: 140px; }
+
+    /* Report section */
+    .report-total {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    /* Category badge */
+    .cat-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .cat-office { background: #e8f4fd; color: #1a5276; }
+    .cat-food { background: #fef9e7; color: #7d6608; }
+    .cat-print { background: #f0fff0; color: #1a6632; }
+    .cat-trans { background: #fdf2f8; color: #6c3483; }
+    .cat-other { background: #f2f2f2; color: #555; }
+
+    /* Image preview thumbnail */
+    #receipt-thumb {
+      max-width: 120px;
+      max-height: 80px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      margin-top: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<?!= include('_PasswordGate') ?>
+
+<h1>Expense Tracker</h1>
+<p class="page-subtitle">Log clinic expenses and generate PDF reimbursement reports.</p>
+
+<!-- ── ADD EXPENSE ───────────────────────────────────────────────── -->
+<div class="card">
+  <h2>Add Expense</h2>
+
+  <div id="drop-zone" role="button" tabindex="0" aria-label="Drop receipt image here or click to browse">
+    <div class="drop-icon">📄</div>
+    <div class="drop-text">
+      Drag &amp; drop a receipt image here, or
+      <span class="drop-link" id="browse-link">browse to upload</span>
+    </div>
+    <div class="drop-text" style="font-size:0.78rem; margin-top:6px;">JPG, PNG, PDF · max 10 MB · optional</div>
+  </div>
+  <input type="file" id="file-input" accept="image/jpeg,image/png,application/pdf">
+  <img id="receipt-thumb" alt="Receipt preview">
+
+  <div id="ocr-status" class="status-msg" style="margin-top:10px;"></div>
+
+  <details id="ocr-preview">
+    <summary>OCR raw text (for reference)</summary>
+    <pre id="ocr-raw-text"></pre>
+  </details>
+
+  <div class="form-grid">
+    <div class="form-group">
+      <label for="f-date">Date *</label>
+      <input type="date" id="f-date" required>
+    </div>
+    <div class="form-group">
+      <label for="f-amount">Amount (CAD) *</label>
+      <input type="number" id="f-amount" placeholder="0.00" min="0" step="0.01">
+    </div>
+    <div class="form-group">
+      <label for="f-category">Category *</label>
+      <select id="f-category">
+        <option value="">— select —</option>
+        <option value="Office Supplies">Office Supplies</option>
+        <option value="Food &amp; Refreshments">Food &amp; Refreshments</option>
+        <option value="Printing / Photocopying">Printing / Photocopying</option>
+        <option value="Transportation">Transportation</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="f-vendor">Vendor / Store *</label>
+      <input type="text" id="f-vendor" placeholder="e.g. Staples, Tim Hortons">
+    </div>
+    <div class="form-group full">
+      <label for="f-desc">Description (optional)</label>
+      <textarea id="f-desc" placeholder="e.g. Printer paper and highlighters for clinic day"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="f-submitter">Your Name *</label>
+      <input type="text" id="f-submitter" placeholder="Full name">
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" id="submit-btn" onclick="submitExpense()">Save Expense</button>
+    <button class="btn btn-secondary" id="clear-btn" onclick="clearForm()">Clear</button>
+    <div id="submit-status" class="status-msg"></div>
+  </div>
+</div>
+
+<!-- ── EXPENSE LIST ──────────────────────────────────────────────── -->
+<div class="card">
+  <h2>Logged Expenses</h2>
+
+  <div class="filter-bar">
+    <div class="form-group">
+      <label for="list-start">From</label>
+      <input type="date" id="list-start">
+    </div>
+    <div class="form-group">
+      <label for="list-end">To</label>
+      <input type="date" id="list-end">
+    </div>
+    <button class="btn btn-secondary" onclick="loadExpenses()">Filter</button>
+    <button class="btn btn-secondary" onclick="clearFilter()">Show All</button>
+  </div>
+
+  <div id="list-status" class="status-msg"></div>
+
+  <div class="expense-table-wrap">
+    <table id="expense-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Category</th>
+          <th>Vendor</th>
+          <th>Description</th>
+          <th>Amount</th>
+          <th>Receipt</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="expense-tbody">
+        <tr><td colspan="7" class="no-expenses">Loading expenses…</td></tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" style="text-align:right;">Total</td>
+          <td id="total-cell" class="amount-cell">—</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ── GENERATE REPORT ───────────────────────────────────────────── -->
+<div class="card">
+  <h2>Generate PDF Report</h2>
+  <p style="font-size:0.88rem; color:var(--text-muted); margin-top:0;">
+    Creates a formatted PDF saved to Google Drive. A link will open in a new tab for download or printing.
+  </p>
+
+  <div class="form-grid" style="max-width:600px;">
+    <div class="form-group">
+      <label for="r-start">Period Start</label>
+      <input type="date" id="r-start">
+    </div>
+    <div class="form-group">
+      <label for="r-end">Period End</label>
+      <input type="date" id="r-end">
+    </div>
+    <div class="form-group full">
+      <label for="r-name">Submitted By</label>
+      <input type="text" id="r-name" placeholder="Your full name">
+    </div>
+    <div class="form-group">
+      <label for="r-request-date">Request Date</label>
+      <input type="date" id="r-request-date">
+    </div>
+    <div class="form-group">
+      <label for="r-email">Email</label>
+      <input type="email" id="r-email" placeholder="you@example.com">
+    </div>
+    <div class="form-group full">
+      <label for="r-address">Address</label>
+      <input type="text" id="r-address" placeholder="Mailing address">
+    </div>
+    <div class="form-group">
+      <label for="r-department">Department / Unit</label>
+      <input type="text" id="r-department" placeholder="AFSA IS / Tax Clinic">
+    </div>
+    <div class="form-group">
+      <label for="r-delivery">Delivery Note (Optional)</label>
+      <input type="text" id="r-delivery" placeholder="N/A if pickup at SLC Turnkey Desk">
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" id="report-btn" onclick="generateReport()">Generate PDF Report</button>
+    <div id="report-status" class="status-msg"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── STATE ─────────────────────────────────────────────────────────
+  var pendingBase64 = null;
+  var pendingMime = null;
+  var allExpenses = [];
+
+  // ── INIT ──────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function () {
+    setDefaultDates();
+    loadExpenses();
+    restoreSubmitter();
+  });
+
+  function setDefaultDates() {
+    var today = new Date().toISOString().slice(0, 10);
+    document.getElementById('f-date').value = today;
+    var firstOfMonth = today.slice(0, 7) + '-01';
+    document.getElementById('r-start').value = firstOfMonth;
+    document.getElementById('r-end').value = today;
+    document.getElementById('r-request-date').value = today;
+    document.getElementById('r-department').value = 'AFSA IS / Tax Clinic';
+    document.getElementById('r-delivery').value = 'N/A if picking up cheque at SLC Turnkey Desk';
+  }
+
+  function restoreSubmitter() {
+    var saved = sessionStorage.getItem('expense_submitter');
+    if (saved) {
+      document.getElementById('f-submitter').value = saved;
+      document.getElementById('r-name').value = saved;
+    }
+  }
+
+  // ── DROP ZONE ────────────────────────────────────────────────────
+  var dropZone = document.getElementById('drop-zone');
+  var fileInput = document.getElementById('file-input');
+
+  document.getElementById('browse-link').addEventListener('click', function (e) {
+    e.stopPropagation();
+    fileInput.click();
+  });
+  dropZone.addEventListener('click', function () { fileInput.click(); });
+  dropZone.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') fileInput.click();
+  });
+
+  dropZone.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', function () { dropZone.classList.remove('dragover'); });
+  dropZone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files.length) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    if (file.size > 10 * 1024 * 1024) {
+      showStatus('ocr-status', 'error', 'File too large (max 10 MB).');
+      return;
+    }
+    var allowed = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (allowed.indexOf(file.type) === -1) {
+      showStatus('ocr-status', 'error', 'Unsupported file type. Use JPG, PNG, or PDF.');
+      return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var base64 = e.target.result.split(',')[1];
+      pendingBase64 = base64;
+      pendingMime = file.type;
+
+      // Show thumbnail for images
+      var thumb = document.getElementById('receipt-thumb');
+      if (file.type !== 'application/pdf') {
+        thumb.src = e.target.result;
+        thumb.style.display = 'block';
+      } else {
+        thumb.style.display = 'none';
+      }
+
+      // Run OCR
+      showStatus('ocr-status', 'info', '<span class="spinner"></span>Reading receipt…');
+      document.getElementById('ocr-preview').style.display = 'none';
+
+      google.script.run
+        .withSuccessHandler(onOcrResult)
+        .withFailureHandler(function (err) {
+          showStatus('ocr-status', 'error', 'OCR failed: ' + (err.message || err));
+        })
+        .ocrReceiptForReview(base64, file.type);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function onOcrResult(result) {
+    if (!result.success) {
+      showStatus('ocr-status', 'error', 'OCR error: ' + result.message + '. Please fill in the fields manually.');
+      return;
+    }
+    showStatus('ocr-status', 'success', 'Receipt scanned. Please review and confirm the extracted details below.');
+    if (result.amount) document.getElementById('f-amount').value = result.amount;
+    if (result.vendor) document.getElementById('f-vendor').value = result.vendor;
+    if (result.date) {
+      var parsed = tryParseDate(result.date);
+      if (parsed) document.getElementById('f-date').value = parsed;
+    }
+    if (result.rawText) {
+      document.getElementById('ocr-raw-text').textContent = result.rawText;
+      document.getElementById('ocr-preview').style.display = 'block';
+    }
+  }
+
+  function tryParseDate(str) {
+    // Try to convert various formats to YYYY-MM-DD
+    var d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      var y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+      if (y >= 2000 && y <= 2099) {
+        return y + '-' + String(m).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+      }
+    }
+    return null;
+  }
+
+  // ── SUBMIT EXPENSE ───────────────────────────────────────────────
+  window.submitExpense = function () {
+    var date = document.getElementById('f-date').value;
+    var amount = document.getElementById('f-amount').value;
+    var category = document.getElementById('f-category').value;
+    var vendor = document.getElementById('f-vendor').value.trim();
+    var submitter = document.getElementById('f-submitter').value.trim();
+
+    if (!date || !amount || !category || !vendor || !submitter) {
+      showStatus('submit-status', 'error', 'Please fill in all required fields (*).');
+      return;
+    }
+    if (parseFloat(amount) <= 0) {
+      showStatus('submit-status', 'error', 'Amount must be greater than zero.');
+      return;
+    }
+
+    var btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Saving…';
+    showStatus('submit-status', 'info', '');
+
+    sessionStorage.setItem('expense_submitter', submitter);
+    document.getElementById('r-name').value = submitter;
+
+    var data = {
+      base64Image: pendingBase64 || '',
+      mimeType: pendingMime || 'image/jpeg',
+      expenseDate: date,
+      category: category,
+      vendor: vendor,
+      description: document.getElementById('f-desc').value.trim(),
+      amount: parseFloat(amount),
+      submittedBy: submitter
+    };
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        btn.disabled = false;
+        btn.textContent = 'Save Expense';
+        if (res.success) {
+          showStatus('submit-status', 'success', 'Expense saved successfully.');
+          clearForm();
+          loadExpenses();
+        } else {
+          showStatus('submit-status', 'error', 'Save failed: ' + res.message);
+        }
+      })
+      .withFailureHandler(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'Save Expense';
+        showStatus('submit-status', 'error', 'Error: ' + (err.message || err));
+      })
+      .submitExpense(data);
+  };
+
+  window.clearForm = function () {
+    document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('f-amount').value = '';
+    document.getElementById('f-category').value = '';
+    document.getElementById('f-vendor').value = '';
+    document.getElementById('f-desc').value = '';
+    document.getElementById('file-input').value = '';
+    document.getElementById('receipt-thumb').style.display = 'none';
+    document.getElementById('ocr-preview').style.display = 'none';
+    clearStatus('ocr-status');
+    clearStatus('submit-status');
+    pendingBase64 = null;
+    pendingMime = null;
+  };
+
+  // ── EXPENSE LIST ─────────────────────────────────────────────────
+  window.loadExpenses = function () {
+    var start = document.getElementById('list-start').value;
+    var end = document.getElementById('list-end').value;
+    showStatus('list-status', 'info', '<span class="spinner"></span>Loading…');
+    document.getElementById('expense-tbody').innerHTML = '<tr><td colspan="7" class="no-expenses">Loading…</td></tr>';
+    document.getElementById('total-cell').textContent = '—';
+
+    google.script.run
+      .withSuccessHandler(renderExpenses)
+      .withFailureHandler(function (err) {
+        showStatus('list-status', 'error', 'Failed to load expenses: ' + (err.message || err));
+      })
+      .getExpenses(start, end);
+  };
+
+  window.clearFilter = function () {
+    document.getElementById('list-start').value = '';
+    document.getElementById('list-end').value = '';
+    loadExpenses();
+  };
+
+  function renderExpenses(result) {
+    clearStatus('list-status');
+    var tbody = document.getElementById('expense-tbody');
+    var totalCell = document.getElementById('total-cell');
+
+    if (!result.success) {
+      showStatus('list-status', 'error', result.message);
+      tbody.innerHTML = '<tr><td colspan="7" class="no-expenses">Could not load expenses.</td></tr>';
+      return;
+    }
+
+    allExpenses = result.expenses;
+    if (!allExpenses.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="no-expenses">No expenses found for this period.</td></tr>';
+      totalCell.textContent = '$0.00';
+      return;
+    }
+
+    var total = 0;
+    var rows = allExpenses.map(function (e) {
+      total += e.amount;
+      var receiptCell = e.receiptUrl
+        ? '<a class="receipt-link" href="' + e.receiptUrl + '" target="_blank">View</a>'
+        : '—';
+      return '<tr>' +
+        '<td>' + (e.expenseDate || '—') + '</td>' +
+        '<td>' + catBadge(e.category) + '</td>' +
+        '<td>' + esc(e.vendor) + '</td>' +
+        '<td>' + esc(e.description) + '</td>' +
+        '<td class="amount-cell">$' + e.amount.toFixed(2) + '</td>' +
+        '<td>' + receiptCell + '</td>' +
+        '<td><button class="btn btn-danger btn-sm" onclick="deleteRow(' + e.rowIndex + ', \'' + esc(e.vendor) + '\')">Delete</button></td>' +
+        '</tr>';
+    });
+    tbody.innerHTML = rows.join('');
+    totalCell.textContent = '$' + total.toFixed(2);
+  }
+
+  window.deleteRow = function (rowIndex, vendor) {
+    if (!confirm('Delete expense from "' + vendor + '"? This cannot be undone.')) return;
+    showStatus('list-status', 'info', '<span class="spinner"></span>Deleting…');
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (res.success) {
+          loadExpenses();
+        } else {
+          showStatus('list-status', 'error', 'Delete failed: ' + res.message);
+        }
+      })
+      .withFailureHandler(function (err) {
+        showStatus('list-status', 'error', 'Error: ' + (err.message || err));
+      })
+      .deleteExpense(rowIndex);
+  };
+
+  // ── GENERATE REPORT ──────────────────────────────────────────────
+  window.generateReport = function () {
+    var start = document.getElementById('r-start').value;
+    var end = document.getElementById('r-end').value;
+    var name = document.getElementById('r-name').value.trim();
+    var requestDate = document.getElementById('r-request-date').value;
+    var email = document.getElementById('r-email').value.trim();
+    var address = document.getElementById('r-address').value.trim();
+    var department = document.getElementById('r-department').value.trim();
+    var deliveryNote = document.getElementById('r-delivery').value.trim();
+
+    if (!name) {
+      showStatus('report-status', 'error', 'Please enter a name for the report.');
+      return;
+    }
+
+    if (!requestDate || !email || !address || !department) {
+      showStatus('report-status', 'error', 'Please complete request date, email, address, and department/unit.');
+      return;
+    }
+
+    var btn = document.getElementById('report-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Generating PDF…';
+    showStatus('report-status', 'info', 'Creating your report. This may take a few seconds…');
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        btn.disabled = false;
+        btn.textContent = 'Generate PDF Report';
+        if (res.success) {
+          showStatus('report-status', 'success',
+            'Report ready! Total: <strong>$' + res.total.toFixed(2) + '</strong> &nbsp;' +
+            '<a href="' + res.url + '" target="_blank" style="color:var(--accent);">Open PDF &rarr;</a>');
+        } else {
+          showStatus('report-status', 'error', 'Generation failed: ' + res.message);
+        }
+      })
+      .withFailureHandler(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'Generate PDF Report';
+        showStatus('report-status', 'error', 'Error: ' + (err.message || err));
+      })
+      .generateExpenseReport({
+        startDate: start,
+        endDate: end,
+        submitterName: name,
+        requestDate: requestDate,
+        email: email,
+        address: address,
+        department: department,
+        deliveryNote: deliveryNote
+      });
+  };
+
+  // ── HELPERS ──────────────────────────────────────────────────────
+  function showStatus(id, type, html) {
+    var el = document.getElementById(id);
+    el.className = 'status-msg ' + type;
+    el.innerHTML = html;
+    el.style.display = 'block';
+  }
+  function clearStatus(id) {
+    var el = document.getElementById(id);
+    el.className = 'status-msg';
+    el.innerHTML = '';
+    el.style.display = 'none';
+  }
+
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  var catClasses = {
+    'Office Supplies': 'cat-office',
+    'Food & Refreshments': 'cat-food',
+    'Printing / Photocopying': 'cat-print',
+    'Transportation': 'cat-trans'
+  };
+  function catBadge(cat) {
+    var cls = catClasses[cat] || 'cat-other';
+    return '<span class="cat-badge ' + cls + '">' + esc(cat) + '</span>';
+  }
+
+})();
+</script>
+</body>
+</html>

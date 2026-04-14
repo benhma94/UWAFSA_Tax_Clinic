@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Training Wiki &mdash; Accounting &amp; Finance Student Association</title>
+    <link rel="icon" type="image/x-icon" href="images/favicon.ico"/>
+    <script>(function(){var t=localStorage.getItem('theme');if(t==='dark'||(t===null&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark-mode');})();</script>
+    <link rel="stylesheet" href="shared.css?v=2">
+    <script src="config.js"></script>
+    <style>
+      #content {
+        max-width: none;
+        padding: 0;
+        animation: none;
+      }
+
+      .wiki-wrap {
+        display: flex;
+        max-width: 1100px;
+        margin: 0 auto;
+        min-height: 80vh;
+      }
+
+      .sidebar {
+        width: 240px;
+        flex-shrink: 0;
+        border-right: 1px solid var(--border);
+        padding: 16px;
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+        background: var(--bg);
+      }
+
+      #wiki-search {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 12px;
+        margin-bottom: 12px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--input-bg);
+        color: var(--text);
+        font-family: inherit;
+        font-size: 0.9rem;
+      }
+
+      #wiki-search::placeholder {
+        color: var(--text-muted);
+      }
+
+      .sidebar nav {
+        border: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .sidebar nav > div {
+        margin-bottom: 12px;
+      }
+
+      .cat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        cursor: pointer;
+        user-select: none;
+        border-radius: 4px;
+        background: transparent;
+        transition: background 0.2s ease;
+        font-weight: 600;
+        color: var(--text);
+        font-size: 0.95rem;
+      }
+
+      .cat-header:hover {
+        background: var(--bg-secondary);
+      }
+
+      .cat-header::after {
+        content: '+';
+        display: inline-block;
+        width: 20px;
+        text-align: center;
+        transition: transform 0.2s ease;
+      }
+
+      .cat-header.expanded::after {
+        content: '−';
+      }
+
+      .cat-links {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+      }
+
+      .cat-links.open {
+        max-height: 500px;
+      }
+
+      .cat-link {
+        display: block;
+        padding: 6px 12px 6px 24px;
+        color: var(--text);
+        text-decoration: none;
+        font-size: 0.85rem;
+        border-left: 2px solid transparent;
+        transition: border-color 0.2s ease, color 0.2s ease;
+      }
+
+      .cat-link:hover,
+      .cat-link.active {
+        border-left-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .no-results {
+        padding: 16px 12px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        text-align: center;
+      }
+
+      .no-results.hidden {
+        display: none;
+      }
+
+      .wiki-main {
+        flex: 1;
+        padding: 0 32px 40px;
+      }
+
+      .section {
+        border-bottom: 1px solid var(--border-light);
+        margin-bottom: 0;
+      }
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 0;
+        cursor: pointer;
+        user-select: none;
+        font-weight: 600;
+        color: var(--text);
+        font-size: 1.05rem;
+        transition: color 0.2s ease;
+      }
+
+      .section-header:hover {
+        color: var(--accent);
+      }
+
+      .section-header::after {
+        content: '+';
+        display: inline-block;
+        width: 20px;
+        text-align: center;
+        transition: transform 0.2s ease;
+      }
+
+      .section-header.open::after {
+        content: '−';
+      }
+
+      .section-body {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+      }
+
+      .section-body.open {
+        max-height: 800px;
+      }
+
+      .section-body > * {
+        margin: 12px 0;
+      }
+
+      .section-body ol, .section-body ul {
+        padding-left: 24px;
+      }
+
+      .section-body li {
+        margin-bottom: 8px;
+      }
+
+      .tip {
+        background: var(--bg-secondary);
+        border-left: 4px solid var(--accent);
+        padding: 12px 16px;
+        margin: 16px 0;
+        border-radius: 2px;
+        font-size: 0.95rem;
+      }
+
+      mark {
+        background: #ffeb3b;
+        color: inherit;
+        padding: 0 2px;
+      }
+
+      html.dark-mode mark {
+        background: #d4b800;
+      }
+
+      @media (max-width: 768px) {
+        .wiki-wrap {
+          flex-direction: column;
+        }
+
+        .sidebar {
+          width: 100%;
+          position: static;
+          max-height: none;
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+          padding: 12px;
+        }
+
+        .cat-links {
+          display: none;
+        }
+
+        .cat-links.open {
+          display: block;
+          max-height: none;
+        }
+
+        .wiki-main {
+          padding: 0 16px 40px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+
+  <div id="site-header"></div>
+  <div id="site-nav"></div>
+
+  <div id="content">
+    <div class="wiki-wrap">
+      <aside class="sidebar">
+        <input id="wiki-search" type="search" placeholder="Search…" />
+        <nav id="wiki-nav">
+          <!-- Categories and links populated by JavaScript -->
+        </nav>
+        <p class="no-results hidden">No results.</p>
+      </aside>
+
+      <main class="wiki-main">
+        <!-- Sections populated by JavaScript -->
+      </main>
+    </div>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="shared.js?v=2"></script>
+  <script>
+    // Wiki content structure: categories with subsections and content
+    const wikiData = [
+      {
+        id: 'day-of-ops',
+        title: 'Day-of Operations',
+        sections: [
+          {
+            id: 'admin-ops',
+            title: 'Admin',
+            intro: 'Administrative tasks every volunteer completes at the start and end of each clinic day.',
+            steps: [
+              'Arrive 10 minutes before your shift starts.',
+              'Open the CATBUS web app and go to the <strong>Sign In / Sign Out page</strong> (<code>?app=signin</code>). Select your name from the volunteer list, choose your station (e.g., Filer, Mentor, Reception), and click Sign In. This registers you as active for the day.',
+              'If you submitted your availability beforehand, your shift assignment is already in the <strong>Schedule Viewer</strong> (<code>?app=schedule</code>). Check it to confirm your shift slot (e.g., D1B = Day 1, Afternoon).',
+              'If you have not yet submitted availability for an upcoming clinic, complete the <strong>Availability Form</strong> (<code>?app=availability</code>) — the coordinator uses this to build the schedule.',
+              'During the clinic, if you need a break, use the <strong>Break toggle</strong> on your Control Sheet. This removes you from the available-volunteer list so the doorman won\'t assign you a client.',
+              'At the end of your shift, return to the Sign In / Sign Out page and click <strong>Sign Out</strong>. This closes your session, releases your station, and updates attendance records used for metrics.'
+            ],
+            tip: 'If you forget to sign out at the end of a clinic, your session will be automatically cleared the next morning. But it\'s best practice to sign out yourself — stale sessions can affect the volunteer availability list.'
+          },
+          {
+            id: 'front-desk-ops',
+            title: 'Front Desk',
+            intro: 'The front desk runs the client intake process using the CATBUS Intake Screening Tool.',
+            steps: [
+              'Open the <strong>Intake Screening Tool</strong> on the public website. This tool walks you through eligibility questions before a client is entered into the system.',
+              'The tool checks income limits (typically under $50,000), residency status, and complexity flags (self-employment, multiple years, foreign income, rental property, etc.). Ineligible clients are shown a referral message — do not enter them into the intake form.',
+              'For eligible clients, open the <strong>Intake Form</strong> (<code>?app=intake</code>) in CATBUS. Enter household size, filing years needed, any special situations (e.g., needs senior review, high priority), and upload any documents the client has brought.',
+              'CATBUS automatically assigns a <strong>Client ID</strong> (e.g., A001, B002). If the client has a pre-booked priority appointment (format P001), enter that ID — it overrides the auto-generated one.',
+              'Once submitted, the client appears in the <strong>Queue Dashboard</strong> (<code>?app=queue</code>) for the doorman to assign. The elapsed wait time is tracked automatically.',
+              'If a client\'s situation changes after intake (e.g., they mention a new filing year), use the <strong>Edit</strong> function on the Intake Form to update their record before they are assigned to a filer.'
+            ],
+            tip: 'The Intake Screening Tool and the CATBUS Intake Form both check eligibility rules from the same config — they stay in sync. If a client seems borderline, check with a mentor before entering them.'
+          },
+          {
+            id: 'filing-ops',
+            title: 'Filing',
+            intro: 'Volunteers file tax returns using the CATBUS Control Sheet, which manages client assignment, help requests, review, and receipt sending.',
+            steps: [
+              '<strong>Receiving a client:</strong> When a client is assigned to you, your <strong>Control Sheet</strong> (<code>?app=control</code>) automatically updates (it polls every few seconds). You\'ll see the client\'s ID, household size, filing years, and any special notes entered at intake.',
+              '<strong>Filing the return:</strong> Work through the return in your tax software (UFile). The Control Sheet shows all the information collected at intake. Use the <strong>Client Data</strong> view on the Control Sheet to look up prior-year tracker status if the client has filed with the clinic before.',
+              '<strong>Asking for help:</strong> If you need mentor assistance, click <strong>Request Help</strong> on the Control Sheet. A help alert appears on the <strong>Alert Dashboard</strong> (<code>?app=alerts</code>) for all mentors. A mentor will come to you or respond via the dashboard. Your Control Sheet polls for their response automatically.',
+              '<strong>Requesting a review:</strong> When the return is complete, click <strong>Request Review</strong> on the Control Sheet. Select the mentor you want to review the file (the list shows currently signed-in mentors). The mentor sees the request on the Alert Dashboard and can approve or return the file with comments.',
+              '<strong>Escalation:</strong> If a mentor returns your file for corrections, you\'ll see their comments in the Control Sheet polling update. Make the corrections and re-submit the review request. If the issue is complex and beyond your scope, the mentor may take over the file entirely — they will mark it complete from their end.',
+              '<strong>Sending the receipt:</strong> Once a mentor approves the review, CATBUS automatically sends a <strong>receipt confirmation email</strong> to the client and records the filed return in the Tax Return Tracker. You do not need to trigger this manually.',
+              '<strong>Finalizing:</strong> After the receipt email is sent, click <strong>Finalize</strong> on the Control Sheet. This marks the assignment as complete, releases your station for the next client, and writes the return details to the tracker. For married couples, both returns are counted separately in the metrics.',
+              '<strong>Taking a break:</strong> Before stepping away between clients, toggle <strong>On Break</strong> in the Control Sheet. This removes you from the available-volunteer list in the Queue Dashboard so the doorman won\'t assign you a new client while you\'re away. Toggle it off when you return.'
+            ],
+            tip: 'The Control Sheet\'s single polling endpoint bundles help status, review status, and mentor availability into one request — this is why updates feel instant even with many volunteers online simultaneously. If your Control Sheet stops updating, refresh the page and sign back in.'
+          }
+        ]
+      },
+      {
+        id: 'filing-tax',
+        title: 'Filing & Tax Topics',
+        sections: [
+          {
+            id: 'cra-basics',
+            title: 'CRA Basics',
+            intro: 'Understanding the Canada Revenue Agency and tax filing requirements.',
+            steps: [
+              'The CRA is Canada\'s federal tax authority; they manage federal income tax and GST.',
+              'Every Canadian resident earning income must file a return (even if zero income).',
+              'Deadlines: June 15 for individuals; June 15 for self-employed (payment due June 15).',
+              'Late-filed returns incur penalties: 5% + 0.5% per month (max 12 months).',
+              'NETFILE (online filing) is fastest and most reliable.',
+              'Keep all receipts and documents for 6 years.'
+            ],
+            tip: 'If a client missed last year\'s deadline, they should file ASAP — even if they owe taxes, filing reduces penalties.'
+          },
+          {
+            id: 't1-walkthrough',
+            title: 'T1 Walkthrough',
+            intro: 'Step-by-step guide to completing a T1 General return.',
+            steps: [
+              'Section A: Basic information (name, SIN, address, phone).',
+              'Section B: Marital status and spouse info (affects benefits and credits).',
+              'Section C: Employment income (boxes 14–17 from T4 slips).',
+              'Section D: Self-employment income (gross receipts minus expenses, Schedule 8).',
+              'Section E: Taxable investment income (T5, T3, T776 slips).',
+              'Section F: Taxable capital gains (50% of gains on sales).',
+              'Section G: Credits (basic personal, spousal, Canada Child Benefit).',
+              'Line 15000: Total income. Line 25600: Taxable income. Line 43700: Federal tax.'
+            ],
+            tip: 'Always double-check spouse name spelling and SIN — these errors trigger CRA correspondence.'
+          },
+          {
+            id: 'common-slips',
+            title: 'Common Tax Slips',
+            intro: 'Overview of T-slips and other documents received by clients.',
+            steps: [
+              'T4: Employment income and tax deducted (boxes 14, 22).',
+              'T4A: Pension, unemployment, or fellowship income.',
+              'T5: Investment income (dividends, interest) — box 10 (dividends), box 12 (interest).',
+              'T776: Rental income and expenses (net to line 16400).',
+              'T2202: Tuition credits (federal amount in box 20).',
+              'RRSP: Contribution room on latest Notice of Assessment.',
+              'Ensure all slips are reported; CRA has copies — mismatches trigger notices.'
+            ],
+            tip: 'Some clients forget to include investment income slips. Check their online CRA account for any missing slips.'
+          },
+          {
+            id: 'deductions-credits',
+            title: 'Deductions & Credits',
+            intro: 'Tax deductions and credits that reduce tax owing or increase refunds.',
+            steps: [
+              'Deduction: Reduces taxable income. Examples: self-employment expenses, RRSP contribution, spousal support paid.',
+              'Credit: Reduces tax owing directly. Examples: basic personal amount, Canada Child Benefit, tuition.',
+              'Non-refundable credits: Cannot produce a refund if they exceed tax owing (tuition, political donations).',
+              'Refundable credits: Can produce a refund even if tax is zero (Canada Worker Benefit, GST credit).',
+              'Document everything: receipts, T5007 (spousal support), donation receipts.',
+              'Common mistake: Claiming deductions that spouse should claim (only one spouse can claim rental losses, etc.).'
+            ],
+            tip: 'Always ask clients: "Did you have any eligible childcare expenses?" — UCCB (now Canada Child Benefit) is easy to miss.'
+          }
+        ]
+      },
+      {
+        id: 'ufile-setup',
+        title: 'UFILE Setup',
+        sections: [
+          {
+            id: 'ufile-return-setup',
+            title: 'Return Setup Checklist',
+            intro: 'Configure each return carefully before you attempt EFILE so client identity, eligibility fields, and credits are correct.',
+            steps: [
+              'Before filing, verify the client\'s <strong>name, SIN/ITN, date of birth, and mailing address</strong> against their slips and prior records.',
+              'Confirm slip years and amounts while the client is present. If details do not match, pause and correct entries before continuing.',
+              'For Ontario renters or residence clients, choose the <strong>2025 OEPTC</strong> prompt correctly in the ON-BEN workflow so they do not miss benefit payments.',
+              'For tuition slips, always enter the <strong>T2202 months</strong>. Missing months can make scholarship income taxable incorrectly in UFILE.',
+              'For direct deposit questions, tell clients CRA no longer accepts direct deposit setup through the return. They must set it up through online banking/CRA tools.',
+              'If the client owes tax, stop before filing and ask a mentor for a review before proceeding.'
+            ],
+            tip: 'Slide deck highlights the same failure points repeatedly: identity fields, OEPTC selection, and T2202 months are the most common setup mistakes.'
+          },
+          {
+            id: 'ufile-efile-flow',
+            title: 'EFILE Flow and Error Handling',
+            intro: 'Use a consistent EFILE process so every return is reviewed, signed, and filed with a clear audit trail.',
+            steps: [
+              'Run a final pre-EFILE check with the client watching the screen: slips, amounts, addresses, and key credits/deductions.',
+              'Complete the <strong>TIS-60</strong> and get signatures in both required sections before transmitting.',
+              'Submit through EFILE and record the confirmation details from the success screen onto TIS-60.',
+              'If EFILE fails, stop and involve a mentor immediately before retrying.',
+              'For common EFILE errors (name/SIN/date of birth/address mismatch), re-verify with client documents and correct the return before another attempt.',
+              'If needed, default to paper filing for edge cases during high-volume clinic periods.'
+            ],
+            tip: 'Once EFILE is submitted, reversal is difficult. Always do client-visible review first, then transmit.'
+          },
+          {
+            id: 'ufile-newcomer-itn',
+            title: 'Newcomers, SIN, and ITN Setup',
+            intro: 'International and first-time filers require extra setup fields that affect credits and downstream CRA processing.',
+            steps: [
+              'Ask whether the client has a SIN or ITN, or has filed before. Use prior Notice of Assessment details when available.',
+              'For first-time international filers, capture date of entry to Canada and pre/post-arrival income fields, even when values are $0.',
+              'Direct newcomer clients to complete the <strong>RC151</strong> webform while you prepare the return.',
+              'If client is not eligible for a SIN, start <strong>T1261 (ITN)</strong> workflow and ensure they understand identity certification requirements.',
+              'When preparing an ITN return in UFILE, use temporary SIN placeholder guidance and confirm mailing address is stable for at least one year.',
+              'Escalate uncertain immigration/residency edge cases to a mentor before filing.'
+            ],
+            tip: 'For newcomer workflows, complete all required circles/fields even if amount is $0 so CRA can calculate benefit eligibility correctly.'
+          }
+        ]
+      },
+      {
+        id: 'tax-items',
+        title: 'Tax Items',
+        sections: [
+          {
+            id: 'tax-items-medical',
+            title: 'Medical Expenses',
+            intro: 'Medical claims are common and valuable, but they have strict eligibility, timing, and transfer rules.',
+            steps: [
+              'Eligible examples include prescriptions, dental, optometry, RMT services, and eligible health plan premiums (including UHIP for eligible students).',
+              'Do not claim over-the-counter drugs that do not require a prescription.',
+              'Choose the best <strong>365-day window ending in the filing year</strong> to maximize eligible expenses without double-claiming.',
+              'Reduce claims by any amount reimbursed through insurance or a health plan.',
+              'For students with low/no income, consider whether expenses should be transferred to parents where permitted by CRA rules.',
+              'Enter medical details when appropriate because the <strong>Medical Expense Supplement</strong> can be a refundable benefit for eligible workers.'
+            ],
+            tip: 'If uncertain about large or unusual receipt stacks, enter cautiously and ask a mentor before final filing.'
+          },
+          {
+            id: 'tax-items-tuition',
+            title: 'Tuition and Student Credits (T2202)',
+            intro: 'Tuition slips are high-impact and must be entered completely to preserve credits and avoid accidental taxable scholarship treatment.',
+            steps: [
+              'Always enter the <strong>T2202</strong> slip when available, even if the client plans to transfer credits to a parent.',
+              'Enter the number of qualifying months from the slip. Missing months can cause incorrect scholarship taxation in UFILE.',
+              'Use prior Notice of Assessment (or Schedule 11) to confirm carryforward tuition amounts.',
+              'If transferring current-year tuition to parents, use the transfer option instructed in training and leave unrelated fields blank.',
+              'Tell the student what documentation/values parents need to claim transferred amounts correctly.',
+              'Student loan interest is deductible only for eligible government student loans; use official statements where possible.'
+            ],
+            tip: 'Textbook receipts are not a substitute for T2202 and are usually not needed for this workflow.'
+          },
+          {
+            id: 'tax-items-deductions-benefits',
+            title: 'Deductions and Benefit Triggers',
+            intro: 'Prioritize deductions that regularly appear at clinic and ensure benefit-trigger fields are selected correctly.',
+            steps: [
+              'Enter RRSP contributions from official receipts and split first-60-days vs remainder periods correctly.',
+              'For FHSA, confirm annual/lifetime room and prior carryforward from Notice of Assessment; request mentor review for complex entries.',
+              'Assess moving expenses with both distance and reason tests before claiming; use simplified method unless detailed receipts justify otherwise.',
+              'For childcare deductions, ensure child profiles and eligible care provider details are entered on the correct taxpayer workflow.',
+              'For donations, confirm receipt legitimacy and classify political vs charitable contributions properly.',
+              'Complete Ontario benefit prompts (especially OEPTC-related choices) when rent/residence/property tax conditions are met so clients do not lose payments.'
+            ],
+            tip: 'When in doubt, verify with source slips and a mentor rather than forcing a deduction that may fail CRA review.'
+          }
+        ]
+      },
+      {
+        id: 'client-interaction',
+        title: 'Client Interaction',
+        sections: [
+          {
+            id: 'discovery-questions',
+            title: 'Discovery Questions',
+            intro: 'How to ask clients the right questions to uncover all income and deductions.',
+            steps: [
+              'Start broad: "Tell me about your work this year — are you employed or self-employed?"',
+              '"Did you change jobs, or have any income besides your main job?" (side gigs, contract work).',
+              '"Did you have any investments — stocks, bonds, GICs, mutual funds? Any gains or losses?"',
+              '"Do you own rental property? Any significant home renovations?" (home office, principal residence exemption).',
+              '"Do you have student loans? RRSP room? Have you made contributions?" (RRSP lowers taxable income).',
+              '"Do you pay spousal support, child support, or alimony? Do you receive any?"',
+              '"Any major medical expenses, charitable donations, or tuition paid?" (non-refundable credits).',
+              'Document everything and ask for clarification if uncertain.'
+            ],
+            tip: 'Many clients don\'t realize side gigs (Uber, freelance work) are taxable. Gently ask: "Any cash income or barter arrangements?"'
+          },
+          {
+            id: 'privacy-confidentiality',
+            title: 'Privacy & Confidentiality',
+            intro: 'Protecting client information and maintaining trust.',
+            steps: [
+              'All client data is confidential — never share names, SINs, or income with others.',
+              'Work in a private area or position your screen so others can\'t see details.',
+              'Don\'t discuss one client with another. Each conversation is separate.',
+              'If a client asks about their situation being reported to authorities, inform your mentor immediately.',
+              'CRA may ask about clients (rare) — your mentor/clinic director handles those requests.',
+              'At end of shift, log out of all systems. Don\'t leave client data on screen or printed.',
+              'Secure all paper documents — use the shredder or confidential recycling bin.'
+            ],
+            tip: 'A client may disclose unreported income or past-year unfiled returns. Stay neutral, document it, and escalate to your mentor.'
+          },
+          {
+            id: 'handling-conflict',
+            title: 'Handling Conflict',
+            intro: 'De-escalating difficult conversations and knowing when to ask for help.',
+            steps: [
+              'Stay calm and professional. Acknowledge the client\'s frustration: "I understand this is stressful."',
+              'Don\'t argue about tax law. If unsure, say: "Let me check with my mentor — this is a complex situation."',
+              'If a client becomes hostile or abusive, politely excuse yourself: "I\'m going to get my mentor. One moment please."',
+              'Never promise refunds or outcomes — tax is unpredictable. Say: "Based on what I see, here\'s likely, but CRA has final say."',
+              'If a client insists on claiming something you know is ineligible, involve your mentor before proceeding.',
+              'Document any conflicts in the client record so the mentor can follow up.',
+              'Remember: The clinic\'s reputation depends on accurate work and respectful interactions.'
+            ],
+            tip: 'Some clients are anxious about tax. Reassure them: "We\'ve seen this before — you\'re not alone in this situation."'
+          }
+        ]
+      },
+      {
+        id: 'help-resources',
+        title: 'Help & Resources',
+        sections: [
+          {
+            id: 'contact-mentor',
+            title: 'Contact Mentor',
+            intro: 'How to reach a mentor when you need help.',
+            steps: [
+              'Look around the room — identify the volunteer wearing a "Mentor" badge or ask the receptionist.',
+              'Flag them down or use the help request button on the control sheet.',
+              'Briefly explain the issue: "I have a client with self-employment income and I\'m not sure how to handle it."',
+              'Mentor will advise in real-time or take over the file if needed.',
+              'If no mentor is immediately available, use the alert dashboard to escalate (for review-related issues).',
+              'Record the mentor\'s advice in the control sheet notes for your records.'
+            ],
+            tip: 'Don\'t hesitate to ask questions — mentors expect it and prefer you ask rather than make errors.'
+          },
+          {
+            id: 'faq',
+            title: 'Frequently Asked Questions',
+            intro: 'Answers to common questions from clients and volunteers.',
+            steps: [
+              '<strong>Q: What if my income is above $50k?</strong> A: Ineligible this year. We provide a referral sheet; they can file on their own or hire an accountant.',
+              '<strong>Q: Do I get a refund or owe taxes?</strong> A: Depends on total income and tax withheld. CRA processes the return; refunds take 4–6 weeks.',
+              '<strong>Q: Can I claim my home office?</strong> A: Yes, if you use part of your home exclusively for work. Calculate square footage and household expenses.',
+              '<strong>Q: What about cryptocurrency gains?</strong> A: Taxable as capital gains (50% inclusion). Report at fair market value when sold.',
+              '<strong>Q: Can I claim my dog as a dependent?</strong> A: No. Dependents are spouses, children, or relatives supporting you (subject to income limits).',
+              '<strong>Q: How long do I keep my receipts?</strong> A: 6 years after filing. CRA can audit back further in some cases.'
+            ]
+          }
+        ]
+      }
+    ];
+
+    // Track active category for filtering
+    let activeCategory = null;
+
+    // Show only sections from a specific category
+    function showCategory(categoryId) {
+      document.querySelectorAll('.section').forEach(s => {
+        if (s.dataset.category === categoryId) {
+          s.style.display = '';
+        } else {
+          s.style.display = 'none';
+          // Close open sections in hidden categories
+          const header = s.querySelector('.section-header');
+          const body = s.querySelector('.section-body');
+          if (header && body) {
+            header.classList.remove('open');
+            body.classList.remove('open');
+          }
+        }
+      });
+    }
+
+    // Show all categories (welcome state - no sections visible)
+    function showAllCategories() {
+      document.querySelectorAll('.section').forEach(s => {
+        s.style.display = 'none';
+      });
+    }
+
+    // Initialize the wiki
+    function initWiki() {
+      const navContainer = document.getElementById('wiki-nav');
+      const mainContainer = document.querySelector('.wiki-main');
+
+      // Build sidebar navigation
+      wikiData.forEach(category => {
+        const catDiv = document.createElement('div');
+        const catHeader = document.createElement('div');
+        catHeader.className = 'cat-header';
+        catHeader.textContent = category.title;
+        catHeader.addEventListener('click', function() {
+          const isExpanding = !this.classList.contains('expanded');
+
+          // Collapse all category headers
+          document.querySelectorAll('.cat-header').forEach(h => h.classList.remove('expanded'));
+          document.querySelectorAll('.cat-links').forEach(l => l.classList.remove('open'));
+
+          if (isExpanding) {
+            this.classList.add('expanded');
+            links.classList.add('open');
+            activeCategory = category.id;
+            showCategory(category.id);
+          } else {
+            activeCategory = null;
+            showAllCategories();
+          }
+          saveState();
+        });
+
+        const links = document.createElement('div');
+        links.className = 'cat-links';
+
+        category.sections.forEach(section => {
+          const link = document.createElement('a');
+          link.href = '#' + section.id;
+          link.className = 'cat-link';
+          link.textContent = section.title;
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            scrollToSection(section.id);
+          });
+          links.appendChild(link);
+        });
+
+        catDiv.appendChild(catHeader);
+        catDiv.appendChild(links);
+        navContainer.appendChild(catDiv);
+      });
+
+      // Build main content sections
+      wikiData.forEach(category => {
+        category.sections.forEach(section => {
+          const sectionDiv = document.createElement('div');
+          sectionDiv.className = 'section';
+          sectionDiv.id = section.id;
+          sectionDiv.dataset.category = category.id;
+
+          const header = document.createElement('div');
+          header.className = 'section-header';
+          header.textContent = section.title;
+          header.addEventListener('click', function() {
+            this.classList.toggle('open');
+            body.classList.toggle('open');
+          });
+
+          const body = document.createElement('div');
+          body.className = 'section-body';
+
+          const intro = document.createElement('p');
+          intro.textContent = section.intro;
+          body.appendChild(intro);
+
+          const ol = document.createElement('ol');
+          section.steps.forEach(step => {
+            const li = document.createElement('li');
+            li.innerHTML = step;
+            ol.appendChild(li);
+          });
+          body.appendChild(ol);
+
+          if (section.tip) {
+            const tipDiv = document.createElement('div');
+            tipDiv.className = 'tip';
+            tipDiv.textContent = '💡 ' + section.tip;
+            body.appendChild(tipDiv);
+          }
+
+          sectionDiv.appendChild(header);
+          sectionDiv.appendChild(body);
+          mainContainer.appendChild(sectionDiv);
+        });
+      });
+    }
+
+    // Search functionality
+    const searchInput = document.getElementById('wiki-search');
+    let searchTimeout;
+
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        const query = this.value.toLowerCase().trim();
+        filterWiki(query);
+      }, 300);
+    });
+
+    function filterWiki(query) {
+      const noResults = document.querySelector('.no-results');
+      const mainContainer = document.querySelector('.wiki-main');
+      let hasMatches = false;
+
+      if (!query) {
+        document.querySelectorAll('mark').forEach(el => {
+          const parent = el.parentNode;
+          parent.replaceChild(document.createTextNode(el.textContent), el);
+        });
+        noResults.classList.add('hidden');
+
+        // Restore category filtering
+        if (activeCategory) {
+          showCategory(activeCategory);
+        } else {
+          showAllCategories();
+        }
+        return;
+      }
+
+      // Hide all sections first
+      document.querySelectorAll('.section').forEach(section => {
+        section.style.display = 'none';
+      });
+
+      // Filter links and show matching sections
+      document.querySelectorAll('.cat-link').forEach(link => {
+        const matches = link.textContent.toLowerCase().includes(query);
+        link.style.display = matches ? '' : 'none';
+        if (matches) {
+          const catHeader = link.closest('.cat-links').previousElementSibling;
+          catHeader.classList.add('expanded');
+          link.closest('.cat-links').classList.add('open');
+          hasMatches = true;
+
+          // Show matching section
+          const href = link.getAttribute('href').substring(1);
+          document.querySelectorAll('.section').forEach(section => {
+            if (section.querySelector('.section-header').textContent.toLowerCase().includes(query)) {
+              section.style.display = '';
+              section.querySelector('.section-header').classList.add('open');
+              section.querySelector('.section-body').classList.add('open');
+            }
+          });
+        }
+      });
+
+      // Also search in section content
+      document.querySelectorAll('.section').forEach(section => {
+        const text = section.textContent.toLowerCase();
+        if (text.includes(query)) {
+          section.style.display = '';
+          hasMatches = true;
+          const header = section.querySelector('.section-header');
+          const body = section.querySelector('.section-body');
+          if (!header.classList.contains('open')) {
+            header.classList.add('open');
+            body.classList.add('open');
+          }
+
+          // Highlight matches in content
+          highlightMatches(body, query);
+        }
+      });
+
+      noResults.classList.toggle('hidden', hasMatches);
+      saveState();
+    }
+
+    function highlightMatches(element, query) {
+      const walker = document.createTreeWalker(
+        element,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+      );
+
+      const nodesToReplace = [];
+      let node;
+      while (node = walker.nextNode()) {
+        const text = node.nodeValue.toLowerCase();
+        if (text.includes(query)) {
+          nodesToReplace.push(node);
+        }
+      }
+
+      nodesToReplace.forEach(node => {
+        const span = document.createElement('span');
+        const regex = new RegExp(`(${query})`, 'gi');
+        const html = node.nodeValue.replace(regex, '<mark>$1</mark>');
+        span.innerHTML = html;
+        node.parentNode.replaceChild(span, node);
+      });
+    }
+
+    // Scroll to section with highlight
+    function scrollToSection(id) {
+      const allSections = document.querySelectorAll('.section');
+
+      allSections.forEach(s => {
+        const header = s.querySelector('.section-header');
+        const body = s.querySelector('.section-body');
+        const isTarget = s.id === id || header.textContent.toLowerCase().includes(id.replace(/-/g, ' '));
+
+        if (isTarget) {
+          const cat = s.dataset.category;
+          // Activate the correct category if it's not already active
+          if (cat !== activeCategory) {
+            activeCategory = cat;
+            showCategory(cat);
+            // Sync sidebar: expand the right cat-header and close others
+            document.querySelectorAll('.cat-header').forEach(h => {
+              const catTitle = wikiData.find(c => c.id === cat)?.title;
+              const matches = h.textContent === catTitle;
+              h.classList.toggle('expanded', matches);
+              h.nextElementSibling.classList.toggle('open', matches);
+            });
+          }
+          header.classList.add('open');
+          body.classList.add('open');
+          s.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          body.classList.add('highlight');
+          setTimeout(() => body.classList.remove('highlight'), 600);
+        }
+      });
+      saveState();
+    }
+
+    // Persist state to localStorage
+    function saveState() {
+      localStorage.setItem('wikiActiveCategory', activeCategory || '');
+    }
+
+    function restoreState() {
+      const saved = localStorage.getItem('wikiActiveCategory');
+      if (saved) {
+        activeCategory = saved;
+        // Find the matching category header and expand it
+        const categoryTitle = wikiData.find(c => c.id === saved)?.title;
+        if (categoryTitle) {
+          document.querySelectorAll('.cat-header').forEach(header => {
+            if (header.textContent === categoryTitle) {
+              header.classList.add('expanded');
+              header.nextElementSibling.classList.add('open');
+            }
+          });
+        }
+        showCategory(saved);
+      } else {
+        activeCategory = null;
+        showAllCategories();
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      initWiki();
+      restoreState();
+    });
+
+    // Highlight on scroll (visual feedback)
+    const style = document.createElement('style');
+    style.textContent = `
+      .section-body.highlight {
+        animation: pulse 0.6s ease-in-out;
+      }
+      @keyframes pulse {
+        0%, 100% { background: transparent; }
+        50% { background: rgba(200, 57, 43, 0.1); }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+  </body>
+</html>

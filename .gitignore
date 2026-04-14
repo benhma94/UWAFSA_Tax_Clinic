@@ -11,6 +11,7 @@ webpage/config.js
 
 # Graphify generated outputs (large/binary-like, rebuilt on demand)
 .graphify_*
+graphify-out/
 
 # Superpowers skills/plugins (local tooling, not shared)
 .superpowers/

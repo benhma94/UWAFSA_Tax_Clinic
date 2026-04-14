@@ -101,6 +101,8 @@ function doGet(e) {
       return loadPage('mass_email', 'Mass Email', {});
     case 'volunteermgmt':
       return loadPage('volunteer_management', 'Volunteer Management', {});
+    case 'expenses':
+      return loadPage('expense_tracker', 'Expense Tracker', { vars: { baseUrl } });
     case 'todo':
       return doGetTodoList();
     default:
