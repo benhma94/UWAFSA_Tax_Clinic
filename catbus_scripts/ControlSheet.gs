@@ -101,7 +101,7 @@ function getVolunteersAndClients() {
           if (!name || !station || !sessionId) continue;
 
           const signInDate = new Date(row[CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP]).toDateString();
-          if (signInDate !== today && station !== 'quiz') continue;
+          if (signInDate !== today) continue;
 
           if (signedOutSessions.has(sessionId)) continue;
 
@@ -214,6 +214,7 @@ function getMentorList() {
       () => {
         const volunteerSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
         const lastRow = volunteerSheet.getLastRow();
+        const today = new Date().toDateString();
 
         if (lastRow <= 1) {
           return { reviewers: [], seniors: [] };
@@ -246,12 +247,13 @@ function getMentorList() {
           const name = data[i][1]?.toString().trim();
           const role = data[i][2]?.toString().trim().toLowerCase();
           const sessionId = data[i][3]?.toString().trim();
+          const signInDate = new Date(timestamp).toDateString();
 
-          if (name && timestamp instanceof Date) {
-            // Include any mentor currently signed in (not yet signed out), regardless of sign-in date
-            if ((role === 'mentor' || role === 'senior mentor') && !signedOutIds.has(sessionId)) {
-              mentorsToday.add(name);
-            }
+          if (!name || !(timestamp instanceof Date)) continue;
+          if (signInDate !== today) continue;
+
+          if ((role === 'mentor' || role === 'senior mentor') && !signedOutIds.has(sessionId)) {
+            mentorsToday.add(name);
           }
         }
 

@@ -387,7 +387,11 @@ function setVolunteerBreakStatus(volunteerName, isOnBreak) {
     setCellValue(sheet, sheetRow, CONFIG.COLUMNS.VOLUNTEER_LIST.ON_BREAK, isOnBreak ? 'yes' : '');
 
     // Invalidate caches so queue and control sheet reflect the change immediately
-    invalidateMultiple([CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS, CACHE_CONFIG.KEYS.VOLUNTEER_LIST]);
+    invalidateMultiple([
+      CACHE_CONFIG.KEYS.QUEUE,
+      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
+      CACHE_CONFIG.KEYS.VOLUNTEER_LIST
+    ]);
 
     Logger.log(`Break status for ${volunteerName}: ${isOnBreak ? 'ON BREAK' : 'AVAILABLE'}`);
     return { success: true, isOnBreak: isOnBreak };

@@ -1775,6 +1775,9 @@
         quizVolunteerSet     = new Set(data.quizVolunteers || []);
         checkFormReady();
         checkAndShowDraftBanner(); // show restore banner if a draft exists
+      }).withFailureHandler(error => {
+        const message = (error && error.message) ? error.message : error;
+        showError('Error loading volunteers and clients: ' + message, true);
       }).getVolunteersAndClients();
       setupVolunteerAutocomplete();
       startPolling();

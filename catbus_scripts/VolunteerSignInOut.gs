@@ -8,6 +8,7 @@ function buildVolunteerSessionState_() {
   const signInSheet = ss.getSheetByName(CONFIG.SHEETS.VOLUNTEER_LIST);
   const signOutSheet = ss.getSheetByName(CONFIG.SHEETS.SIGNOUT);
   const cols = CONFIG.COLUMNS.VOLUNTEER_LIST;
+  const today = new Date().toDateString();
 
   if (!signInSheet || !signOutSheet) {
     return {
@@ -38,10 +39,12 @@ function buildVolunteerSessionState_() {
 
   for (let i = 0; i < signInData.length; i++) {
     const timestamp = signInData[i][cols.TIMESTAMP];
+    const signInDate = new Date(timestamp).toDateString();
     const name = signInData[i][cols.NAME]?.toString().trim();
     const station = signInData[i][cols.STATION]?.toString().trim();
     const sessionId = signInData[i][cols.SESSION_ID]?.toString().trim();
     if (!name || !sessionId || signedOutIds.has(sessionId)) continue;
+    if (signInDate !== today) continue;
 
     if (station && !exceptionStations.has(station)) {
       activeStations.add(station);
@@ -153,7 +156,12 @@ function signInVolunteer(volunteerName, station) {
       sheet.appendRow([timestamp, normalizedName, normalizedStation, sessionId]);
 
       Logger.log(`Volunteer signed in: ${normalizedName} at station ${normalizedStation} (${sessionId})`);
-      invalidateCache(CACHE_CONFIG.KEYS.MENTOR_LIST);
+      invalidateMultiple([
+        CACHE_CONFIG.KEYS.MENTOR_LIST,
+        CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
+        CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
+        CACHE_CONFIG.KEYS.QUEUE
+      ]);
 
       return {
         success: true,
@@ -190,7 +198,12 @@ function signOutVolunteer(sessionId) {
     signOutSheet.appendRow([timestamp, session.name || sessionId, sessionId.trim()]);
 
     Logger.log(`Volunteer signed out: ${session.name} (${sessionId})`);
-    invalidateCache(CACHE_CONFIG.KEYS.MENTOR_LIST);
+    invalidateMultiple([
+      CACHE_CONFIG.KEYS.MENTOR_LIST,
+      CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
+      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
+      CACHE_CONFIG.KEYS.QUEUE
+    ]);
 
     return {
       success: true,
@@ -303,7 +316,8 @@ function clearStaleSessions(hoursThreshold) {
         }
         invalidateMultiple([
           CACHE_CONFIG.KEYS.QUEUE,
-          CACHE_CONFIG.KEYS.VOLUNTEER_LIST
+          CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
+          CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
         ]);
       }
     }

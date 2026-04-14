@@ -428,8 +428,6 @@
   }
 
   function loadQueue() {
-    if (!isPageVisible) return; // Don't refresh if page is not visible
-    
     google.script.run.withSuccessHandler(data => {
       const serialized = JSON.stringify(data);
 
@@ -447,6 +445,10 @@
         // Still update timestamp even if data didn't change
         updateLastUpdatedTime();
       }
+    }).withFailureHandler(error => {
+      const message = (error && error.message) ? error.message : error;
+      showToast('Error loading queue data: ' + message, 'error');
+      updateLastUpdatedTime();
     }).getQueueData();
   }
 
