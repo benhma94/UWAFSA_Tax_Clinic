@@ -166,8 +166,15 @@ function buildReceiptEmailBody(emailData, filingStatus) {
           <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #8e0000;">Return Summary:</h3>
             
-            ${emailData.refundBalance && emailData.refundLabel ? `
+            ${emailData.refundBalance && emailData.refundLabel && !emailData.refundBalance2 ? `
               <p><strong>${escapeHtmlServer(emailData.refundLabel)}:</strong> ${escapeHtmlServer(emailData.refundBalance)}</p>
+            ` : ''}
+
+            ${emailData.refundBalance2 ? `
+              ${emailData.refundBalance && emailData.refundLabel ? `
+                <p><strong>Taxpayer 1 ${escapeHtmlServer(emailData.refundLabel)}:</strong> ${escapeHtmlServer(emailData.refundBalance)}</p>
+              ` : ''}
+              <p><strong>Taxpayer 2 ${escapeHtmlServer(emailData.refundLabel2 || 'Refund')}:</strong> ${escapeHtmlServer(emailData.refundBalance2)}</p>
             ` : ''}
 
             ${emailData.onBen ? `
@@ -182,8 +189,13 @@ function buildReceiptEmailBody(emailData, filingStatus) {
               <p><strong>Other Amounts:</strong> ${escapeHtmlServer(emailData.other)}</p>
             ` : ''}
 
-            ${emailData.efileConfirmation ? `
+            ${emailData.efileConfirmation && !emailData.efileConfirmation2 ? `
               <p><strong>E-File Confirmation Number:</strong> ${escapeHtmlServer(emailData.efileConfirmation)}</p>
+            ` : ''}
+
+            ${emailData.efileConfirmation2 ? `
+              <p><strong>Taxpayer 1 E-File Confirmation Number:</strong> ${escapeHtmlServer(emailData.efileConfirmation)}</p>
+              <p><strong>Taxpayer 2 E-File Confirmation Number:</strong> ${escapeHtmlServer(emailData.efileConfirmation2)}</p>
             ` : ''}
           </div>
           
