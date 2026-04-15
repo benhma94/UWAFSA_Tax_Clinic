@@ -3516,9 +3516,24 @@
       const modal = document.getElementById('emailReceiptModal');
       const filingStatus = modal.getAttribute('data-filing-status') || 'efile';
       const taxYear = modal.getAttribute('data-tax-year') || '';
+      const isMarried = currentClientData?.situations?.includes('Married/Common-Law') || false;
+
+      // Validate efile confirmations differ for married clients
+      if (isMarried && filingStatus === 'efile') {
+        const conf1 = document.getElementById('efileConfirmation1Receipt').value.trim();
+        const conf2 = document.getElementById('efileConfirmation2Receipt').value.trim();
+        if (conf1 && conf2 && conf1 === conf2) {
+          document.getElementById('efileMatchError').style.display = 'block';
+          showEmailStatus('E-File confirmation numbers must be different for each taxpayer.', 'error');
+          return;
+        }
+        document.getElementById('efileMatchError').style.display = 'none';
+      }
 
       // Extract and format numbers
-      const refundBalanceRaw = document.getElementById('refundBalanceReceipt').value.trim();
+      const refundBalanceRaw = isMarried
+        ? document.getElementById('refundBalance1Receipt').value.trim()
+        : document.getElementById('refundBalanceReceipt').value.trim();
       const refundBalanceNum = refundBalanceRaw ? parseAccountingNumber(refundBalanceRaw) : null;
       
       const gstHstRaw = document.getElementById('gstHstReceipt').value.trim();
@@ -3529,6 +3544,10 @@
       
       const otherRaw = document.getElementById('otherReceipt').value.trim();
       const otherNum = otherRaw ? parseAccountingNumber(otherRaw) : null;
+
+      // Taxpayer 2 refund (married only)
+      const refundBalance2Raw = isMarried ? document.getElementById('refundBalance2Receipt').value.trim() : '';
+      const refundBalance2Num = refundBalance2Raw ? parseAccountingNumber(refundBalance2Raw) : null;
 
       // Format refund/balance - determine label based on sign
       let refundBalance = null;
@@ -3545,10 +3564,23 @@
         }
       }
 
+      // Format T2 refund/balance
+      let refundBalance2 = null;
+      let refundLabel2 = null;
+      if (refundBalance2Num !== null && !isNaN(refundBalance2Num) && refundBalance2Num !== 0) {
+        const absValue2 = Math.abs(refundBalance2Num);
+        const formatted2 = formatAsAccountingPositive(absValue2);
+        refundLabel2 = refundBalance2Num > 0 ? 'Refund' : 'Balance Owing';
+        refundBalance2 = formatted2;
+      }
+
       // Calculate total sum of all numeric amounts
       let totalAmount = 0;
       if (refundBalanceNum !== null && !isNaN(refundBalanceNum)) {
         totalAmount += refundBalanceNum;
+      }
+      if (isMarried && refundBalance2Num !== null && !isNaN(refundBalance2Num)) {
+        totalAmount += refundBalance2Num;
       }
       if (gstHstNum !== null && !isNaN(gstHstNum) && gstHstNum >= 0) {
         totalAmount += gstHstNum;
@@ -3562,29 +3594,51 @@
 
       const _emailReceiptRow = document.querySelector(`[data-row-id="${currentEmailRowId}"]`);
       const emailData = {
-        clientEmail: document.getElementById('clientEmailReceipt').value.trim(),
+        clientEmail: isMarried
+          ? document.getElementById('clientEmail1Receipt').value.trim()
+          : document.getElementById('clientEmailReceipt').value.trim(),
+        clientEmail2: isMarried
+          ? document.getElementById('clientEmail2Receipt').value.trim()
+          : '',
         refundBalance: refundBalance,
         refundLabel: refundLabel,
+        refundBalance2: refundBalance2,
+        refundLabel2: refundLabel2,
         gstHst: gstHstNum !== null && !isNaN(gstHstNum) && gstHstNum >= 0 ? formatAsAccountingPositive(gstHstNum) : '',
         onBen: onBenNum !== null && !isNaN(onBenNum) && onBenNum >= 0 ? formatAsAccountingPositive(onBenNum) : '',
         other: otherNum !== null && !isNaN(otherNum) && otherNum >= 0 ? formatAsAccountingPositive(otherNum) : '',
         notes: document.getElementById('notesReceipt').value.trim(),
         totalAmount: totalAmount,
         ufilePassword: document.getElementById('ufilePasswordReceipt').value.trim(),
-        efileConfirmation: filingStatus === 'efile' ? document.getElementById('efileConfirmationReceipt').value.trim() : '',
+        efileConfirmation: isMarried && filingStatus === 'efile'
+          ? document.getElementById('efileConfirmation1Receipt').value.trim()
+          : (filingStatus === 'efile' ? document.getElementById('efileConfirmationReceipt').value.trim() : ''),
+        efileConfirmation2: isMarried && filingStatus === 'efile'
+          ? document.getElementById('efileConfirmation2Receipt').value.trim()
+          : '',
         clientID: document.getElementById('client').value.trim(),
         volunteerName: document.getElementById('volunteer').value.trim(),
-        married: currentClientData?.situations?.includes("Married/Common-Law") || false,
+        married: isMarried,
         reviewer: _emailReceiptRow?.querySelector('input[name="reviewer"]')?.value.trim() || '',
         secondaryReviewer: _emailReceiptRow?.querySelector('input[name="secondaryReviewer"]')?.value.trim() || ''
       };
 
       // Validate E-File Confirmation Number is required for EFILE
       if (filingStatus === 'efile') {
-        const efileConfirmation = document.getElementById('efileConfirmationReceipt').value.trim();
-        if (!efileConfirmation) {
-          showEmailStatus('E-File Confirmation Number is required for EFILE submissions.', 'error');
-          return;
+        if (isMarried) {
+          if (!emailData.efileConfirmation) {
+            showEmailStatus('E-File Confirmation Number for Taxpayer 1 is required for EFILE submissions.', 'error');
+            return;
+          }
+          if (!emailData.efileConfirmation2) {
+            showEmailStatus('E-File Confirmation Number for Taxpayer 2 is required for EFILE submissions.', 'error');
+            return;
+          }
+        } else {
+          if (!emailData.efileConfirmation) {
+            showEmailStatus('E-File Confirmation Number is required for EFILE submissions.', 'error');
+            return;
+          }
         }
       }
 
