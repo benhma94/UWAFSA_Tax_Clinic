@@ -1463,32 +1463,62 @@
       </div>
       
       <div class="email-modal-body">
+        <div id="receiptMarriedBanner">Married / Common-Law — two taxpayers</div>
         <form id="emailReceiptForm">
           <div class="email-form-field">
             <label for="clientEmailReceipt">Client Email <span style="color: red;">*</span></label>
             <input type="email" id="clientEmailReceipt" required placeholder="client@example.com">
           </div>
-          
+
+          <div class="email-form-field receipt-married-field">
+            <label>Client Email</label>
+            <div class="receipt-pair">
+              <div class="receipt-pair-col">
+                <div class="receipt-pair-label">Taxpayer 1 <span style="color:red;">*</span></div>
+                <input type="email" id="clientEmail1Receipt" placeholder="taxpayer1@example.com">
+              </div>
+              <div class="receipt-pair-col">
+                <div class="receipt-pair-label">Taxpayer 2 <span class="receipt-optional">(optional)</span></div>
+                <input type="email" id="clientEmail2Receipt" placeholder="spouse@example.com">
+              </div>
+            </div>
+          </div>
+
           <div class="email-form-field">
             <label for="refundBalanceReceipt">Refund/Balance Owing</label>
             <input type="text" id="refundBalanceReceipt" class="number-input" placeholder="Enter amount (e.g., 1,500.00 or -200.00)" oninput="formatAccountingNumber(this, 'refundBalance')" onblur="validateAndFormatRefundBalance(this)">
             <div class="number-input-hint">Positive = Refund (green), Negative = Balance Owing (red)</div>
           </div>
-          
+
+          <div class="email-form-field receipt-married-field">
+            <label>Refund / Balance Owing</label>
+            <div class="receipt-pair">
+              <div class="receipt-pair-col">
+                <div class="receipt-pair-label">Taxpayer 1</div>
+                <input type="text" id="refundBalance1Receipt" class="number-input" placeholder="e.g., 1,200.00 or -200.00" oninput="formatAccountingNumber(this, 'refundBalance1')" onblur="validateAndFormatRefundBalance(this)">
+              </div>
+              <div class="receipt-pair-col">
+                <div class="receipt-pair-label">Taxpayer 2</div>
+                <input type="text" id="refundBalance2Receipt" class="number-input" placeholder="e.g., 1,200.00 or -200.00" oninput="formatAccountingNumber(this, 'refundBalance2')" onblur="validateAndFormatRefundBalance(this)">
+              </div>
+            </div>
+            <div class="number-input-hint">Positive = Refund (green), Negative = Balance Owing (red)</div>
+          </div>
+
           <div class="email-form-field">
-            <label for="onBenReceipt">Total ON-BEN Credit</label>
+            <label for="onBenReceipt">Total ON-BEN Credit <span id="onBenCombinedHint" style="display:none; font-weight:normal; color:#888; font-size:0.88em;">(combined)</span></label>
             <input type="text" id="onBenReceipt" class="number-input" placeholder="Enter amount (e.g., 75.00)" oninput="formatAccountingNumber(this, 'onBen')" onblur="finalizeAccountingFormat(this)">
             <div class="number-input-hint">Enter as number (e.g., 75.00)</div>
           </div>
 
           <div class="email-form-field">
-            <label for="gstHstReceipt">Total CGEB or GST/HST Credit</label>
+            <label for="gstHstReceipt">Total CGEB or GST/HST Credit <span id="gstCombinedHint" style="display:none; font-weight:normal; color:#888; font-size:0.88em;">(combined)</span></label>
             <input type="text" id="gstHstReceipt" class="number-input" placeholder="Enter amount (e.g., 150.00)" oninput="formatAccountingNumber(this, 'gstHst')" onblur="finalizeAccountingFormat(this)">
             <div class="number-input-hint">Enter as number (e.g., 150.00)</div>
           </div>
           
           <div class="email-form-field">
-            <label for="otherReceipt">Other Amounts</label>
+            <label for="otherReceipt">Other Amounts <span id="otherCombinedHint" style="display:none; font-weight:normal; color:#888; font-size:0.88em;">(combined)</span></label>
             <input type="text" id="otherReceipt" class="number-input" placeholder="Enter amount (e.g., 150.00)" oninput="formatAccountingNumber(this, 'other')" onblur="finalizeAccountingFormat(this)">
             <div class="number-input-hint">Enter as number (e.g., 150.00)</div>
           </div>
@@ -1506,6 +1536,21 @@
           <div class="email-form-field" id="efileConfirmationField" style="display: none;">
             <label for="efileConfirmationReceipt">E-File Confirmation Number <span style="color:#e74c3c;">*</span></label>
             <input type="text" id="efileConfirmationReceipt" placeholder="Enter E-File confirmation number" required>
+          </div>
+
+          <div class="email-form-field receipt-married-field" id="efileConfirmationFieldMarried" style="display: none;">
+            <label>E-File Confirmation Number <span style="color:#e74c3c;">*</span></label>
+            <div class="receipt-pair">
+              <div class="receipt-pair-col">
+                <div class="receipt-pair-label">Taxpayer 1</div>
+                <input type="text" id="efileConfirmation1Receipt" placeholder="Enter confirmation number">
+              </div>
+              <div class="receipt-pair-col">
+                <div class="receipt-pair-label">Taxpayer 2</div>
+                <input type="text" id="efileConfirmation2Receipt" placeholder="Enter confirmation number">
+              </div>
+            </div>
+            <div id="efileMatchError" style="display:none; font-size:0.82em; color:#e74c3c; margin-top:4px;">Confirmation numbers must be different from each other.</div>
           </div>
         </form>
 
