@@ -3,78 +3,118 @@
  * Handles volunteer sign-in and sign-out functionality
  */
 
-function buildVolunteerSessionState_() {
-  const ss = getSpreadsheet();
-  const signInSheet = ss.getSheetByName(CONFIG.SHEETS.VOLUNTEER_LIST);
-  const signOutSheet = ss.getSheetByName(CONFIG.SHEETS.SIGNOUT);
-  const cols = CONFIG.COLUMNS.VOLUNTEER_LIST;
-  const today = new Date().toDateString();
+/**
+ * Converts a timestamp-like value to an ISO string for client-safe JSON payloads.
+ * @param {*} value - Date-like value
+ * @returns {string|null} ISO timestamp string or null when invalid
+ */
+function toClientIsoTimestamp_(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
 
-  if (!signInSheet || !signOutSheet) {
+function buildVolunteerSessionState_() {
+  try {
+    const ss = getSpreadsheet();
+    if (!ss) {
+      Logger.log('buildVolunteerSessionState_: Spreadsheet is null, returning empty state');
+      return getEmptySessionState_();
+    }
+
+    const signInSheet = ss.getSheetByName(CONFIG.SHEETS.VOLUNTEER_LIST);
+    const signOutSheet = ss.getSheetByName(CONFIG.SHEETS.SIGNOUT);
+    const cols = CONFIG.COLUMNS.VOLUNTEER_LIST;
+    const today = new Date().toDateString();
+
+    if (!signInSheet || !signOutSheet) {
+      Logger.log(`buildVolunteerSessionState_: Missing sheets (signIn: ${!!signInSheet}, signOut: ${!!signOutSheet})`);
+      return {
+        signInSheet,
+        signOutSheet,
+        signInData: [],
+        signedOutIds: new Set(),
+        activeStations: new Set(),
+        activeSessions: [],
+        activeSessionById: {},
+        activeSessionByName: {}
+      };
+    }
+
+    const signInData = signInSheet.getLastRow() > 1
+      ? signInSheet.getRange(2, 1, signInSheet.getLastRow() - 1, cols.SESSION_ID + 1).getValues()
+      : [];
+    const signOutData = signOutSheet.getLastRow() > 1
+      ? signOutSheet.getRange(2, CONFIG.COLUMNS.SIGNOUT.SESSION_ID + 1, signOutSheet.getLastRow() - 1, 1).getValues()
+      : [];
+
+    const signedOutIds = new Set(signOutData.map(row => row[0]?.toString().trim()).filter(Boolean));
+    const exceptionStations = new Set(CONFIG.SIGN_IN_OUT.EXCEPTION_STATIONS);
+    const activeStations = new Set();
+    const activeSessions = [];
+    const activeSessionById = {};
+    const activeSessionByName = {};
+
+    for (let i = 0; i < signInData.length; i++) {
+      const timestamp = signInData[i][cols.TIMESTAMP];
+      const signInDate = new Date(timestamp).toDateString();
+      const name = signInData[i][cols.NAME]?.toString().trim();
+      const station = signInData[i][cols.STATION]?.toString().trim();
+      const sessionId = signInData[i][cols.SESSION_ID]?.toString().trim();
+      if (!name || !sessionId || signedOutIds.has(sessionId)) continue;
+      if (signInDate !== today) continue;
+
+      if (station && !exceptionStations.has(station)) {
+        activeStations.add(station);
+      }
+
+      const time = Utilities.formatDate(new Date(timestamp), Session.getScriptTimeZone(), 'HH:mm');
+      const session = {
+        name,
+        station: station || 'N/A',
+        sessionId,
+        timestamp,
+        time,
+        displayText: `${name} @ ${time} • Station ${station || 'N/A'}`
+      };
+      activeSessions.push(session);
+      activeSessionById[sessionId] = session;
+      activeSessionByName[name.toLowerCase()] = session;
+    }
+
+    activeSessions.sort((a, b) => a.name.localeCompare(b.name));
+
     return {
       signInSheet,
       signOutSheet,
-      signInData: [],
-      signedOutIds: new Set(),
-      activeStations: new Set(),
-      activeSessions: [],
-      activeSessionById: {},
-      activeSessionByName: {}
+      signInData,
+      signedOutIds,
+      activeStations,
+      activeSessions,
+      activeSessionById,
+      activeSessionByName
     };
+  } catch (error) {
+    Logger.log(`buildVolunteerSessionState_ error: ${error.message}`);
+    Logger.log(`Stack: ${error.stack}`);
+    return getEmptySessionState_();
   }
+}
 
-  const signInData = signInSheet.getLastRow() > 1
-    ? signInSheet.getRange(2, 1, signInSheet.getLastRow() - 1, cols.SESSION_ID + 1).getValues()
-    : [];
-  const signOutData = signOutSheet.getLastRow() > 1
-    ? signOutSheet.getRange(2, CONFIG.COLUMNS.SIGNOUT.SESSION_ID + 1, signOutSheet.getLastRow() - 1, 1).getValues()
-    : [];
-
-  const signedOutIds = new Set(signOutData.map(row => row[0]?.toString().trim()).filter(Boolean));
-  const exceptionStations = new Set(CONFIG.SIGN_IN_OUT.EXCEPTION_STATIONS);
-  const activeStations = new Set();
-  const activeSessions = [];
-  const activeSessionById = {};
-  const activeSessionByName = {};
-
-  for (let i = 0; i < signInData.length; i++) {
-    const timestamp = signInData[i][cols.TIMESTAMP];
-    const signInDate = new Date(timestamp).toDateString();
-    const name = signInData[i][cols.NAME]?.toString().trim();
-    const station = signInData[i][cols.STATION]?.toString().trim();
-    const sessionId = signInData[i][cols.SESSION_ID]?.toString().trim();
-    if (!name || !sessionId || signedOutIds.has(sessionId)) continue;
-    if (signInDate !== today) continue;
-
-    if (station && !exceptionStations.has(station)) {
-      activeStations.add(station);
-    }
-
-    const time = Utilities.formatDate(new Date(timestamp), Session.getScriptTimeZone(), 'HH:mm');
-    const session = {
-      name,
-      station: station || 'N/A',
-      sessionId,
-      timestamp,
-      time,
-      displayText: `${name} @ ${time} • Station ${station || 'N/A'}`
-    };
-    activeSessions.push(session);
-    activeSessionById[sessionId] = session;
-    activeSessionByName[name.toLowerCase()] = session;
-  }
-
-  activeSessions.sort((a, b) => a.name.localeCompare(b.name));
-
+/**
+ * Returns safe empty session state
+ * @returns {Object} Empty session state structure
+ */
+function getEmptySessionState_() {
   return {
-    signInSheet,
-    signOutSheet,
-    signInData,
-    signedOutIds,
-    activeStations,
-    activeSessions,
-    activeSessionById,
-    activeSessionByName
+    signInSheet: null,
+    signOutSheet: null,
+    signInData: [],
+    signedOutIds: new Set(),
+    activeStations: new Set(),
+    activeSessions: [],
+    activeSessionById: {},
+    activeSessionByName: {}
   };
 }
 
@@ -87,12 +127,15 @@ function getAvailableStations() {
     const stationList = Array.from({ length: CONFIG.SIGN_IN_OUT.STATION_COUNT }, (_, i) => (i + 1).toString());
     const exceptionStations = CONFIG.SIGN_IN_OUT.EXCEPTION_STATIONS;
     const sessionState = buildVolunteerSessionState_();
+    const activeStations = sessionState.activeStations instanceof Set
+      ? sessionState.activeStations
+      : new Set(Array.isArray(sessionState.activeStations) ? sessionState.activeStations : []);
 
     if (!sessionState.signInSheet || !sessionState.signOutSheet) {
       return [...exceptionStations, ...stationList];
     }
 
-    const availableStations = stationList.filter(s => !sessionState.activeStations.has(s));
+    const availableStations = stationList.filter(s => !activeStations.has(s));
     const sortedStations = availableStations.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
     return [...exceptionStations, ...sortedStations];
   }, 'getAvailableStations');
@@ -106,7 +149,28 @@ function getActiveSessions() {
   return safeExecute(() => {
     const sessionState = buildVolunteerSessionState_();
     if (!sessionState.signInSheet || !sessionState.signOutSheet) return [];
-    return sessionState.activeSessions;
+
+    const sessions = Array.isArray(sessionState.activeSessions) ? sessionState.activeSessions : [];
+    return sessions
+      .map(session => {
+        const name = session?.name ? session.name.toString().trim() : '';
+        const sessionId = session?.sessionId ? session.sessionId.toString().trim() : '';
+        if (!name || !sessionId) return null;
+
+        const station = session?.station ? session.station.toString().trim() : 'N/A';
+        const timestamp = toClientIsoTimestamp_(session?.timestamp);
+        const time = session?.time ? session.time.toString().trim() : '';
+
+        return {
+          name,
+          station: station || 'N/A',
+          sessionId,
+          timestamp,
+          time,
+          displayText: `${name} @ ${time || '--:--'} • Station ${station || 'N/A'}`
+        };
+      })
+      .filter(Boolean);
   }, 'getActiveSessions');
 }
 
@@ -166,7 +230,7 @@ function signInVolunteer(volunteerName, station) {
       return {
         success: true,
         sessionId,
-        timestamp,
+        timestamp: toClientIsoTimestamp_(timestamp),
         volunteerName: normalizedName,
         station: normalizedStation
       };
@@ -208,7 +272,7 @@ function signOutVolunteer(sessionId) {
     return {
       success: true,
       sessionId: sessionId.trim(),
-      timestamp,
+      timestamp: toClientIsoTimestamp_(timestamp),
       volunteerName: session.name
     };
   }, 'signOutVolunteer');
@@ -254,14 +318,17 @@ function getOrCreateSignOutSheet_() {
  */
 function getSignInStats() {
   return safeExecute(() => {
-    const activeSessions = getActiveSessions();
-    const availableStations = getAvailableStations();
+    const activeSessionsResult = getActiveSessions();
+    const availableStationsResult = getAvailableStations();
+    const activeSessions = Array.isArray(activeSessionsResult) ? activeSessionsResult : [];
+    const availableStations = Array.isArray(availableStationsResult) ? availableStationsResult : [];
     const regularStations = availableStations.filter(s => !CONFIG.SIGN_IN_OUT.EXCEPTION_STATIONS.includes(s));
+    const totalStations = parseInt(CONFIG.SIGN_IN_OUT.STATION_COUNT, 10) || 0;
 
     return {
       activeVolunteers: activeSessions.length,
       availableStations: regularStations.length,
-      totalStations: CONFIG.SIGN_IN_OUT.STATION_COUNT,
+      totalStations,
       activeSessions
     };
   }, 'getSignInStats');

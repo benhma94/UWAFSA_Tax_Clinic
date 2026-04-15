@@ -5,7 +5,8 @@
         "/^cd \"c:\\\\Users\\\\Ben Ma\\\\Dropbox\\\\Tax Clinic\\\\Website\" ; python -m graphify \"catbus_scripts\" --update --obsidian --obsidian-dir \"Obsidian - Tax Clinic Website\"$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "git -C \"c:\\Users\\Ben": true
     },
     "python-envs.defaultEnvManager": "ms-python.python:system"
 }

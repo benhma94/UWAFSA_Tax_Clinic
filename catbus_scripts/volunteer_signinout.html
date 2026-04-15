@@ -563,7 +563,7 @@
   function loadActiveSessions() {
     google.script.run
       .withSuccessHandler(sessions => {
-        allSessions = sessions || [];
+        allSessions = normalizeActiveSessions(sessions);
       })
       .withFailureHandler(error => {
         allSessions = [];
@@ -587,26 +587,97 @@
     });
   }
 
+  function getPayloadSummary(payload) {
+    const type = payload === null ? 'null' : Array.isArray(payload) ? 'array' : typeof payload;
+    const summary = { type };
+
+    if (Array.isArray(payload)) {
+      summary.length = payload.length;
+      return summary;
+    }
+
+    if (payload && typeof payload === 'object') {
+      summary.keys = Object.keys(payload).slice(0, 10);
+    }
+
+    return summary;
+  }
+
+  function toDisplayTimeFromTimestamp(timestamp) {
+    if (!timestamp) return 'Unknown time';
+    const parsed = new Date(timestamp);
+    return Number.isNaN(parsed.getTime())
+      ? 'Unknown time'
+      : parsed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function normalizeActiveSessions(sessions) {
+    if (!Array.isArray(sessions)) return [];
+
+    return sessions
+      .map(rawSession => {
+        if (!rawSession || typeof rawSession !== 'object') return null;
+
+        const name = (rawSession.name || '').toString().trim();
+        const station = (rawSession.station || 'N/A').toString().trim() || 'N/A';
+        const sessionId = (rawSession.sessionId || '').toString().trim();
+        const timestamp = rawSession.timestamp ? rawSession.timestamp.toString() : '';
+        const time = (rawSession.time || '').toString().trim() || toDisplayTimeFromTimestamp(timestamp);
+        const displayText = (rawSession.displayText || `${name || 'Unknown volunteer'} @ ${time} • Station ${station}`).toString();
+
+        return {
+          name: name || 'Unknown volunteer',
+          station,
+          sessionId,
+          timestamp,
+          time,
+          displayText
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function normalizeSignInStats(stats) {
+    const safeStats = (stats && typeof stats === 'object') ? stats : {};
+    const activeSessions = normalizeActiveSessions(safeStats.activeSessions);
+    const activeVolunteers = Number.parseInt(safeStats.activeVolunteers, 10);
+    const availableStations = Number.parseInt(safeStats.availableStations, 10);
+
+    return {
+      activeVolunteers: Number.isNaN(activeVolunteers) ? activeSessions.length : activeVolunteers,
+      availableStations: Number.isNaN(availableStations) ? 0 : availableStations,
+      activeSessions
+    };
+  }
+
   function refreshStats() {
     google.script.run
       .withSuccessHandler(stats => {
-        document.getElementById('activeVolunteers').textContent = stats.activeVolunteers || 0;
-        document.getElementById('availableStations').textContent = stats.availableStations || 0;
+        const safeStats = normalizeSignInStats(stats);
+        if (!stats || typeof stats !== 'object') {
+          console.error('Invalid getSignInStats payload:', getPayloadSummary(stats));
+        }
+
+        document.getElementById('activeVolunteers').textContent = safeStats.activeVolunteers;
+        document.getElementById('availableStations').textContent = safeStats.availableStations;
         
         // Display active sessions
         const container = document.getElementById('activeSessionsContainer');
         const list = document.getElementById('activeSessionsList');
         
-        if (stats.activeSessions && stats.activeSessions.length > 0) {
+        if (safeStats.activeSessions.length > 0) {
           container.style.display = 'block';
           list.innerHTML = '';
           
-          stats.activeSessions.forEach(session => {
+          safeStats.activeSessions.forEach(session => {
+            const sessionName = session.name || 'Unknown volunteer';
+            const station = session.station || 'N/A';
+            const time = session.time || toDisplayTimeFromTimestamp(session.timestamp);
             const div = document.createElement('div');
             div.className = 'session-item';
             div.innerHTML = `
-              <strong>${session.name}</strong> 
-              <span style="opacity: 0.7;">• Station: ${session.station} • Signed in at ${session.time}</span>
+              <strong>${sessionName}</strong> 
+              <span style="opacity: 0.7;">• Station: ${station} • Signed in at ${time}</span>
             `;
             list.appendChild(div);
           });
@@ -641,8 +712,21 @@
         btn.disabled = false;
         btn.textContent = originalText;
 
+        if (!result || typeof result !== 'object') {
+          console.error('Invalid sign-in response payload:', getPayloadSummary(result));
+          showMessage('Sign-in completed, but status response was invalid. Refreshing page data.', 'info');
+          loadAvailableStations();
+          loadActiveSessions();
+          refreshStats();
+          return;
+        }
+
+        const volunteerName = (result.volunteerName || name).toString();
+        const stationName = (result.station || station).toString();
+        const signInTime = toDisplayTimeFromTimestamp(result.timestamp || result.timestampIso || Date.now());
+
         showToast('Volunteer signed in!');
-        showMessage(`Successfully signed in! Welcome, ${result.volunteerName} at Station ${result.station}`, 'success');
+        showMessage(`Successfully signed in! Welcome, ${volunteerName} at Station ${stationName}`, 'success');
 
         // Clear form
         document.getElementById('signInForm').reset();
@@ -653,11 +737,10 @@
         container.style.display = 'block';
         const div = document.createElement('div');
         div.className = 'session-item';
-        const signInTime = new Date(result.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        div.innerHTML = `<strong>${result.volunteerName}</strong> <span style="opacity: 0.7;">• Station: ${result.station} • Signed in at ${signInTime}</span>`;
+        div.innerHTML = `<strong>${volunteerName}</strong> <span style="opacity: 0.7;">• Station: ${stationName} • Signed in at ${signInTime}</span>`;
         list.appendChild(div);
         const activeEl = document.getElementById('activeVolunteers');
-        activeEl.textContent = (parseInt(activeEl.textContent) || 0) + 1;
+        activeEl.textContent = (parseInt(activeEl.textContent, 10) || 0) + 1;
 
         // Refresh all data from server to confirm and sync
         loadAvailableStations();
@@ -692,8 +775,22 @@
         btn.disabled = false;
         btn.textContent = originalText;
 
+        if (!result || typeof result !== 'object') {
+          console.error('Invalid sign-out response payload:', getPayloadSummary(result));
+          showMessage('Sign-out completed, but status response was invalid. Refreshing page data.', 'info');
+          document.getElementById('signOutForm').reset();
+          document.getElementById('sessionInput').value = '';
+          selectedSession = null;
+          loadAvailableStations();
+          loadActiveSessions();
+          refreshStats();
+          return;
+        }
+
+        const signedOutName = (result.volunteerName || selectedSession.name || 'volunteer').toString();
+
         showToast('Volunteer signed out!');
-        showMessage(`Successfully signed out. Thank you, ${result.volunteerName || 'volunteer'}!`, 'success');
+        showMessage(`Successfully signed out. Thank you, ${signedOutName}!`, 'success');
 
         // Reset form, clear autocomplete input and selected session
         document.getElementById('signOutForm').reset();
@@ -707,10 +804,10 @@
         const list = document.getElementById('activeSessionsList');
         list.querySelectorAll('.session-item').forEach(item => {
           const nameEl = item.querySelector('strong');
-          if (nameEl && nameEl.textContent === result.volunteerName) item.remove();
+          if (nameEl && nameEl.textContent === signedOutName) item.remove();
         });
         const activeEl = document.getElementById('activeVolunteers');
-        const newCount = Math.max(0, (parseInt(activeEl.textContent) || 1) - 1);
+        const newCount = Math.max(0, (parseInt(activeEl.textContent, 10) || 1) - 1);
         activeEl.textContent = newCount;
         if (list.children.length === 0) {
           document.getElementById('activeSessionsContainer').style.display = 'none';
