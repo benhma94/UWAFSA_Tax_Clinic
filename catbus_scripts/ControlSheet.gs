@@ -134,8 +134,10 @@ function getVolunteersAndClients() {
  * Consolidated polling endpoint for the control sheet.
  * Returns both help status and review approval result in a single call,
  * reducing from 2 google.script.run calls to 1 per poll cycle.
+ * Includes clientMap to keep the control sheet's volunteer→client mapping fresh
+ * without requiring page refresh when assignments change.
  * @param {string} volunteer - Full volunteer string (may include station prefix)
- * @returns {{ helpStatus: string, reviewResult: Object|null }}
+ * @returns {{ helpStatus: string, reviewResult: Object|null, mentors: Object, allFilerNames: string[], clientMap: Object }}
  */
 function getVolunteerPollingStatus(volunteer) {
   return safeExecute(() => {
@@ -145,13 +147,15 @@ function getVolunteerPollingStatus(volunteer) {
 
     const volunteersData = getVolunteersAndClients();
     const allFilerNames = (volunteersData && volunteersData.allFilerNames) ? volunteersData.allFilerNames : null;
+    const clientMap = (volunteersData && volunteersData.clientMap) ? volunteersData.clientMap : {};
     const pollSnapshot = getRequestPollSnapshot_(volunteer, volunteerNameOnly);
 
     return {
       helpStatus: pollSnapshot.helpStatus,
       reviewResult: pollSnapshot.reviewResult,
       mentors: getMentorList(),
-      allFilerNames: allFilerNames
+      allFilerNames: allFilerNames,
+      clientMap: clientMap
     };
   }, 'getVolunteerPollingStatus');
 }
