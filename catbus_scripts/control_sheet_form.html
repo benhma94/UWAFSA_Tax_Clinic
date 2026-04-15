@@ -787,6 +787,48 @@
       color: #aaa;
     }
 
+    /* Receipt form — married/common-law paired fields */
+    #receiptMarriedBanner {
+      display: none;
+      background: #e8f4fd;
+      border: 1px solid #2c7be5;
+      border-radius: 4px;
+      padding: 7px 12px;
+      font-size: 0.85em;
+      color: #1a5fa8;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .receipt-married-field {
+      display: none;
+    }
+    .receipt-pair {
+      display: flex;
+      gap: 10px;
+    }
+    .receipt-pair-col {
+      flex: 1;
+      min-width: 0;
+    }
+    .receipt-pair-label {
+      font-size: 0.82em;
+      color: #777;
+      margin-bottom: 3px;
+    }
+    .receipt-pair-label .receipt-optional {
+      color: #aaa;
+      font-style: italic;
+    }
+    .receipt-pair-col input[type="email"],
+    .receipt-pair-col input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+
     .email-modal-footer {
       display: flex;
       gap: 10px;
@@ -1421,32 +1463,62 @@
       </div>
       
       <div class="email-modal-body">
+        <div id="receiptMarriedBanner">Married / Common-Law — two taxpayers</div>
         <form id="emailReceiptForm">
           <div class="email-form-field">
             <label for="clientEmailReceipt">Client Email <span style="color: red;">*</span></label>
             <input type="email" id="clientEmailReceipt" required placeholder="client@example.com">
           </div>
-          
+
+          <div class="email-form-field receipt-married-field">
+            <label>Client Email</label>
+            <div class="receipt-pair">
+              <div class="receipt-pair-col">
+                <div class="receipt-pair-label">Taxpayer 1 <span style="color:red;">*</span></div>
+                <input type="email" id="clientEmail1Receipt" placeholder="taxpayer1@example.com">
+              </div>
+              <div class="receipt-pair-col">
+                <div class="receipt-pair-label">Taxpayer 2 <span class="receipt-optional">(optional)</span></div>
+                <input type="email" id="clientEmail2Receipt" placeholder="spouse@example.com">
+              </div>
+            </div>
+          </div>
+
           <div class="email-form-field">
             <label for="refundBalanceReceipt">Refund/Balance Owing</label>
             <input type="text" id="refundBalanceReceipt" class="number-input" placeholder="Enter amount (e.g., 1,500.00 or -200.00)" oninput="formatAccountingNumber(this, 'refundBalance')" onblur="validateAndFormatRefundBalance(this)">
             <div class="number-input-hint">Positive = Refund (green), Negative = Balance Owing (red)</div>
           </div>
-          
+
+          <div class="email-form-field receipt-married-field">
+            <label>Refund / Balance Owing</label>
+            <div class="receipt-pair">
+              <div class="receipt-pair-col">
+                <div class="receipt-pair-label">Taxpayer 1</div>
+                <input type="text" id="refundBalance1Receipt" class="number-input" placeholder="e.g., 1,200.00 or -200.00" oninput="formatAccountingNumber(this, 'refundBalance1')" onblur="validateAndFormatRefundBalance(this)">
+              </div>
+              <div class="receipt-pair-col">
+                <div class="receipt-pair-label">Taxpayer 2</div>
+                <input type="text" id="refundBalance2Receipt" class="number-input" placeholder="e.g., 1,200.00 or -200.00" oninput="formatAccountingNumber(this, 'refundBalance2')" onblur="validateAndFormatRefundBalance(this)">
+              </div>
+            </div>
+            <div class="number-input-hint">Positive = Refund (green), Negative = Balance Owing (red)</div>
+          </div>
+
           <div class="email-form-field">
-            <label for="onBenReceipt">Total ON-BEN Credit</label>
+            <label for="onBenReceipt">Total ON-BEN Credit <span id="onBenCombinedHint" style="display:none; font-weight:normal; color:#888; font-size:0.88em;">(combined)</span></label>
             <input type="text" id="onBenReceipt" class="number-input" placeholder="Enter amount (e.g., 75.00)" oninput="formatAccountingNumber(this, 'onBen')" onblur="finalizeAccountingFormat(this)">
             <div class="number-input-hint">Enter as number (e.g., 75.00)</div>
           </div>
 
           <div class="email-form-field">
-            <label for="gstHstReceipt">Total CGEB or GST/HST Credit</label>
+            <label for="gstHstReceipt">Total CGEB or GST/HST Credit <span id="gstCombinedHint" style="display:none; font-weight:normal; color:#888; font-size:0.88em;">(combined)</span></label>
             <input type="text" id="gstHstReceipt" class="number-input" placeholder="Enter amount (e.g., 150.00)" oninput="formatAccountingNumber(this, 'gstHst')" onblur="finalizeAccountingFormat(this)">
             <div class="number-input-hint">Enter as number (e.g., 150.00)</div>
           </div>
           
           <div class="email-form-field">
-            <label for="otherReceipt">Other Amounts</label>
+            <label for="otherReceipt">Other Amounts <span id="otherCombinedHint" style="display:none; font-weight:normal; color:#888; font-size:0.88em;">(combined)</span></label>
             <input type="text" id="otherReceipt" class="number-input" placeholder="Enter amount (e.g., 150.00)" oninput="formatAccountingNumber(this, 'other')" onblur="finalizeAccountingFormat(this)">
             <div class="number-input-hint">Enter as number (e.g., 150.00)</div>
           </div>
@@ -1464,6 +1536,21 @@
           <div class="email-form-field" id="efileConfirmationField" style="display: none;">
             <label for="efileConfirmationReceipt">E-File Confirmation Number <span style="color:#e74c3c;">*</span></label>
             <input type="text" id="efileConfirmationReceipt" placeholder="Enter E-File confirmation number" required>
+          </div>
+
+          <div class="email-form-field receipt-married-field" id="efileConfirmationFieldMarried" style="display: none;">
+            <label>E-File Confirmation Number <span style="color:#e74c3c;">*</span></label>
+            <div class="receipt-pair">
+              <div class="receipt-pair-col">
+                <div class="receipt-pair-label">Taxpayer 1</div>
+                <input type="text" id="efileConfirmation1Receipt" placeholder="Enter confirmation number">
+              </div>
+              <div class="receipt-pair-col">
+                <div class="receipt-pair-label">Taxpayer 2</div>
+                <input type="text" id="efileConfirmation2Receipt" placeholder="Enter confirmation number">
+              </div>
+            </div>
+            <div id="efileMatchError" style="display:none; font-size:0.82em; color:#e74c3c; margin-top:4px;">Confirmation numbers must be different from each other.</div>
           </div>
         </form>
 
@@ -1535,6 +1622,7 @@
     const CLIENT_REFRESH_COOLDOWN = 10000; // ms — max one background refresh per 10 s
     let currentMentorListJson = null;
     let currentFilerNamesJson = null;
+    let currentClientMapJson = null;
     let cachedMentors = null; // parsed mentor data from polling, reused to skip getMentorList round-trip
 
     // Draft persistence (sessionStorage — survives same-tab refresh in private browsing)
@@ -2148,6 +2236,15 @@
         handleHelpStatusUpdate(data.helpStatus);
         // Handle review approval
         handleReviewApprovalUpdate(data.reviewResult, volunteer);
+        // Keep client map fresh when assignments change (fixes multi-window assignment updates)
+        if (data.clientMap) {
+          const newJson = JSON.stringify(data.clientMap);
+          if (newJson !== currentClientMapJson) {
+            currentClientMapJson = newJson;
+            volunteerMap = data.clientMap;
+            updateClients(); // Refresh client dropdown with new assignments
+          }
+        }
         // Keep reviewer datalists fresh when mentors sign in
         if (data.mentors) {
           const newJson = JSON.stringify(data.mentors);
@@ -3099,34 +3196,91 @@
     function openEmailReceiptDialog(rowId, rowCount) {
       currentEmailRowId = rowId;
       currentEmailRowCount = rowCount;
-      
+
       // Get the selected filing status and tax year for this row
       const row = document.querySelector(`[data-row-id="${rowId}"]`);
       const selectedRadio = row.querySelector(`input[name="filingStatus${rowCount}"]:checked`);
       const filingStatus = selectedRadio ? selectedRadio.value : 'efile';
       const taxYear = row.querySelector('select[name="taxYear"]')?.value || '';
-      
+
       const modal = document.getElementById('emailReceiptModal');
       modal.classList.add('show');
       modal.setAttribute('data-filing-status', filingStatus);
       modal.setAttribute('data-tax-year', taxYear);
-      
+
       // Reset form
       document.getElementById('emailReceiptForm').reset();
       document.getElementById('emailReceiptStatusMessage').classList.remove('show');
-      
-      // Show/hide E-File Confirmation Number field based on filing status
+      document.getElementById('efileMatchError').style.display = 'none';
+
+      const isMarried = currentClientData?.situations?.includes('Married/Common-Law') || false;
+
+      // Toggle married banner
+      document.getElementById('receiptMarriedBanner').style.display = isMarried ? 'block' : 'none';
+
+      // Toggle single vs paired email field
+      const singleEmailField = document.querySelector('.email-form-field:has(#clientEmailReceipt)');
+      const marriedEmailField = document.querySelector('.email-form-field.receipt-married-field:has(#clientEmail1Receipt)');
+      if (isMarried) {
+        if (singleEmailField) singleEmailField.style.display = 'none';
+        document.getElementById('clientEmailReceipt').required = false;
+        if (marriedEmailField) marriedEmailField.style.display = 'block';
+        document.getElementById('clientEmail1Receipt').required = true;
+      } else {
+        if (singleEmailField) singleEmailField.style.display = 'block';
+        document.getElementById('clientEmailReceipt').required = true;
+        if (marriedEmailField) marriedEmailField.style.display = 'none';
+        document.getElementById('clientEmail1Receipt').required = false;
+      }
+
+      // Toggle single vs paired refund field
+      const singleRefundField = document.querySelector('.email-form-field:has(#refundBalanceReceipt)');
+      const marriedRefundField = document.querySelector('.email-form-field.receipt-married-field:has(#refundBalance1Receipt)');
+      if (isMarried) {
+        if (singleRefundField) singleRefundField.style.display = 'none';
+        if (marriedRefundField) marriedRefundField.style.display = 'block';
+      } else {
+        if (singleRefundField) singleRefundField.style.display = 'block';
+        if (marriedRefundField) marriedRefundField.style.display = 'none';
+      }
+
+      // Toggle (combined) hints on shared fields
+      ['onBenCombinedHint', 'gstCombinedHint', 'otherCombinedHint'].forEach(id => {
+        document.getElementById(id).style.display = isMarried ? 'inline' : 'none';
+      });
+
+      // Show/hide efile confirmation fields based on married + filing status
       const efileConfirmationField = document.getElementById('efileConfirmationField');
-      const efileConfirmationInput = document.getElementById('efileConfirmationReceipt');
+      const efileConfirmationReceipt = document.getElementById('efileConfirmationReceipt');
+      const efileConfirmationFieldMarried = document.getElementById('efileConfirmationFieldMarried');
+      const efile1 = document.getElementById('efileConfirmation1Receipt');
+      const efile2 = document.getElementById('efileConfirmation2Receipt');
+
       if (filingStatus === 'efile') {
-        efileConfirmationField.style.display = 'block';
+        if (isMarried) {
+          efileConfirmationField.style.display = 'none';
+          efileConfirmationReceipt.required = false;
+          efileConfirmationFieldMarried.style.display = 'block';
+          efile1.required = true;
+          efile2.required = true;
+        } else {
+          efileConfirmationField.style.display = 'block';
+          efileConfirmationReceipt.required = true;
+          efileConfirmationFieldMarried.style.display = 'none';
+          efile1.required = false;
+          efile2.required = false;
+        }
       } else {
         efileConfirmationField.style.display = 'none';
-        if (efileConfirmationInput) {
-          efileConfirmationInput.value = '';
-        }
+        efileConfirmationReceipt.required = false;
+        efileConfirmationReceipt.value = '';
+        efileConfirmationFieldMarried.style.display = 'none';
+        efile1.required = false;
+        efile2.required = false;
+        efile1.value = '';
+        efile2.value = '';
       }
-      
+
       // Clear files
       selectedFilesEmail = [];
       updateFileListEmail();
@@ -3362,9 +3516,24 @@
       const modal = document.getElementById('emailReceiptModal');
       const filingStatus = modal.getAttribute('data-filing-status') || 'efile';
       const taxYear = modal.getAttribute('data-tax-year') || '';
+      const isMarried = currentClientData?.situations?.includes('Married/Common-Law') || false;
+
+      // Validate efile confirmations differ for married clients
+      if (isMarried && filingStatus === 'efile') {
+        const conf1 = document.getElementById('efileConfirmation1Receipt').value.trim();
+        const conf2 = document.getElementById('efileConfirmation2Receipt').value.trim();
+        if (conf1 && conf2 && conf1 === conf2) {
+          document.getElementById('efileMatchError').style.display = 'block';
+          showEmailStatus('E-File confirmation numbers must be different for each taxpayer.', 'error');
+          return;
+        }
+        document.getElementById('efileMatchError').style.display = 'none';
+      }
 
       // Extract and format numbers
-      const refundBalanceRaw = document.getElementById('refundBalanceReceipt').value.trim();
+      const refundBalanceRaw = isMarried
+        ? document.getElementById('refundBalance1Receipt').value.trim()
+        : document.getElementById('refundBalanceReceipt').value.trim();
       const refundBalanceNum = refundBalanceRaw ? parseAccountingNumber(refundBalanceRaw) : null;
       
       const gstHstRaw = document.getElementById('gstHstReceipt').value.trim();
@@ -3375,6 +3544,10 @@
       
       const otherRaw = document.getElementById('otherReceipt').value.trim();
       const otherNum = otherRaw ? parseAccountingNumber(otherRaw) : null;
+
+      // Taxpayer 2 refund (married only)
+      const refundBalance2Raw = isMarried ? document.getElementById('refundBalance2Receipt').value.trim() : '';
+      const refundBalance2Num = refundBalance2Raw ? parseAccountingNumber(refundBalance2Raw) : null;
 
       // Format refund/balance - determine label based on sign
       let refundBalance = null;
@@ -3391,10 +3564,23 @@
         }
       }
 
+      // Format T2 refund/balance
+      let refundBalance2 = null;
+      let refundLabel2 = null;
+      if (refundBalance2Num !== null && !isNaN(refundBalance2Num) && refundBalance2Num !== 0) {
+        const absValue2 = Math.abs(refundBalance2Num);
+        const formatted2 = formatAsAccountingPositive(absValue2);
+        refundLabel2 = refundBalance2Num > 0 ? 'Refund' : 'Balance Owing';
+        refundBalance2 = formatted2;
+      }
+
       // Calculate total sum of all numeric amounts
       let totalAmount = 0;
       if (refundBalanceNum !== null && !isNaN(refundBalanceNum)) {
         totalAmount += refundBalanceNum;
+      }
+      if (isMarried && refundBalance2Num !== null && !isNaN(refundBalance2Num)) {
+        totalAmount += refundBalance2Num;
       }
       if (gstHstNum !== null && !isNaN(gstHstNum) && gstHstNum >= 0) {
         totalAmount += gstHstNum;
@@ -3408,29 +3594,51 @@
 
       const _emailReceiptRow = document.querySelector(`[data-row-id="${currentEmailRowId}"]`);
       const emailData = {
-        clientEmail: document.getElementById('clientEmailReceipt').value.trim(),
+        clientEmail: isMarried
+          ? document.getElementById('clientEmail1Receipt').value.trim()
+          : document.getElementById('clientEmailReceipt').value.trim(),
+        clientEmail2: isMarried
+          ? document.getElementById('clientEmail2Receipt').value.trim()
+          : '',
         refundBalance: refundBalance,
         refundLabel: refundLabel,
+        refundBalance2: refundBalance2,
+        refundLabel2: refundLabel2,
         gstHst: gstHstNum !== null && !isNaN(gstHstNum) && gstHstNum >= 0 ? formatAsAccountingPositive(gstHstNum) : '',
         onBen: onBenNum !== null && !isNaN(onBenNum) && onBenNum >= 0 ? formatAsAccountingPositive(onBenNum) : '',
         other: otherNum !== null && !isNaN(otherNum) && otherNum >= 0 ? formatAsAccountingPositive(otherNum) : '',
         notes: document.getElementById('notesReceipt').value.trim(),
         totalAmount: totalAmount,
         ufilePassword: document.getElementById('ufilePasswordReceipt').value.trim(),
-        efileConfirmation: filingStatus === 'efile' ? document.getElementById('efileConfirmationReceipt').value.trim() : '',
+        efileConfirmation: isMarried && filingStatus === 'efile'
+          ? document.getElementById('efileConfirmation1Receipt').value.trim()
+          : (filingStatus === 'efile' ? document.getElementById('efileConfirmationReceipt').value.trim() : ''),
+        efileConfirmation2: isMarried && filingStatus === 'efile'
+          ? document.getElementById('efileConfirmation2Receipt').value.trim()
+          : '',
         clientID: document.getElementById('client').value.trim(),
         volunteerName: document.getElementById('volunteer').value.trim(),
-        married: currentClientData?.situations?.includes("Married/Common-Law") || false,
+        married: isMarried,
         reviewer: _emailReceiptRow?.querySelector('input[name="reviewer"]')?.value.trim() || '',
         secondaryReviewer: _emailReceiptRow?.querySelector('input[name="secondaryReviewer"]')?.value.trim() || ''
       };
 
       // Validate E-File Confirmation Number is required for EFILE
       if (filingStatus === 'efile') {
-        const efileConfirmation = document.getElementById('efileConfirmationReceipt').value.trim();
-        if (!efileConfirmation) {
-          showEmailStatus('E-File Confirmation Number is required for EFILE submissions.', 'error');
-          return;
+        if (isMarried) {
+          if (!emailData.efileConfirmation) {
+            showEmailStatus('E-File Confirmation Number for Taxpayer 1 is required for EFILE submissions.', 'error');
+            return;
+          }
+          if (!emailData.efileConfirmation2) {
+            showEmailStatus('E-File Confirmation Number for Taxpayer 2 is required for EFILE submissions.', 'error');
+            return;
+          }
+        } else {
+          if (!emailData.efileConfirmation) {
+            showEmailStatus('E-File Confirmation Number is required for EFILE submissions.', 'error');
+            return;
+          }
         }
       }
 

@@ -104,6 +104,34 @@ function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
       Logger.log(`UFILE password email sent to ${clientEmail}`);
     }
 
+    // Send to Taxpayer 2 if email provided (married/common-law)
+    const email2Pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const clientEmail2 = (emailData.clientEmail2 || '').trim();
+    if (clientEmail2 && email2Pattern.test(clientEmail2)) {
+      const emailBody2 = buildReceiptEmailBody(emailData, filingStatus);
+      sendEmail({
+        to: clientEmail2,
+        subject: subject,
+        htmlBody: emailBody2,
+        name: 'AFSA Tax Clinic',
+        ...(attachments.length > 0 ? { attachments: attachments } : {})
+      }, 'sendReceiptEmail_T2');
+      Logger.log(`Receipt email sent to Taxpayer 2: ${clientEmail2}`);
+
+      if (emailData.ufilePassword) {
+        const passwordSubject2 = taxYearDisplay
+          ? `Tax Year ${taxYearDisplay} — UFILE Password`
+          : `UFILE Password`;
+        sendEmail({
+          to: clientEmail2,
+          subject: passwordSubject2,
+          htmlBody: buildPasswordEmailBody(emailData.ufilePassword, taxYearDisplay),
+          name: 'AFSA Tax Clinic'
+        }, 'sendPasswordEmail_T2');
+        Logger.log(`UFILE password email sent to Taxpayer 2: ${clientEmail2}`);
+      }
+    }
+
     // Auto-track the return in Tax Return Tracker so it's captured even if volunteer skips Finalize
     try {
       trackReturnOnEmailSent(emailData, filingStatus, taxYear);
@@ -112,10 +140,13 @@ function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
       // Non-fatal — email was already sent successfully
     }
 
+    const recipients = clientEmail2 && email2Pattern.test(clientEmail2)
+      ? `${clientEmail} and ${clientEmail2}`
+      : clientEmail;
     return {
       success: true,
       message: 'Email sent successfully',
-      recipient: clientEmail,
+      recipient: recipients,
       attachmentCount: attachments.length
     };
 
@@ -166,8 +197,15 @@ function buildReceiptEmailBody(emailData, filingStatus) {
           <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #8e0000;">Return Summary:</h3>
             
-            ${emailData.refundBalance && emailData.refundLabel ? `
+            ${emailData.refundBalance && emailData.refundLabel && !emailData.refundBalance2 ? `
               <p><strong>${escapeHtmlServer(emailData.refundLabel)}:</strong> ${escapeHtmlServer(emailData.refundBalance)}</p>
+            ` : ''}
+
+            ${emailData.refundBalance2 ? `
+              ${emailData.refundBalance && emailData.refundLabel ? `
+                <p><strong>Taxpayer 1 ${escapeHtmlServer(emailData.refundLabel)}:</strong> ${escapeHtmlServer(emailData.refundBalance)}</p>
+              ` : ''}
+              <p><strong>Taxpayer 2 ${escapeHtmlServer(emailData.refundLabel2 || 'Refund')}:</strong> ${escapeHtmlServer(emailData.refundBalance2)}</p>
             ` : ''}
 
             ${emailData.onBen ? `
@@ -182,8 +220,13 @@ function buildReceiptEmailBody(emailData, filingStatus) {
               <p><strong>Other Amounts:</strong> ${escapeHtmlServer(emailData.other)}</p>
             ` : ''}
 
-            ${emailData.efileConfirmation ? `
+            ${emailData.efileConfirmation && !emailData.efileConfirmation2 ? `
               <p><strong>E-File Confirmation Number:</strong> ${escapeHtmlServer(emailData.efileConfirmation)}</p>
+            ` : ''}
+
+            ${emailData.efileConfirmation2 ? `
+              <p><strong>Taxpayer 1 E-File Confirmation Number:</strong> ${escapeHtmlServer(emailData.efileConfirmation)}</p>
+              <p><strong>Taxpayer 2 E-File Confirmation Number:</strong> ${escapeHtmlServer(emailData.efileConfirmation2)}</p>
             ` : ''}
           </div>
           
