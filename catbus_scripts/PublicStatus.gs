@@ -63,18 +63,14 @@ function buildPublicClinicStatus_() {
 
 function buildPublicStatusMessage_(open, todayClinic, nextClinic, queueSignal, volunteerSignal, clinicHours) {
   if (open) {
-    return 'The clinic is open. ' + queueSignal.label + ' and volunteer coverage looks ' + volunteerSignal.label.toLowerCase() + '.';
-  }
-
-  if (todayClinic && clinicHours) {
-    return 'The clinic is closed right now. Today\'s hours are ' + ELIGIBILITY_CONFIG.CLINIC_HOURS + '.';
+    return 'The Tax Clinic is open. ' + queueSignal.label + ' and volunteer coverage looks ' + volunteerSignal.label.toLowerCase() + '.';
   }
 
   if (nextClinic) {
-    return 'The clinic is closed. Next clinic date: ' + nextClinic.label + '.';
+    return 'The Tax Clinic is closed. Next clinic date: ' + nextClinic.label + '.';
   }
 
-  return 'The clinic season has ended for the year.';
+  return 'The Tax Clinic has ended its services for the year. We will return next March.';
 }
 
 function buildQueueSignal_(queueCount, volunteerCount) {

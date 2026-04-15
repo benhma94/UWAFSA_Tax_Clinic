@@ -119,6 +119,7 @@
 
   <div id="content">
     <div class="sqs-html-content">
+  <h2 id="clinic-dates" style="white-space:pre-wrap;"><strong>Tax Clinic 2026</strong></h2>
   <section id="clinic-status-panel" class="clinic-status-panel" aria-live="polite">
     <div class="clinic-status-panel__header">
       <div>
@@ -135,7 +136,6 @@
     </div>
     <p class="clinic-status-updated">Waiting for the first live update...</p>
   </section>
-  <h2 id="clinic-dates" style="white-space:pre-wrap;"><strong>Tax Clinic 2026</strong></h2>
 <div id="clinic-schedule">
 <table>
     <thead>
@@ -225,16 +225,13 @@
   <div id="site-footer"></div>
 
   <script src="shared.js?v=3"></script>
+  <script src="clinic-status.js?v=1"></script>
   <script>
     (function() {
       var cutoff = new Date('2026-03-30');
       if (new Date() >= cutoff) {
         document.getElementById('clinic-schedule').style.display = 'none';
         document.getElementById('booking-walkin-p').style.display = 'none';
-        var msg = document.createElement('div');
-        msg.className = 'callout-box';
-        msg.innerHTML = '<p>The AFSA Tax Clinic has ended its services for the year. We will return in March 2027.</p>';
-        document.getElementById('appointment-booking').insertAdjacentElement('beforebegin', msg);
       }
     })();
   </script>
