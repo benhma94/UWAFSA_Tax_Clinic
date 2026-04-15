@@ -14,6 +14,7 @@
 function doGet(e) {
   // Handle API actions from static web pages (GET with action= parameter)
   const action = e?.parameter?.action;
+
   if (action === 'volunteerApplication') {
     try {
       submitVolunteerApplication(e.parameter);
@@ -57,6 +58,25 @@ function doGet(e) {
   if (action === 'getEligibilityConfig') {
     return ContentService.createTextOutput(JSON.stringify(ELIGIBILITY_CONFIG))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'getPublicClinicStatus') {
+    try {
+      const payload = getPublicClinicStatus();
+      return ContentService.createTextOutput(JSON.stringify(payload))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      Logger.log('getPublicClinicStatus error: ' + err.message);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'closed',
+        open: false,
+        message: 'Clinic status is temporarily unavailable. Please refresh shortly.',
+        queueSignal: { band: 'unknown', label: 'Queue updating', queueCount: null },
+        volunteerSignal: { band: 'unknown', label: 'Volunteer availability updating', availableCount: null },
+        nextClinicDate: null,
+        lastUpdated: new Date().toISOString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
   }
 
   const ALLOW = HtmlService.XFrameOptionsMode.ALLOWALL;

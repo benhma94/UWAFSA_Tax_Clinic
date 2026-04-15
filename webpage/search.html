@@ -5,8 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Search &mdash; Tax Clinic</title>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico"/>
+    <link rel="canonical" href="https://taxclinic.uwaterloo.ca/search.html"/>
+    <meta property="og:site_name" content="Accounting &amp; Finance Student Association"/>
+    <meta property="og:title" content="Search &mdash; UW AFSA Tax Clinic"/>
+    <meta property="og:url" content="https://taxclinic.uwaterloo.ca/search.html"/>
+    <meta property="og:image" content="https://taxclinic.uwaterloo.ca/images/logo.png"/>
+    <meta property="og:type" content="website"/>
+    <meta name="description" content="Search information across UW AFSA Tax Clinic pages including eligibility, checklists, FAQs, and post-filing resources." />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "UW AFSA Tax Clinic",
+        "url": "https://taxclinic.uwaterloo.ca/",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://taxclinic.uwaterloo.ca/search.html?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
     <script>(function(){var t=localStorage.getItem('theme');if(t==='dark'||(t===null&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark-mode');})();</script>
-    <link rel="stylesheet" href="shared.css?v=2">
+    <script src="config.js"></script>
+    <link rel="stylesheet" href="shared.css?v=3">
     <style>
       .search-bar {
         display: flex;
@@ -95,7 +116,7 @@
   <div id="site-footer"></div>
 
   <script src="search-index.js"></script>
-  <script src="shared.js?v=2"></script>
+  <script src="shared.js?v=3"></script>
   <script>
     var params = new URLSearchParams(window.location.search);
     var query = (params.get('q') || '').trim();

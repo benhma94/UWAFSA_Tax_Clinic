@@ -13,7 +13,8 @@ const CACHE_CONFIG = {
     AVAILABILITY_DATA: 'availability_data',
     RETURN_SUMMARY: 'return_summary',
     MENTOR_LIST: 'mentor_list',
-    VOLUNTEERS_AND_CLIENTS: 'volunteers_and_clients'
+    VOLUNTEERS_AND_CLIENTS: 'volunteers_and_clients',
+    PUBLIC_CLINIC_STATUS: 'public_clinic_status'
   },
   // Cache TTLs in seconds
   TTL: {
@@ -24,7 +25,8 @@ const CACHE_CONFIG = {
     AVAILABILITY_DATA: 300,        // 5 minutes - rarely changes during operation
     RETURN_SUMMARY: 60,            // 1 minute - summary data changes less frequently
     MENTOR_LIST: 45,               // 45 seconds - matches existing cache TTL
-    VOLUNTEERS_AND_CLIENTS: 30     // 30 seconds - invalidated immediately on new assignment
+    VOLUNTEERS_AND_CLIENTS: 30,    // 30 seconds - invalidated immediately on new assignment
+    PUBLIC_CLINIC_STATUS: 30       // 30 seconds - public status should stay fresh without hammering sheets
   }
 };
 

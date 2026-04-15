@@ -224,7 +224,8 @@ function signInVolunteer(volunteerName, station) {
         CACHE_CONFIG.KEYS.MENTOR_LIST,
         CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
         CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
-        CACHE_CONFIG.KEYS.QUEUE
+        CACHE_CONFIG.KEYS.QUEUE,
+        CACHE_CONFIG.KEYS.PUBLIC_CLINIC_STATUS
       ]);
 
       return {
@@ -266,7 +267,8 @@ function signOutVolunteer(sessionId) {
       CACHE_CONFIG.KEYS.MENTOR_LIST,
       CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
       CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
-      CACHE_CONFIG.KEYS.QUEUE
+      CACHE_CONFIG.KEYS.QUEUE,
+      CACHE_CONFIG.KEYS.PUBLIC_CLINIC_STATUS
     ]);
 
     return {
@@ -384,7 +386,8 @@ function clearStaleSessions(hoursThreshold) {
         invalidateMultiple([
           CACHE_CONFIG.KEYS.QUEUE,
           CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
-          CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
+          CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
+          CACHE_CONFIG.KEYS.PUBLIC_CLINIC_STATUS
         ]);
       }
     }

@@ -189,6 +189,19 @@ const CONFIG = {
     LOCK_TIMEOUT_MS: 10000,
     // Number of days of return data to read for summary (0 = all)
     RETURN_SUMMARY_DAYS: 0 // 0 means read all, set to number of days to limit
+  },
+
+  // Public website status polling and queue transparency settings
+  PUBLIC_STATUS: {
+    CACHE_TTL_SECONDS: 45,
+    QUEUE_BANDS: {
+      LOW_MAX: 5,
+      MEDIUM_MAX: 12
+    },
+    VOLUNTEER_BANDS: {
+      LOW_MAX: 2,
+      MEDIUM_MAX: 6
+    }
   }
 };
 

@@ -2,7 +2,7 @@
     "chat.tools.terminal.autoApprove": {
         ".venv/Scripts/python": true,
         "Get-Item": true,
-        "/^cd \"c:\\\\Users\\\\Ben Ma\\\\Dropbox\\\\Tax Clinic\\\\Website\" ; python -m graphify \"catbus_scripts\" --update --obsidian --obsidian-dir \"Obsidian - Tax Clinic Website\"$/": {
+        "/^cd \"c:\\\\Users\\\\[^\\\\]+\\\\Dropbox\\\\Tax Clinic\\\\Website\" ; python -m graphify \"catbus_scripts\" --update --obsidian --obsidian-dir \"Obsidian - Tax Clinic Website\"$/": {
             "approve": true,
             "matchCommandLine": true
         },
