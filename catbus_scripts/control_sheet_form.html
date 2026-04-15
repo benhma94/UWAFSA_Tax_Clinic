@@ -787,6 +787,48 @@
       color: #aaa;
     }
 
+    /* Receipt form — married/common-law paired fields */
+    #receiptMarriedBanner {
+      display: none;
+      background: #e8f4fd;
+      border: 1px solid #2c7be5;
+      border-radius: 4px;
+      padding: 7px 12px;
+      font-size: 0.85em;
+      color: #1a5fa8;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .receipt-married-field {
+      display: none;
+    }
+    .receipt-pair {
+      display: flex;
+      gap: 10px;
+    }
+    .receipt-pair-col {
+      flex: 1;
+      min-width: 0;
+    }
+    .receipt-pair-label {
+      font-size: 0.82em;
+      color: #777;
+      margin-bottom: 3px;
+    }
+    .receipt-pair-label .receipt-optional {
+      color: #aaa;
+      font-style: italic;
+    }
+    .receipt-pair-col input[type="email"],
+    .receipt-pair-col input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      font-size: 1em;
+      box-sizing: border-box;
+    }
+
     .email-modal-footer {
       display: flex;
       gap: 10px;
@@ -1535,6 +1577,7 @@
     const CLIENT_REFRESH_COOLDOWN = 10000; // ms — max one background refresh per 10 s
     let currentMentorListJson = null;
     let currentFilerNamesJson = null;
+    let currentClientMapJson = null;
     let cachedMentors = null; // parsed mentor data from polling, reused to skip getMentorList round-trip
 
     // Draft persistence (sessionStorage — survives same-tab refresh in private browsing)
@@ -2148,6 +2191,15 @@
         handleHelpStatusUpdate(data.helpStatus);
         // Handle review approval
         handleReviewApprovalUpdate(data.reviewResult, volunteer);
+        // Keep client map fresh when assignments change (fixes multi-window assignment updates)
+        if (data.clientMap) {
+          const newJson = JSON.stringify(data.clientMap);
+          if (newJson !== currentClientMapJson) {
+            currentClientMapJson = newJson;
+            volunteerMap = data.clientMap;
+            updateClients(); // Refresh client dropdown with new assignments
+          }
+        }
         // Keep reviewer datalists fresh when mentors sign in
         if (data.mentors) {
           const newJson = JSON.stringify(data.mentors);
