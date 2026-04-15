@@ -104,6 +104,34 @@ function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
       Logger.log(`UFILE password email sent to ${clientEmail}`);
     }
 
+    // Send to Taxpayer 2 if email provided (married/common-law)
+    const email2Pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const clientEmail2 = (emailData.clientEmail2 || '').trim();
+    if (clientEmail2 && email2Pattern.test(clientEmail2)) {
+      const emailBody2 = buildReceiptEmailBody(emailData, filingStatus);
+      sendEmail({
+        to: clientEmail2,
+        subject: subject,
+        htmlBody: emailBody2,
+        name: 'AFSA Tax Clinic',
+        ...(attachments.length > 0 ? { attachments: attachments } : {})
+      }, 'sendReceiptEmail_T2');
+      Logger.log(`Receipt email sent to Taxpayer 2: ${clientEmail2}`);
+
+      if (emailData.ufilePassword) {
+        const passwordSubject2 = taxYearDisplay
+          ? `Tax Year ${taxYearDisplay} — UFILE Password`
+          : `UFILE Password`;
+        sendEmail({
+          to: clientEmail2,
+          subject: passwordSubject2,
+          htmlBody: buildPasswordEmailBody(emailData.ufilePassword, taxYearDisplay),
+          name: 'AFSA Tax Clinic'
+        }, 'sendPasswordEmail_T2');
+        Logger.log(`UFILE password email sent to Taxpayer 2: ${clientEmail2}`);
+      }
+    }
+
     // Auto-track the return in Tax Return Tracker so it's captured even if volunteer skips Finalize
     try {
       trackReturnOnEmailSent(emailData, filingStatus, taxYear);
@@ -112,10 +140,13 @@ function sendReceiptEmail(emailData, filingStatus, taxYear, fileDataArray) {
       // Non-fatal — email was already sent successfully
     }
 
+    const recipients = clientEmail2 && email2Pattern.test(clientEmail2)
+      ? `${clientEmail} and ${clientEmail2}`
+      : clientEmail;
     return {
       success: true,
       message: 'Email sent successfully',
-      recipient: clientEmail,
+      recipient: recipients,
       attachmentCount: attachments.length
     };
 
