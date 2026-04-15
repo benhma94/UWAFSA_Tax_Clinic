@@ -3196,34 +3196,91 @@
     function openEmailReceiptDialog(rowId, rowCount) {
       currentEmailRowId = rowId;
       currentEmailRowCount = rowCount;
-      
+
       // Get the selected filing status and tax year for this row
       const row = document.querySelector(`[data-row-id="${rowId}"]`);
       const selectedRadio = row.querySelector(`input[name="filingStatus${rowCount}"]:checked`);
       const filingStatus = selectedRadio ? selectedRadio.value : 'efile';
       const taxYear = row.querySelector('select[name="taxYear"]')?.value || '';
-      
+
       const modal = document.getElementById('emailReceiptModal');
       modal.classList.add('show');
       modal.setAttribute('data-filing-status', filingStatus);
       modal.setAttribute('data-tax-year', taxYear);
-      
+
       // Reset form
       document.getElementById('emailReceiptForm').reset();
       document.getElementById('emailReceiptStatusMessage').classList.remove('show');
-      
-      // Show/hide E-File Confirmation Number field based on filing status
+      document.getElementById('efileMatchError').style.display = 'none';
+
+      const isMarried = currentClientData?.situations?.includes('Married/Common-Law') || false;
+
+      // Toggle married banner
+      document.getElementById('receiptMarriedBanner').style.display = isMarried ? 'block' : 'none';
+
+      // Toggle single vs paired email field
+      const singleEmailField = document.querySelector('.email-form-field:has(#clientEmailReceipt)');
+      const marriedEmailField = document.querySelector('.email-form-field.receipt-married-field:has(#clientEmail1Receipt)');
+      if (isMarried) {
+        if (singleEmailField) singleEmailField.style.display = 'none';
+        document.getElementById('clientEmailReceipt').required = false;
+        if (marriedEmailField) marriedEmailField.style.display = 'block';
+        document.getElementById('clientEmail1Receipt').required = true;
+      } else {
+        if (singleEmailField) singleEmailField.style.display = 'block';
+        document.getElementById('clientEmailReceipt').required = true;
+        if (marriedEmailField) marriedEmailField.style.display = 'none';
+        document.getElementById('clientEmail1Receipt').required = false;
+      }
+
+      // Toggle single vs paired refund field
+      const singleRefundField = document.querySelector('.email-form-field:has(#refundBalanceReceipt)');
+      const marriedRefundField = document.querySelector('.email-form-field.receipt-married-field:has(#refundBalance1Receipt)');
+      if (isMarried) {
+        if (singleRefundField) singleRefundField.style.display = 'none';
+        if (marriedRefundField) marriedRefundField.style.display = 'block';
+      } else {
+        if (singleRefundField) singleRefundField.style.display = 'block';
+        if (marriedRefundField) marriedRefundField.style.display = 'none';
+      }
+
+      // Toggle (combined) hints on shared fields
+      ['onBenCombinedHint', 'gstCombinedHint', 'otherCombinedHint'].forEach(id => {
+        document.getElementById(id).style.display = isMarried ? 'inline' : 'none';
+      });
+
+      // Show/hide efile confirmation fields based on married + filing status
       const efileConfirmationField = document.getElementById('efileConfirmationField');
-      const efileConfirmationInput = document.getElementById('efileConfirmationReceipt');
+      const efileConfirmationReceipt = document.getElementById('efileConfirmationReceipt');
+      const efileConfirmationFieldMarried = document.getElementById('efileConfirmationFieldMarried');
+      const efile1 = document.getElementById('efileConfirmation1Receipt');
+      const efile2 = document.getElementById('efileConfirmation2Receipt');
+
       if (filingStatus === 'efile') {
-        efileConfirmationField.style.display = 'block';
+        if (isMarried) {
+          efileConfirmationField.style.display = 'none';
+          efileConfirmationReceipt.required = false;
+          efileConfirmationFieldMarried.style.display = 'block';
+          efile1.required = true;
+          efile2.required = true;
+        } else {
+          efileConfirmationField.style.display = 'block';
+          efileConfirmationReceipt.required = true;
+          efileConfirmationFieldMarried.style.display = 'none';
+          efile1.required = false;
+          efile2.required = false;
+        }
       } else {
         efileConfirmationField.style.display = 'none';
-        if (efileConfirmationInput) {
-          efileConfirmationInput.value = '';
-        }
+        efileConfirmationReceipt.required = false;
+        efileConfirmationReceipt.value = '';
+        efileConfirmationFieldMarried.style.display = 'none';
+        efile1.required = false;
+        efile2.required = false;
+        efile1.value = '';
+        efile2.value = '';
       }
-      
+
       // Clear files
       selectedFilesEmail = [];
       updateFileListEmail();
