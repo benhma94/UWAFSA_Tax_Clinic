@@ -876,9 +876,11 @@ function getReviewerLeaderboard(trackerData, filterDate) {
       const timestamp = data[i][cols.TIMESTAMP];
       const incomplete = data[i][cols.INCOMPLETE]?.toString().toLowerCase() === 'yes';
       const married = data[i][cols.MARRIED]?.toString().toLowerCase() === 'yes';
+      const efile = data[i][cols.EFILE]?.toString().toLowerCase() === 'yes';
+      const paper = data[i][cols.PAPER]?.toString().toLowerCase() === 'yes';
       const increment = married ? 2 : 1;
 
-      if ((!reviewer && !secondary) || incomplete) continue;
+      if ((!reviewer && !secondary) || incomplete || (!efile && !paper)) continue;
 
       const isToday = timestamp instanceof Date &&
         timestamp.getFullYear() === today.getFullYear() &&
