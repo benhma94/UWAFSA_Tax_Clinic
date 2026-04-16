@@ -455,7 +455,7 @@ function readTrackerData_() {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return { data: [], lastRow: lastRow };
   const numRows = lastRow - 1;
-  const numCols = CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1;
+  const numCols = CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE + 1;
   const data = sheet.getRange(2, 1, numRows, numCols).getValues();
   return { data: data, lastRow: lastRow };
 }
@@ -489,7 +489,7 @@ function getReturnSummary(trackerData, filterDate) {
       const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
       const lastRow = sheet.getLastRow();
       if (lastRow <= 1) return { totalCompleted: 0, completedToday: 0, hourlyCounts: {} };
-      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1).getValues();
+      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE + 1).getValues();
     }
 
     if (!data.length) {
@@ -679,7 +679,7 @@ function getVolunteerPerformanceMetrics(trackerData, filterDate) {
       const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
       const lastRow = sheet.getLastRow();
       if (lastRow <= 1) return { topVolunteers: [], todayVolunteers: [], totalVolunteers: 0, avgReturnsPerVolunteer: 0 };
-      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1).getValues();
+      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE + 1).getValues();
     }
 
     if (!data.length) {
@@ -855,7 +855,7 @@ function getReviewerLeaderboard(trackerData, filterDate) {
       const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
       const lastRow = sheet.getLastRow();
       if (lastRow <= 1) return { topReviewers: [], todayReviewers: [] };
-      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1).getValues();
+      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE + 1).getValues();
     }
 
     if (!data.length) {
