@@ -38,6 +38,20 @@ if "%DEPLOYMENT_ID%"=="" (
 
 echo Deployment ID: %DEPLOYMENT_ID%
 echo.
+echo Pushing local project files before deployment...
+clasp push
+if %errorlevel% neq 0 (
+    echo.
+    echo ERROR: Push failed!
+    echo.
+    echo Try running: clasp login
+    echo Then retry the deploy command.
+    echo.
+    pause
+    exit /b 1
+)
+
+echo.
 echo Updating existing deployment...
 echo.
 
