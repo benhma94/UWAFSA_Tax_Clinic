@@ -702,10 +702,11 @@ function getVolunteerPerformanceMetrics(trackerData, filterDate) {
       const volunteer = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.VOLUNTEER]?.toString().trim();
       const efile = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.EFILE]?.toString().toLowerCase() === 'yes';
       const paper = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER]?.toString().toLowerCase() === 'yes';
+      const incomplete = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE]?.toString().toLowerCase() === 'yes';
       const married = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.MARRIED]?.toString().toLowerCase() === 'yes';
       const increment = married ? 2 : 1;
 
-      if (!volunteer || (!efile && !paper)) continue;
+      if (!volunteer || (!efile && !paper) || incomplete) continue;
 
       // All-time counting
       volunteerCounts[volunteer] = (volunteerCounts[volunteer] || 0) + increment;
@@ -873,10 +874,11 @@ function getReviewerLeaderboard(trackerData, filterDate) {
       const reviewer = data[i][cols.REVIEWER]?.toString().trim();
       const secondary = data[i][cols.SECONDARY_REVIEWER]?.toString().trim();
       const timestamp = data[i][cols.TIMESTAMP];
+      const incomplete = data[i][cols.INCOMPLETE]?.toString().toLowerCase() === 'yes';
       const married = data[i][cols.MARRIED]?.toString().toLowerCase() === 'yes';
       const increment = married ? 2 : 1;
 
-      if (!reviewer && !secondary) continue;
+      if ((!reviewer && !secondary) || incomplete) continue;
 
       const isToday = timestamp instanceof Date &&
         timestamp.getFullYear() === today.getFullYear() &&
