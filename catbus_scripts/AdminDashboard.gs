@@ -847,64 +847,16 @@ function removeDuplicateReturns() {
 
 function getReviewerLeaderboard(trackerData, filterDate) {
   return safeExecute(() => {
-    // Use pre-read data if available, otherwise read from sheet
-    var data;
-    if (trackerData && trackerData.data) {
-      data = trackerData.data;
-    } else {
-      const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
-      const lastRow = sheet.getLastRow();
-      if (lastRow <= 1) return { topReviewers: [], todayReviewers: [] };
-      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE + 1).getValues();
-    }
+    const date = filterDate ? new Date(filterDate) : new Date();
+    const reviewData = getReviewerCountsByDate(trackerData, date);
 
-    if (!data.length) {
-      return { topReviewers: [], todayReviewers: [] };
-    }
-
-    const today = filterDate ? new Date(filterDate) : new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const cols = CONFIG.COLUMNS.TAX_RETURN_TRACKER;
-
-    const allTimeCounts = {};
-    const todayCounts = {};
-
-    for (let i = 0; i < data.length; i++) {
-      const reviewer = data[i][cols.REVIEWER]?.toString().trim();
-      const secondary = data[i][cols.SECONDARY_REVIEWER]?.toString().trim();
-      const timestamp = data[i][cols.TIMESTAMP];
-      const incomplete = data[i][cols.INCOMPLETE]?.toString().toLowerCase() === 'yes';
-      const married = data[i][cols.MARRIED]?.toString().toLowerCase() === 'yes';
-      const efile = data[i][cols.EFILE]?.toString().toLowerCase() === 'yes';
-      const paper = data[i][cols.PAPER]?.toString().toLowerCase() === 'yes';
-      const increment = married ? 2 : 1;
-
-      if ((!reviewer && !secondary) || incomplete || (!efile && !paper)) continue;
-
-      const isToday = timestamp instanceof Date &&
-        timestamp.getFullYear() === today.getFullYear() &&
-        timestamp.getMonth() === today.getMonth() &&
-        timestamp.getDate() === today.getDate();
-
-      // Collect unique reviewers for this row
-      const reviewersThisRow = new Set();
-      if (reviewer) reviewersThisRow.add(reviewer);
-      if (secondary && secondary.toLowerCase() !== reviewer?.toLowerCase()) reviewersThisRow.add(secondary);
-
-      reviewersThisRow.forEach(name => {
-        allTimeCounts[name] = (allTimeCounts[name] || 0) + increment;
-        if (isToday) todayCounts[name] = (todayCounts[name] || 0) + increment;
-      });
-    }
-
-    const topReviewers = Object.entries(allTimeCounts)
-      .map(([name, count]) => ({ name, count }))
+    const topReviewers = Object.entries(reviewData.allTimeCounts)
+      .map(([key, count]) => ({ name: reviewData.reviewerDisplayNames[key] || key, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    const todayReviewers = Object.entries(todayCounts)
-      .map(([name, count]) => ({ name, count }))
+    const todayReviewers = Object.entries(reviewData.dateCounts)
+      .map(([key, count]) => ({ name: reviewData.reviewerDisplayNames[key] || key, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
@@ -1088,4 +1040,20 @@ function getClientFeatureBreakdown(trackerData) {
 
     return { total: clientMap.size, avgMinutes: overallAvg, baselineAvg: baselineAvg, features: features };
   }, 'getClientFeatureBreakdown');
+}
+
+/**
+ * Aggregates all data needed by the Master Dashboard in a single server round-trip.
+ * @returns {Object} { queue, signedIn, activeReturns, stats }
+ */
+function getMasterDashboardData() {
+  return safeExecute(() => {
+    const stationMap = getVolunteerStationMap_();
+    return {
+      queue: getQueueData(),
+      signedIn: getVolunteersAndClients(),
+      activeReturns: getActiveReturns(stationMap),
+      stats: getAdminDashboardData()
+    };
+  }, 'getMasterDashboardData');
 }

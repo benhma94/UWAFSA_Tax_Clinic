@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <?!= include('shared_styles') ?>
+  <style>
+    body { padding: 20px; }
+
+    /* ===== Tabs ===== */
+    .tab-nav {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--border-light);
+      padding-bottom: 0;
+      flex-wrap: wrap;
+    }
+    body.dark .tab-nav { border-color: var(--border-dark); }
+    .tab-btn {
+      padding: 10px 18px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.95em;
+      font-weight: 600;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      border-radius: 4px 4px 0 0;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    body.dark .tab-btn { color: #aaa; }
+    .tab-btn:hover { color: var(--accent-color); }
+    .tab-btn.active {
+      color: var(--accent-color);
+      border-bottom-color: var(--accent-color);
+      background: rgba(142,0,0,0.05);
+    }
+    body.dark .tab-btn.active { background: rgba(142,0,0,0.12); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ===== Stat Cards ===== */
+    .stat-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--input-bg-light);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow-light);
+    }
+    body.dark .stat-card {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+    .stat-card-label {
+      font-size: 0.75em;
+      color: #888;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    body.dark .stat-card-label { color: #aaa; }
+    .stat-card-value {
+      font-size: 2em;
+      font-weight: 700;
+      color: var(--accent-color);
+      line-height: 1;
+    }
+
+    /* ===== Data Table ===== */
+    .data-table-wrap { overflow-x: auto; }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9em;
+    }
+    .data-table th {
+      text-align: left;
+      padding: 10px 12px;
+      background: var(--input-bg-light);
+      border-bottom: 2px solid var(--border-light);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    body.dark .data-table th {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+    .data-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border-light);
+      vertical-align: middle;
+    }
+    body.dark .data-table td { border-color: var(--border-dark); }
+    .data-table tr.warn td { background: #fff9e6; }
+    .data-table tr.danger td { background: #fff0f0; }
+    body.dark .data-table tr.warn td { background: rgba(255,200,0,0.12); }
+    body.dark .data-table tr.danger td { background: rgba(220,50,50,0.15); }
+    .data-table .priority-badge {
+      display: inline-block;
+      background: var(--accent-color);
+      color: white;
+      font-size: 0.7em;
+      padding: 1px 6px;
+      border-radius: 10px;
+      margin-left: 5px;
+      font-weight: 600;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .section-header h3 { margin: 0; }
+    .last-updated { font-size: 0.8em; color: #888; }
+    body.dark .last-updated { color: #aaa; }
+
+    /* ===== Action Buttons ===== */
+    .btn-action {
+      padding: 5px 12px;
+      font-size: 0.82em;
+      font-weight: 600;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .btn-action:hover { opacity: 0.85; }
+    .btn-assign { background: var(--accent-color); color: white; }
+    .btn-reassign { background: #3498db; color: white; }
+    .btn-primary {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary {
+      background: transparent;
+      color: var(--accent-color);
+      border: 2px solid var(--accent-color);
+      border-radius: 6px;
+      padding: 8px 18px;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-secondary:hover { background: rgba(142,0,0,0.07); }
+    .btn-refresh {
+      padding: 6px 14px;
+      font-size: 0.85em;
+      background: transparent;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    body.dark .btn-refresh { border-color: var(--border-dark); color: #ccc; }
+
+    /* ===== Volunteer Cards ===== */
+    .vol-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .vol-card {
+      background: var(--input-bg-light);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-light);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    body.dark .vol-card {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+    .vol-card-name {
+      font-weight: 700;
+      font-size: 1em;
+    }
+    .vol-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .role-pill {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 10px;
+      font-size: 0.75em;
+      font-weight: 700;
+      color: white;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .role-pill.filer { background: #9b59b6; }
+    .role-pill.training { background: #3498db; }
+    .role-pill.quiz { background: #e67e22; }
+    .vol-card-status {
+      font-size: 0.8em;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      display: inline-block;
+    }
+    .status-floor { background: #e8f8f0; color: #27ae60; }
+    .status-break { background: #fef5e4; color: #e67e22; }
+    body.dark .status-floor { background: rgba(39,174,96,0.15); color: #4fbe80; }
+    body.dark .status-break { background: rgba(230,126,34,0.15); color: #f39c12; }
+    .vol-card-divider {
+      border: none;
+      border-top: 1px solid var(--border-light);
+      margin: 2px 0;
+    }
+    body.dark .vol-card-divider { border-color: var(--border-dark); }
+    .vol-card-client-id {
+      font-weight: 700;
+      font-size: 0.9em;
+      color: var(--accent-color);
+    }
+    .vol-card-detail {
+      font-size: 0.82em;
+      color: #555;
+      line-height: 1.5;
+    }
+    body.dark .vol-card-detail { color: #bbb; }
+    .vol-card-timing {
+      font-size: 0.82em;
+      font-weight: 600;
+      color: #888;
+    }
+    body.dark .vol-card-timing { color: #aaa; }
+    .vol-card-idle {
+      font-size: 0.82em;
+      color: #aaa;
+      font-style: italic;
+    }
+
+    /* ===== Coverage Heatmap ===== */
+    .coverage-table-wrap { overflow-x: auto; }
+    .coverage-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9em;
+    }
+    .coverage-table th, .coverage-table td {
+      padding: 12px 16px;
+      text-align: center;
+      border: 1px solid var(--border-light);
+      min-width: 100px;
+    }
+    body.dark .coverage-table th,
+    body.dark .coverage-table td { border-color: var(--border-dark); }
+    .coverage-table th {
+      background: var(--input-bg-light);
+      font-weight: 700;
+    }
+    body.dark .coverage-table th { background: var(--input-bg-dark); }
+    .coverage-table td.heat-green { background: #d5f5e3; color: #1a7a40; font-weight: 700; }
+    .coverage-table td.heat-yellow { background: #fef9e7; color: #9a7d0a; font-weight: 700; }
+    .coverage-table td.heat-red { background: #fde8e8; color: #a93226; font-weight: 700; }
+    body.dark .coverage-table td.heat-green { background: rgba(39,174,96,0.18); color: #5dbb79; }
+    body.dark .coverage-table td.heat-yellow { background: rgba(255,200,0,0.15); color: #c9a80a; }
+    body.dark .coverage-table td.heat-red { background: rgba(220,50,50,0.18); color: #e07070; }
+
+    /* ===== Schedule Tab ===== */
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .form-group-inline {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .form-group-inline label { font-size: 0.85em; font-weight: 600; }
+    .form-group-inline input {
+      padding: 8px 10px;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      font-size: 0.9em;
+      background: var(--input-bg-light);
+      color: inherit;
+    }
+    body.dark .form-group-inline input {
+      border-color: var(--border-dark);
+      background: var(--input-bg-dark);
+    }
+    .checkbox-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+    .checkbox-row { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+    .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; margin-top: 2px; cursor: pointer; flex-shrink: 0; }
+    .checkbox-label { font-size: 0.9em; }
+    .checkbox-hint { font-size: 0.78em; color: #888; margin-top: 2px; }
+    body.dark .checkbox-hint { color: #aaa; }
+    .section-box {
+      background: var(--input-bg-light);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 20px 22px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-light);
+    }
+    body.dark .section-box {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+    .section-box h3 { margin-top: 0; margin-bottom: 16px; color: var(--accent-color); font-size: 1.05em; }
+    .schedule-msg { padding: 10px 14px; border-radius: 6px; font-size: 0.9em; margin-bottom: 12px; display: none; }
+    .schedule-msg.success { background: #e8f8f0; color: #1a6b3a; border-left: 3px solid #27ae60; }
+    .schedule-msg.error { background: #fde8e8; color: #a93226; border-left: 3px solid #e74c3c; }
+    body.dark .schedule-msg.success { background: rgba(39,174,96,0.1); }
+    body.dark .schedule-msg.error { background: rgba(231,76,60,0.1); }
+    .stats-results { display: none; }
+    .stat-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
+    body.dark .stat-item { border-color: var(--border-dark); }
+    .stat-item:last-child { border-bottom: none; }
+    .stat-label { font-size: 0.88em; color: #555; }
+    body.dark .stat-label { color: #bbb; }
+    .stat-value { font-weight: 700; font-size: 0.95em; }
+    .editor-autocomplete-container { position: relative; }
+    .editor-autocomplete-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--input-bg-light);
+      border: 1px solid var(--border-light);
+      border-radius: 0 0 6px 6px;
+      z-index: 100;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    body.dark .editor-autocomplete-dropdown {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+    .editor-autocomplete-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
+    .editor-autocomplete-item:hover,
+    .editor-autocomplete-item.highlighted { background: rgba(142,0,0,0.08); }
+    .autocomplete-no-matches { padding: 8px 12px; font-size: 0.85em; color: #888; font-style: italic; }
+    .edit-grid-table { border-collapse: collapse; font-size: 0.9em; }
+    .edit-grid-table th, .edit-grid-table td { padding: 8px 14px; border: 1px solid var(--border-light); text-align: center; }
+    body.dark .edit-grid-table th, body.dark .edit-grid-table td { border-color: var(--border-dark); }
+    .edit-grid-table th { background: var(--input-bg-light); font-weight: 600; }
+    body.dark .edit-grid-table th { background: rgba(255,255,255,0.05); }
+
+    /* ===== Stats feature bar ===== */
+    .feature-bar-row { margin-bottom: 10px; }
+    .feature-bar-label { font-size: 0.85em; margin-bottom: 4px; }
+    .feature-bar-track {
+      background: var(--border-light);
+      border-radius: 4px;
+      height: 10px;
+      overflow: hidden;
+    }
+    body.dark .feature-bar-track { background: var(--border-dark); }
+    .feature-bar-fill { height: 100%; background: var(--accent-color); border-radius: 4px; transition: width 0.4s; }
+    .feature-avg-time { color: #888; margin-left: 4px; font-size: 0.9em; }
+
+    /* ===== Modal ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--input-bg-light);
+      border-radius: 12px;
+      padding: 28px 32px;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    }
+    body.dark .modal-box { background: var(--input-bg-dark); }
+    .modal-box h3 { margin-top: 0; margin-bottom: 16px; }
+    .modal-box select {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      font-size: 0.95em;
+      margin-bottom: 18px;
+      background: white;
+      color: inherit;
+    }
+    body.dark .modal-box select {
+      border-color: var(--border-dark);
+      background: #333;
+    }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-modal-cancel {
+      padding: 8px 18px;
+      border: 1px solid var(--border-light);
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9em;
+      font-weight: 600;
+    }
+    body.dark .btn-modal-cancel { border-color: var(--border-dark); color: #ccc; }
+
+    /* ===== Toast ===== */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #2c3e50;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      font-weight: 600;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+      z-index: 2000;
+      max-width: 320px;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: #27ae60; }
+    .toast.error { background: var(--accent-color); }
+
+    /* ===== Loading spinner ===== */
+    .loading-inline {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid #ccc;
+      border-top-color: var(--accent-color);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state { color: #aaa; font-style: italic; font-size: 0.9em; padding: 16px 0; }
+  </style>
+</head>
+<body class="light">
+  <?!= include('shared_topbar') ?>
+
+  <nav class="tab-nav" role="tablist">
+    <button class="tab-btn active" role="tab" data-tab="queue" onclick="switchTab('queue')">📋 Queue</button>
+    <button class="tab-btn" role="tab" data-tab="volunteers" onclick="switchTab('volunteers')">👥 Volunteers</button>
+    <button class="tab-btn" role="tab" data-tab="schedule" onclick="switchTab('schedule')">🗓️ Schedule</button>
+    <button class="tab-btn" role="tab" data-tab="coverage" onclick="switchTab('coverage')">🔥 Coverage</button>
+    <button class="tab-btn" role="tab" data-tab="stats" onclick="switchTab('stats')">📊 Stats</button>
+  </nav>
+
+  <!-- ===== QUEUE TAB ===== -->
+  <div id="tab-queue" class="tab-panel active" role="tabpanel">
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="stat-card-label">In Queue</div>
+        <div class="stat-card-value" id="q-inQueue">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Avg Wait</div>
+        <div class="stat-card-value" id="q-avgWait">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Longest Wait</div>
+        <div class="stat-card-value" id="q-longestWait">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Volunteers on Floor</div>
+        <div class="stat-card-value" id="q-volunteers">–</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <h3>Waiting Clients</h3>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span class="last-updated" id="q-lastUpdated"></span>
+        <button class="btn-refresh" onclick="loadQueueData()">🔄 Refresh</button>
+      </div>
+    </div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Client ID</th>
+            <th>Wait Time</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="q-waitingBody"></tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:28px;margin-bottom:12px;">Active Assignments</h3>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Client ID</th>
+            <th>Assigned To</th>
+            <th>Time Assigned</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="q-activeBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== VOLUNTEERS TAB ===== -->
+  <div id="tab-volunteers" class="tab-panel" role="tabpanel">
+    <div class="section-header">
+      <h3>Signed-In Volunteers</h3>
+      <button class="btn-refresh" onclick="refreshVolunteers()">🔄 Refresh</button>
+    </div>
+    <div id="vol-grid" class="vol-card-grid">
+      <p class="empty-state">Loading volunteers…</p>
+    </div>
+  </div>
+
+  <!-- ===== SCHEDULE TAB ===== -->
+  <div id="tab-schedule" class="tab-panel" role="tabpanel">
+    <div class="section-box">
+      <h3>Day Labels</h3>
+      <div class="form-row">
+        <div class="form-group-inline">
+          <label for="sch-day1">Day 1</label>
+          <input type="text" id="sch-day1" placeholder="Saturday March 20 2027">
+        </div>
+        <div class="form-group-inline">
+          <label for="sch-day2">Day 2</label>
+          <input type="text" id="sch-day2" placeholder="Sunday March 21 2027">
+        </div>
+        <div class="form-group-inline">
+          <label for="sch-day3">Day 3</label>
+          <input type="text" id="sch-day3" placeholder="Saturday March 27 2027">
+        </div>
+        <div class="form-group-inline">
+          <label for="sch-day4">Day 4</label>
+          <input type="text" id="sch-day4" placeholder="Sunday March 28 2027">
+        </div>
+      </div>
+    </div>
+
+    <div class="section-box">
+      <h3>Update Mode</h3>
+      <div class="checkbox-group">
+        <label class="checkbox-row">
+          <input type="checkbox" id="sch-lockPast">
+          <div>
+            <div class="checkbox-label">Lock past shifts</div>
+            <div class="checkbox-hint">Keep existing schedule for clinic days before today unchanged.</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="sch-partial">
+          <div>
+            <div class="checkbox-label">Preserve unchanged volunteers</div>
+            <div class="checkbox-hint">Only re-schedule volunteers who updated their availability since last generation.</div>
+          </div>
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" id="sch-notify">
+          <div>
+            <div class="checkbox-label">Inform volunteers of schedule changes via email</div>
+            <div class="checkbox-hint">Volunteers whose shifts changed will receive an email notification.</div>
+          </div>
+        </label>
+      </div>
+      <button class="btn-primary" id="sch-generateBtn" onclick="generateSchedule()" style="width:100%;padding:14px;font-size:1em;">
+        Generate Schedule
+      </button>
+    </div>
+
+    <div class="schedule-msg" id="sch-msg"></div>
+    <div class="section-box stats-results" id="sch-results">
+      <h3>Generation Results</h3>
+      <div id="sch-statsContent"></div>
+    </div>
+
+    <div class="section-box" style="margin-top:8px;">
+      <h3>✏️ Schedule Editor</h3>
+      <p style="font-size:0.85em;color:#888;margin-top:-8px;margin-bottom:12px;">Search for a volunteer to manually adjust their shift assignments.</p>
+      <div class="form-group-inline" style="margin-bottom:12px;">
+        <label for="sch-editorName">Volunteer Name</label>
+        <div class="editor-autocomplete-container">
+          <input type="text" id="sch-editorName" placeholder="Start typing a volunteer name…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="sch-editorDropdown">
+          <div id="sch-editorDropdown" class="editor-autocomplete-dropdown" role="listbox"></div>
+        </div>
+      </div>
+      <div id="sch-editorPanel" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ===== COVERAGE TAB ===== -->
+  <div id="tab-coverage" class="tab-panel" role="tabpanel">
+    <div class="section-header">
+      <h3>Shift Coverage Heatmap</h3>
+      <button class="btn-refresh" onclick="loadCoverage(true)">🔄 Refresh</button>
+    </div>
+    <p style="font-size:0.85em;color:#888;margin-bottom:16px;">
+      Totals per shift. Thresholds: <span style="color:#1a7a40;font-weight:600;">≥12 full</span> · <span style="color:#9a7d0a;font-weight:600;">≥9 adequate</span> · <span style="color:#a93226;font-weight:600;">&lt;9 short</span>
+    </p>
+    <div id="cov-container">
+      <p class="empty-state">Loading coverage data…</p>
+    </div>
+  </div>
+
+  <!-- ===== STATS TAB ===== -->
+  <div id="tab-stats" class="tab-panel" role="tabpanel">
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="stat-card-label">Returns Filed YTD</div>
+        <div class="stat-card-value" id="st-ytd">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Completed Today</div>
+        <div class="stat-card-value" id="st-today">–</div>
+      </div>
+    </div>
+
+    <div class="section-box">
+      <h3>👤 Client Situations Served</h3>
+      <p style="font-size:0.88em;color:#888;margin:-8px 0 12px;">
+        Unique completed clients: <strong id="st-featureTotal">–</strong>
+        <span id="st-featureAvg"></span>
+      </p>
+      <div id="st-featureBars">
+        <p class="empty-state">Loading…</p>
+      </div>
+    </div>
+
+    <div class="section-box">
+      <h3>🏆 Top Volunteers Today</h3>
+      <div id="st-topToday">
+        <p class="empty-state">Loading…</p>
+      </div>
+    </div>
+
+    <div class="section-box">
+      <h3>🏆 Top Volunteers All-Time</h3>
+      <div id="st-topAllTime">
+        <p class="empty-state">Loading…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Reassign Modal ===== -->
+  <div id="reassignModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reassignModalTitle">
+    <div class="modal-box">
+      <h3 id="reassignModalTitle">Assign Client</h3>
+      <p id="reassignModalDesc" style="font-size:0.9em;color:#666;margin-bottom:14px;"></p>
+      <select id="reassignVolSelect" aria-label="Select volunteer"></select>
+      <div class="modal-actions">
+        <button class="btn-modal-cancel" onclick="closeReassignModal()">Cancel</button>
+        <button class="btn-primary" onclick="confirmReassign()" id="reassignConfirmBtn" style="padding:8px 20px;">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Toast ===== -->
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <?!= include('shared_scripts') ?>
+  <script>
+    // ===== Tab switching =====
+    let initializedTabs = { queue: true, volunteers: false, schedule: false, coverage: false, stats: false };
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
+
+      if (!initializedTabs[tab]) {
+        initializedTabs[tab] = true;
+        if (tab === 'volunteers') {
+          if (cachedSignedIn !== null) {
+            renderVolunteers(cachedSignedIn, cachedActiveReturns);
+          } else {
+            refreshVolunteers();
+          }
+        }
+        if (tab === 'schedule') initScheduleTab();
+        if (tab === 'coverage') loadCoverage(false);
+        if (tab === 'stats') loadStats();
+      }
+    }
+
+    // ===== Toast =====
+    let toastTimer = null;
+    function showToast(msg, type) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = 'toast show' + (type ? ' ' + type : '');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { el.className = 'toast'; }, 3500);
+    }
+
+    // ===== Parse wait time string to minutes =====
+    function parseMinutes(str) {
+      if (!str) return 0;
+      let total = 0;
+      const h = str.match(/(\d+)h/);
+      const m = str.match(/(\d+)m/);
+      if (h) total += parseInt(h[1]) * 60;
+      if (m) total += parseInt(m[1]);
+      return total;
+    }
+
+    function fmtMins(mins) {
+      if (mins < 60) return mins + 'm';
+      return Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm';
+    }
+
+    // ===== QUEUE TAB =====
+    let queuePoller = null;
+    let cachedVolunteerCount = null;
+
+    function renderQueue(data) {
+      const clients = data.clients || [];
+      const active = data.activeAssignments || [];
+
+      // Stat cards
+      const waitMins = clients.map(c => parseMinutes(c.waitTime));
+      const avgWait = waitMins.length ? Math.round(waitMins.reduce((a,b)=>a+b,0)/waitMins.length) : 0;
+      const maxWait = waitMins.length ? Math.max(...waitMins) : 0;
+      document.getElementById('q-inQueue').textContent = clients.length;
+      document.getElementById('q-avgWait').textContent = avgWait ? fmtMins(avgWait) : '–';
+      document.getElementById('q-longestWait').textContent = maxWait ? fmtMins(maxWait) : '–';
+      if (cachedVolunteerCount !== null) {
+        document.getElementById('q-volunteers').textContent = cachedVolunteerCount;
+      }
+
+      // Last updated
+      document.getElementById('q-lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+      // Waiting table
+      const waitBody = document.getElementById('q-waitingBody');
+      if (clients.length === 0) {
+        waitBody.innerHTML = '<tr><td colspan="3" class="empty-state">No clients waiting.</td></tr>';
+      } else {
+        waitBody.innerHTML = clients.map(c => {
+          const mins = parseMinutes(c.waitTime);
+          const cls = mins >= 30 ? 'danger' : mins >= 15 ? 'warn' : '';
+          const badge = c.isHighPriority ? '<span class="priority-badge">P</span>' : '';
+          return `<tr class="${cls}">
+            <td>${escapeHtml(c.clientId)}${badge}</td>
+            <td>${escapeHtml(c.waitTime)}</td>
+            <td><button class="btn-action btn-assign" onclick="openAssignModal('${escapeHtml(c.clientId)}', false)">Assign</button></td>
+          </tr>`;
+        }).join('');
+      }
+
+      // Active table
+      const activeBody = document.getElementById('q-activeBody');
+      if (active.length === 0) {
+        activeBody.innerHTML = '<tr><td colspan="4" class="empty-state">No active assignments.</td></tr>';
+      } else {
+        activeBody.innerHTML = active.map(a => {
+          const mins = parseMinutes(a.assignedAt);
+          const cls = mins >= 30 ? 'danger' : mins >= 15 ? 'warn' : '';
+          const badge = a.isHighPriority ? '<span class="priority-badge">P</span>' : '';
+          const volName = escapeHtml(a.volunteerName.includes('–') ? a.volunteerName.split('–')[1].trim() : a.volunteerName);
+          return `<tr class="${cls}">
+            <td>${escapeHtml(a.clientId)}${badge}</td>
+            <td>${volName}</td>
+            <td>${escapeHtml(a.assignedAt)}</td>
+            <td><button class="btn-action btn-reassign" onclick="openAssignModal('${escapeHtml(a.clientId)}', true)">Reassign</button></td>
+          </tr>`;
+        }).join('');
+      }
+    }
+
+    function loadQueueData() {
+      google.script.run
+        .withSuccessHandler(data => { if (data) renderQueue(data); })
+        .withFailureHandler(err => showToast('Queue error: ' + (err.message || err), 'error'))
+        .getQueueData();
+    }
+
+    // ===== Reassign Modal =====
+    let modalClientId = null;
+    let modalIsReassign = false;
+    let availableVolunteers = [];
+
+    function openAssignModal(clientId, isReassign) {
+      modalClientId = clientId;
+      modalIsReassign = isReassign;
+      document.getElementById('reassignModalTitle').textContent = isReassign ? 'Reassign Client' : 'Assign Client';
+      document.getElementById('reassignModalDesc').textContent = 'Client ' + clientId + ' → Select a volunteer:';
+      document.getElementById('reassignConfirmBtn').disabled = true;
+
+      const sel = document.getElementById('reassignVolSelect');
+      sel.innerHTML = '<option value="">Loading volunteers…</option>';
+      document.getElementById('reassignModal').classList.add('open');
+
+      google.script.run
+        .withSuccessHandler(vols => {
+          availableVolunteers = vols || [];
+          if (availableVolunteers.length === 0) {
+            sel.innerHTML = '<option value="">No available volunteers</option>';
+          } else {
+            sel.innerHTML = '<option value="">— Select volunteer —</option>' +
+              availableVolunteers.map(v => `<option value="${escapeHtml(v.name)}">${escapeHtml(v.displayText || v.name)}</option>`).join('');
+            document.getElementById('reassignConfirmBtn').disabled = false;
+          }
+        })
+        .withFailureHandler(err => { sel.innerHTML = '<option value="">Error loading volunteers</option>'; })
+        .getAvailableVolunteers();
+    }
+
+    function closeReassignModal() {
+      document.getElementById('reassignModal').classList.remove('open');
+      modalClientId = null;
+    }
+
+    function confirmReassign() {
+      const sel = document.getElementById('reassignVolSelect');
+      const volName = sel.value;
+      if (!volName) { showToast('Please select a volunteer', 'error'); return; }
+
+      const btn = document.getElementById('reassignConfirmBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+
+      const onSuccess = result => {
+        btn.disabled = false;
+        btn.textContent = 'Confirm';
+        const clientId = modalClientId;
+        closeReassignModal();
+        if (result && result.success === false) {
+          showToast(result.message || 'Failed', 'error');
+        } else {
+          showToast('Client ' + clientId + ' assigned to ' + volName, 'success');
+          loadQueueData();
+        }
+      };
+      const onError = err => {
+        btn.disabled = false;
+        btn.textContent = 'Confirm';
+        showToast('Error: ' + (err.message || err), 'error');
+      };
+
+      if (modalIsReassign) {
+        google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onError)
+          .reassignClientToVolunteer(modalClientId, volName);
+      } else {
+        google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onError)
+          .assignClientToVolunteer(modalClientId, volName);
+      }
+    }
+
+    // Close modal on overlay click
+    document.getElementById('reassignModal').addEventListener('click', function(e) {
+      if (e.target === this) closeReassignModal();
+    });
+
+    // ===== VOLUNTEERS TAB =====
+    let cachedSignedIn = null;
+    let cachedActiveReturns = null;
+
+    function renderVolunteers(signedIn, activeReturns) {
+      cachedSignedIn = signedIn;
+      cachedActiveReturns = activeReturns;
+
+      const names = (signedIn && signedIn.allFilerNames) || [];
+      const breakStatus = (signedIn && signedIn.breakStatus) || {};
+      const trainingSet = new Set((signedIn && signedIn.trainingVolunteers) || []);
+      const quizSet = new Set((signedIn && signedIn.quizVolunteers) || []);
+
+      // Build a map: baseName → active return object
+      const activeMap = {};
+      for (const r of (activeReturns || [])) {
+        const base = r.volunteer.includes('–') ? r.volunteer.split('–')[1].trim() : r.volunteer.trim();
+        activeMap[base] = r;
+      }
+
+      if (names.length === 0) {
+        document.getElementById('vol-grid').innerHTML = '<p class="empty-state">No volunteers currently signed in.</p>';
+        return;
+      }
+
+      const cards = names.map(name => {
+        const onBreak = breakStatus[name] || false;
+        const role = trainingSet.has(name) ? 'training' : quizSet.has(name) ? 'quiz' : 'filer';
+        const roleLabel = role === 'training' ? 'Training' : role === 'quiz' ? 'Quiz' : 'Filer';
+        const statusHtml = onBreak
+          ? '<span class="vol-card-status status-break">☕ On Break</span>'
+          : '<span class="vol-card-status status-floor">🟢 On Floor</span>';
+
+        const active = activeMap[name];
+        let returnHtml = '';
+        if (active) {
+          returnHtml = `<hr class="vol-card-divider">
+            <div class="vol-card-client-id">Client ${escapeHtml(active.clientId)}</div>
+            ${active.filingYears ? `<div class="vol-card-detail">📅 ${escapeHtml(active.filingYears)}</div>` : ''}
+            ${active.situations ? `<div class="vol-card-detail">📋 ${escapeHtml(active.situations)}</div>` : ''}
+            ${active.minutesOnClient !== null ? `<div class="vol-card-timing">⏱️ ${fmtMins(active.minutesOnClient)} on client</div>` : ''}`;
+        } else {
+          returnHtml = '<div class="vol-card-idle">No active return</div>';
+        }
+
+        return `<div class="vol-card">
+          <div class="vol-card-top">
+            <div class="vol-card-name">${escapeHtml(name)}</div>
+            <span class="role-pill ${role}">${roleLabel}</span>
+          </div>
+          ${statusHtml}
+          ${returnHtml}
+        </div>`;
+      });
+
+      document.getElementById('vol-grid').innerHTML = cards.join('');
+    }
+
+    function refreshVolunteers() {
+      document.getElementById('vol-grid').innerHTML = '<p class="empty-state"><span class="loading-inline"></span> Loading…</p>';
+      google.script.run
+        .withSuccessHandler(data => {
+          if (data) {
+            cachedVolunteerCount = (data.signedIn && data.signedIn.allFilerNames) ? data.signedIn.allFilerNames.length : 0;
+            document.getElementById('q-volunteers').textContent = cachedVolunteerCount;
+            renderVolunteers(data.signedIn, data.activeReturns);
+          }
+        })
+        .withFailureHandler(err => {
+          document.getElementById('vol-grid').innerHTML = '<p class="empty-state">Error loading volunteers.</p>';
+          showToast('Error: ' + (err.message || err), 'error');
+        })
+        .getMasterDashboardData();
+    }
+
+    // ===== SCHEDULE TAB =====
+    let schedEditorVolNames = [];
+    let schedEditorVolNamesLoading = true;
+    let schedEditorVolunteerName = '';
+    let schedEditorShiftMap = {};
+
+    function initScheduleTab() {
+      google.script.run
+        .withSuccessHandler(names => { schedEditorVolNames = names || []; schedEditorVolNamesLoading = false; })
+        .withFailureHandler(() => { schedEditorVolNames = []; schedEditorVolNamesLoading = false; })
+        .getAllVolunteerNames();
+
+      createAutocomplete({
+        inputId: 'sch-editorName',
+        dropdownId: 'sch-editorDropdown',
+        idPrefix: 'sched-opt-',
+        itemClass: 'editor-autocomplete-item',
+        getItems: () => schedEditorVolNames,
+        filterItem: (name, term) => name.toLowerCase().includes(term),
+        renderItem: (name) => escapeHtml(name),
+        onSelect: name => selectScheduleEditor(name),
+        isLoading: () => schedEditorVolNamesLoading,
+        loadingText: 'Loading…'
+      });
+    }
+
+    function showScheduleMsg(msg, type) {
+      const el = document.getElementById('sch-msg');
+      el.textContent = msg;
+      el.className = 'schedule-msg ' + type;
+      el.style.display = 'block';
+    }
+    function hideScheduleMsg() {
+      document.getElementById('sch-msg').style.display = 'none';
+    }
+
+    function generateSchedule() {
+      const outputSheet = 'Shift Schedule';
+      const day1 = document.getElementById('sch-day1').value.trim() || 'Saturday March 20 2027';
+      const day2 = document.getElementById('sch-day2').value.trim() || 'Sunday March 21 2027';
+      const day3 = document.getElementById('sch-day3').value.trim() || 'Saturday March 27 2027';
+      const day4 = document.getElementById('sch-day4').value.trim() || 'Sunday March 28 2027';
+
+      const options = {
+        prioritizeConsecutive: true,
+        dayLabels: [day1, day2, day3, day4],
+        notifyChanges: document.getElementById('sch-notify').checked,
+        lockPastShifts: document.getElementById('sch-lockPast').checked,
+        partialUpdate: document.getElementById('sch-partial').checked
+      };
+
+      const btn = document.getElementById('sch-generateBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading-inline"></span> Generating…';
+      hideScheduleMsg();
+      document.getElementById('sch-results').style.display = 'none';
+
+      google.script.run
+        .withSuccessHandler(result => {
+          btn.disabled = false;
+          btn.textContent = 'Generate Schedule';
+          if (!result) { showScheduleMsg('No result returned', 'error'); return; }
+          showScheduleMsg('Schedule generated successfully!', 'success');
+          displayScheduleStats(result);
+        })
+        .withFailureHandler(err => {
+          btn.disabled = false;
+          btn.textContent = 'Generate Schedule';
+          showScheduleMsg('Error: ' + (err.message || err), 'error');
+        })
+        .generateScheduleFromDashboard(outputSheet, options);
+    }
+
+    function displayScheduleStats(result) {
+      const box = document.getElementById('sch-results');
+      const content = document.getElementById('sch-statsContent');
+      const summary = result.summary || {};
+      const roleDistribution = summary.roleDistribution || {};
+      const shortfalls = summary.shortfalls || [];
+
+      let html = `
+        <div class="stat-item"><span class="stat-label">Total Shifts:</span><span class="stat-value">${summary.totalShifts || 12}</span></div>
+        <div class="stat-item"><span class="stat-label">Shifts Filled:</span><span class="stat-value">${summary.shiftsFilled || 0}</span></div>
+        <div class="stat-item"><span class="stat-label">Total Volunteers:</span><span class="stat-value">${summary.totalVolunteers || 0}</span></div>
+        <div class="stat-item"><span class="stat-label">Total Assignments:</span><span class="stat-value">${summary.totalAssignments || 0}</span></div>
+      `;
+
+      if (result.notificationsSent !== undefined) {
+        html += `<div class="stat-item"><span class="stat-label">📧 Notifications Sent:</span><span class="stat-value">${result.notificationsSent}</span></div>`;
+      }
+
+      if (roleDistribution.filers !== undefined) {
+        html += `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light);">
+          <div style="font-weight:700;margin-bottom:8px;font-size:0.9em;">Volunteers by Role</div>
+          <div class="stat-item"><span class="stat-label"><span style="display:inline-block;width:10px;height:10px;background:#9b59b6;border-radius:2px;margin-right:5px;"></span>Filers</span><span class="stat-value">${roleDistribution.filers || 0}</span></div>
+          <div class="stat-item"><span class="stat-label"><span style="display:inline-block;width:10px;height:10px;background:#3498db;border-radius:2px;margin-right:5px;"></span>Mentors</span><span class="stat-value">${roleDistribution.mentors || 0}</span></div>
+          <div class="stat-item"><span class="stat-label"><span style="display:inline-block;width:10px;height:10px;background:#2ecc71;border-radius:2px;margin-right:5px;"></span>Frontline</span><span class="stat-value">${roleDistribution.frontline || 0}</span></div>
+          <div class="stat-item"><span class="stat-label"><span style="display:inline-block;width:10px;height:10px;background:#e74c3c;border-radius:2px;margin-right:5px;"></span>Internal Services</span><span class="stat-value">${roleDistribution.internalServices || 0}</span></div>
+        </div>`;
+      }
+
+      if (shortfalls.length > 0) {
+        html += `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border-light);"><div style="font-weight:700;color:#e74c3c;margin-bottom:8px;font-size:0.9em;">⚠️ Shifts Under Minimum</div>`;
+        for (const sf of shortfalls) {
+          html += `<div class="stat-item" style="background:rgba(231,76,60,0.08);padding:6px 8px;border-radius:4px;margin-bottom:4px;">
+            <span class="stat-label">${escapeHtml(sf.shiftId)}: ${escapeHtml(sf.role)}</span>
+            <span class="stat-value" style="color:#e74c3c;">${sf.actual} / ${sf.target}</span>
+          </div>`;
+        }
+        html += '</div>';
+      }
+
+      if (result.shiftRoleCounts) {
+        const slotKeys = ['A', 'B', 'C'];
+        const slotLabels = ['Morning', 'Afternoon', 'Evening'];
+        const roleColors = { filer: '#9b59b6', mentor: '#3498db', frontline: '#2ecc71', internalServices: '#e74c3c' };
+        const dayLabels = (summary.dayLabels) || ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
+
+        html += '<div style="margin-top:16px;padding-top:16px;border-top:2px solid var(--border-light);"><div style="font-weight:700;font-size:1em;margin-bottom:12px;">Shift Distribution</div>';
+        html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;font-size:0.8em;">';
+        for (const [role, color] of Object.entries(roleColors)) {
+          html += `<span><span style="display:inline-block;width:10px;height:10px;background:${color};border-radius:2px;margin-right:3px;vertical-align:middle;"></span>${role}</span>`;
+        }
+        html += '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
+
+        for (let d = 0; d < 4; d++) {
+          let maxTotal = 0;
+          for (const sk of slotKeys) {
+            const c = result.shiftRoleCounts['D' + (d+1) + sk] || {};
+            const t = (c.filer||0) + (c.mentor||0) + (c.frontline||0) + (c.internalServices||0);
+            if (t > maxTotal) maxTotal = t;
+          }
+          html += `<div><div style="font-weight:600;font-size:0.88em;margin-bottom:8px;">${escapeHtml(dayLabels[d] || 'Day ' + (d+1))}</div>`;
+          for (let si = 0; si < slotKeys.length; si++) {
+            const shiftId = 'D' + (d+1) + slotKeys[si];
+            const c = result.shiftRoleCounts[shiftId] || { filer:0, mentor:0, frontline:0, internalServices:0 };
+            const total = c.filer + c.mentor + c.frontline + c.internalServices;
+            const pct = maxTotal > 0 ? (total / maxTotal * 100) : 0;
+            html += `<div style="margin-bottom:6px;"><div style="font-size:0.8em;color:#888;margin-bottom:2px;">${slotLabels[si]} (${total})</div>`;
+            html += `<div style="height:14px;background:var(--border-light);border-radius:4px;overflow:hidden;display:flex;">`;
+            for (const [role, color] of Object.entries(roleColors)) {
+              const rPct = maxTotal > 0 ? (c[role] / maxTotal * 100) : 0;
+              if (rPct > 0) html += `<div style="width:${rPct}%;background:${color};"></div>`;
+            }
+            html += '</div></div>';
+          }
+          html += '</div>';
+        }
+        html += '</div></div>';
+      }
+
+      content.innerHTML = html;
+      box.style.display = 'block';
+    }
+
+    function selectScheduleEditor(name) {
+      schedEditorVolunteerName = name;
+      const panel = document.getElementById('sch-editorPanel');
+      panel.style.display = 'block';
+      panel.innerHTML = '<span class="loading-inline"></span> Loading shift data…';
+
+      google.script.run
+        .withSuccessHandler(shiftMap => {
+          schedEditorShiftMap = shiftMap;
+          renderEditorGrid(shiftMap);
+        })
+        .withFailureHandler(err => {
+          panel.innerHTML = '<div style="color:var(--accent-color);">Error: ' + (err.message || err) + '</div>';
+        })
+        .getVolunteerShiftMap(name);
+    }
+
+    function renderEditorGrid(shiftMap) {
+      const panel = document.getElementById('sch-editorPanel');
+      const slotLabels = { A: 'Morning', B: 'Afternoon', C: 'Evening' };
+      const dayLabels = [1,2,3,4].map(d => {
+        const el = document.getElementById('sch-day' + d);
+        const raw = el ? el.value.trim() : 'Day ' + d;
+        const parts = raw.split(/\s+/);
+        return parts.length >= 3 ? parts[0].substring(0,3) + ', ' + parts[1].substring(0,3) + ' ' + parts[2] : raw;
+      });
+
+      let html = `<h4 style="margin-top:0;">Editing: ${escapeHtml(schedEditorVolunteerName)}</h4>`;
+      html += '<div style="overflow-x:auto;"><table class="edit-grid-table"><thead><tr><th>Shift</th>';
+      for (const dl of dayLabels) html += '<th>' + escapeHtml(dl) + '</th>';
+      html += '</tr></thead><tbody>';
+      for (const sk of ['A','B','C']) {
+        html += '<tr><td>' + slotLabels[sk] + '</td>';
+        for (let d = 1; d <= 4; d++) {
+          const shiftId = 'D' + d + sk;
+          const checked = shiftMap[shiftId] ? 'checked' : '';
+          html += `<td><input type="checkbox" id="ed_${shiftId}" ${checked} onchange="schedEditorShiftMap['${shiftId}']=this.checked"></td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table></div>';
+      html += `<div style="margin-top:12px;"><label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="sch-editorNotify" style="width:16px;height:16px;cursor:pointer;">
+        <span style="font-size:0.9em;">Send schedule update email to this volunteer</span>
+      </label></div>`;
+      html += `<div style="display:flex;gap:10px;margin-top:14px;">
+        <button class="btn-primary" onclick="saveEditorChanges()" id="sch-editorSaveBtn">Save Changes</button>
+        <button class="btn-secondary" onclick="document.getElementById('sch-editorPanel').style.display='none';document.getElementById('sch-editorName').value='';" style="padding:8px 16px;">Cancel</button>
+      </div>`;
+      html += '<div id="sch-editorStatus" style="margin-top:10px;"></div>';
+      panel.innerHTML = html;
+    }
+
+    function saveEditorChanges() {
+      const btn = document.getElementById('sch-editorSaveBtn');
+      const status = document.getElementById('sch-editorStatus');
+      const sendEmail = document.getElementById('sch-editorNotify').checked;
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      status.innerHTML = '<span class="loading-inline"></span> Saving…';
+
+      google.script.run
+        .withSuccessHandler(result => {
+          btn.disabled = false;
+          btn.textContent = 'Save Changes';
+          let msg = 'Saved! ' + result.changesApplied + ' shift(s) updated.';
+          if (result.emailSent) msg += ' Notification email sent.';
+          else if (result.emailError) msg += ' (Email not sent: ' + result.emailError + ')';
+          status.innerHTML = '<div style="color:var(--success-color);font-weight:600;">' + msg + '</div>';
+        })
+        .withFailureHandler(err => {
+          btn.disabled = false;
+          btn.textContent = 'Save Changes';
+          status.innerHTML = '<div style="color:var(--accent-color);">Error: ' + (err.message || err) + '</div>';
+        })
+        .saveVolunteerScheduleEdits(schedEditorVolunteerName, schedEditorShiftMap, sendEmail);
+    }
+
+    // ===== COVERAGE TAB =====
+    let coverageLoaded = false;
+
+    function loadCoverage(force) {
+      if (coverageLoaded && !force) return;
+      document.getElementById('cov-container').innerHTML = '<p class="empty-state"><span class="loading-inline"></span> Loading…</p>';
+
+      google.script.run
+        .withSuccessHandler(data => {
+          coverageLoaded = true;
+          renderCoverage(data);
+        })
+        .withFailureHandler(err => {
+          document.getElementById('cov-container').innerHTML = '<p class="empty-state">Error loading coverage data.</p>';
+          showToast('Coverage error: ' + (err.message || err), 'error');
+        })
+        .getVolunteerDistribution();
+    }
+
+    function renderCoverage(data) {
+      const container = document.getElementById('cov-container');
+      if (!data || data.error) {
+        container.innerHTML = '<p class="empty-state">' + escapeHtml((data && data.error) || 'No data available. Generate a schedule first.') + '</p>';
+        return;
+      }
+      const counts = data.shiftRoleCounts || {};
+      const slotLabels = { A: 'Morning', B: 'Afternoon', C: 'Evening' };
+
+      let html = '<div class="coverage-table-wrap"><table class="coverage-table"><thead><tr><th>Shift</th>';
+      for (let d = 1; d <= 4; d++) html += '<th>Day ' + d + '</th>';
+      html += '</tr></thead><tbody>';
+      for (const sk of ['A', 'B', 'C']) {
+        html += '<tr><td><strong>' + slotLabels[sk] + '</strong></td>';
+        for (let d = 1; d <= 4; d++) {
+          const shiftId = 'D' + d + sk;
+          const c = counts[shiftId] || { filer:0, mentor:0, frontline:0, internalServices:0 };
+          const total = c.filer + c.mentor + c.frontline + c.internalServices;
+          const cls = total >= 12 ? 'heat-green' : total >= 9 ? 'heat-yellow' : 'heat-red';
+          html += `<td class="${cls}">${total}</td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    }
+
+    // ===== STATS TAB =====
+    let statsLoaded = false;
+
+    function loadStats() {
+      if (statsLoaded) return;
+      google.script.run
+        .withSuccessHandler(data => {
+          if (data) renderStats(data.stats);
+        })
+        .withFailureHandler(err => showToast('Stats error: ' + (err.message || err), 'error'))
+        .getMasterDashboardData();
+    }
+
+    function renderStats(stats) {
+      if (!stats) return;
+      statsLoaded = true;
+
+      const rs = stats.returnSummary || {};
+      document.getElementById('st-ytd').textContent = rs.totalCompleted !== undefined ? rs.totalCompleted : '–';
+      document.getElementById('st-today').textContent = rs.completedToday !== undefined ? rs.completedToday : '–';
+
+      const fb = stats.clientFeatureBreakdown;
+      if (fb) {
+        document.getElementById('st-featureTotal').textContent = fb.total || 0;
+        if (fb.avgMinutes != null) {
+          document.getElementById('st-featureAvg').textContent = ' · Avg ' + fmtMins(fb.avgMinutes) + '/return';
+        }
+        const barsEl = document.getElementById('st-featureBars');
+        if (!fb.total || !fb.features || fb.features.length === 0) {
+          barsEl.innerHTML = '<p class="empty-state">No completed clients yet.</p>';
+        } else {
+          barsEl.innerHTML = fb.features.map(f => {
+            const pct = Math.round((f.count / fb.total) * 100);
+            const avgText = f.avgMinutes != null ? `<span class="feature-avg-time">· avg ${fmtMins(f.avgMinutes)}/return</span>` : '';
+            let delta = '';
+            if (f.deltaMinutes != null) {
+              const sign = f.deltaMinutes >= 0 ? '+' : '';
+              const color = f.deltaMinutes >= 0 ? '#e74c3c' : '#27ae60';
+              delta = ` <span style="color:${color};font-weight:600;">(${sign}${f.deltaMinutes} min)</span>`;
+            }
+            return `<div class="feature-bar-row">
+              <div class="feature-bar-label">${escapeHtml(f.label)}: ${f.count} (${pct}%) ${avgText}${delta}</div>
+              <div class="feature-bar-track"><div class="feature-bar-fill" style="width:${pct}%"></div></div>
+            </div>`;
+          }).join('');
+        }
+      }
+
+      const pm = stats.performanceMetrics || {};
+      renderVolLeaderboard('st-topToday', pm.todayVolunteers || []);
+      renderVolLeaderboard('st-topAllTime', pm.topVolunteers || []);
+    }
+
+    function renderVolLeaderboard(containerId, vols) {
+      const el = document.getElementById(containerId);
+      if (!vols || vols.length === 0) {
+        el.innerHTML = '<p class="empty-state">No data.</p>';
+        return;
+      }
+      el.innerHTML = vols.slice(0, 10).map((v, i) =>
+        `<div class="stat-item">
+          <span class="stat-label">${i+1}. ${escapeHtml(v.name || v.volunteerName || '?')}</span>
+          <span class="stat-value">${v.count || v.returnsCompleted || 0}</span>
+        </div>`
+      ).join('');
+    }
+
+    // ===== INITIAL LOAD =====
+    window.addEventListener('load', function() {
+      loadThemePreference();
+
+      // Set home link
+      var baseUrl = '<?= baseUrl ?>';
+      if (typeof google !== 'undefined' && google.script && google.script.url) {
+        google.script.url.getLocation(function(loc) {
+          var base = loc.parameter && loc.parameter.base ? loc.parameter.base : '';
+        });
+      }
+
+      // Load master data (queue + volunteers + stats)
+      google.script.run
+        .withSuccessHandler(function(data) {
+          if (!data) return;
+          // Queue
+          renderQueue(data.queue || { clients: [], volunteers: [], activeAssignments: [] });
+          // Volunteer count for queue card
+          cachedVolunteerCount = (data.signedIn && data.signedIn.allFilerNames) ? data.signedIn.allFilerNames.length : 0;
+          document.getElementById('q-volunteers').textContent = cachedVolunteerCount;
+          // Cache for volunteers tab
+          cachedSignedIn = data.signedIn;
+          cachedActiveReturns = data.activeReturns;
+          // Stats (pre-cache)
+          if (data.stats) {
+            renderStats(data.stats);
+            initializedTabs.stats = true;
+          }
+        })
+        .withFailureHandler(function(err) {
+          showToast('Load error: ' + (err.message || err), 'error');
+        })
+        .getMasterDashboardData();
+
+      // Queue auto-refresh every 20s (visibility-gated)
+      queuePoller = createVisibilityAwarePoller(loadQueueData, 20000, { jitterMs: 2000 });
+      // Start after initial load completes (slight delay to avoid double-call)
+      setTimeout(function() { queuePoller.start(); }, 22000);
+    });
+  </script>
+</body>
+</html>

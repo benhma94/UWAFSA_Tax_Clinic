@@ -302,6 +302,7 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
     const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
 
     const nameLower = volunteerName.toLowerCase();
+    const reviewerKey = normalizeReviewerName(volunteerName);
     let filterDate = null;
     if (filterDateStr) {
       filterDate = new Date(filterDateStr);
@@ -314,7 +315,6 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
 
     // For overall benchmarks (all volunteers) — per-volunteer counts for median calculation
     const filerCounts = {};    // volunteerName → total returns
-    const reviewerCounts = {}; // reviewerName → total reviews
 
     // Collect filing events for per-return timing calculation
     const volunteerFilings = []; // { clientId, filedAt } for this volunteer
@@ -329,8 +329,6 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
       const married = (row[cols.MARRIED] || '').toString().toLowerCase() === 'yes';
       const increment = married ? 2 : 1;
       const rowVolunteer = (row[cols.VOLUNTEER] || '').toString().trim().toLowerCase();
-      const reviewer = (row[cols.REVIEWER] || '').toString().trim().toLowerCase();
-      const secondaryReviewer = (row[cols.SECONDARY_REVIEWER] || '').toString().trim().toLowerCase();
       const clientId = (row[cols.CLIENT_ID] || '').toString().trim();
       const filedTimestamp = row[cols.TIMESTAMP];
 
@@ -345,28 +343,19 @@ function getVolunteerPersonalStats(volunteerName, filterDateStr) {
         }
       }
 
-      // Personal: returns reviewed
-      if (reviewer === nameLower || secondaryReviewer === nameLower) {
-        reviewedAllTime += increment;
-        if (filterDate && filedTimestamp && new Date(filedTimestamp).toDateString() === filterDate.toDateString()) {
-          reviewedFiltered += increment;
-        }
-      }
-
       // Overall benchmarks — accumulate per-volunteer counts
       if (rowVolunteer) {
         filerCounts[rowVolunteer] = (filerCounts[rowVolunteer] || 0) + increment;
-      }
-      if (reviewer) {
-        reviewerCounts[reviewer] = (reviewerCounts[reviewer] || 0) + increment;
-      }
-      if (secondaryReviewer) {
-        reviewerCounts[secondaryReviewer] = (reviewerCounts[secondaryReviewer] || 0) + increment;
       }
       if (clientId && filedTimestamp && rowVolunteer) {
         allFilings.push({ clientId, filedAt: new Date(filedTimestamp), volunteer: rowVolunteer });
       }
     }
+
+    const reviewData = getReviewerCountsByDate({ data }, filterDate);
+    reviewedAllTime = reviewData.allTimeCounts[reviewerKey] || 0;
+    reviewedFiltered = filterDate ? (reviewData.dateCounts[reviewerKey] || 0) : null;
+    const reviewerCounts = reviewData.allTimeCounts;
 
     // Volunteer time (existing)
     let totalVolunteerMinutes = 0;

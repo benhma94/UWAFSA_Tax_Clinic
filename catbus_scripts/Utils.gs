@@ -154,6 +154,131 @@ function translateError(error, context = 'Operation') {
 }
 
 /**
+ * Normalizes a volunteer or reviewer name for matching.
+ * @param {string} name - Any name value from sheet data
+ * @returns {string} Normalized reviewer key or empty string
+ */
+function normalizeReviewerName(name) {
+  if (!name) return '';
+
+  const cleaned = name
+    .toString()
+    .trim()
+    .replace(/[\.,()\/]/g, ' ')
+    .replace(/["']+/g, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+
+  const tokens = cleaned.split(' ').filter(Boolean);
+  if (!tokens.length) return '';
+
+  return tokens.sort().join(' ');
+}
+
+/**
+ * Extracts unique reviewer names for a Tax Return Tracker row.
+ * Dedupes reviewer and secondary reviewer by normalized name.
+ * @param {Array} row - Row values from Tax Return Tracker
+ * @param {Object} cols - Column indices map for Tax Return Tracker
+ * @returns {Array<{key:string,display:string}>}
+ */
+function getReviewerNamesFromReturn(row, cols) {
+  const reviewer = row[cols.REVIEWER]?.toString().trim();
+  const secondary = row[cols.SECONDARY_REVIEWER]?.toString().trim();
+  const normalizedReviewers = {};
+
+  if (reviewer) {
+    const reviewerKey = normalizeReviewerName(reviewer);
+    if (reviewerKey) {
+      normalizedReviewers[reviewerKey] = reviewer;
+    }
+  }
+
+  if (secondary) {
+    const secondaryKey = normalizeReviewerName(secondary);
+    if (secondaryKey && !normalizedReviewers[secondaryKey]) {
+      normalizedReviewers[secondaryKey] = secondary;
+    }
+  }
+
+  return Object.entries(normalizedReviewers).map(([key, display]) => ({ key, display }));
+}
+
+/**
+ * Builds reviewer counts from Tax Return Tracker data. Counts are weighted by married returns.
+ * @param {Object} trackerData - Pre-read tracker data or an object containing a data array
+ * @param {Date|string|null} filterDate - Optional date to filter return filing dates; if null, dateCounts remains empty
+ * @returns {Object} { allTimeCounts, dateCounts, reviewerDisplayNames }
+ */
+function getReviewerCountsByDate(trackerData, filterDate) {
+  const cols = CONFIG.COLUMNS.TAX_RETURN_TRACKER;
+  let data = [];
+
+  if (trackerData && trackerData.data) {
+    data = trackerData.data;
+  } else if (trackerData && Array.isArray(trackerData)) {
+    data = trackerData;
+  } else {
+    const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
+    const lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      const numRows = lastRow - 1;
+      data = sheet.getRange(2, 1, numRows, cols.INCOMPLETE + 1).getValues();
+    }
+  }
+
+  function parseDateValue(value) {
+    if (value instanceof Date) return value;
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = new Date(value);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  const allTimeCounts = {};
+  const dateCounts = {};
+  const reviewerDisplayNames = {};
+  let targetDate = null;
+
+  if (filterDate) {
+    targetDate = parseDateValue(filterDate);
+    if (targetDate) {
+      targetDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    }
+  }
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const incomplete = row[cols.INCOMPLETE]?.toString().toLowerCase() === 'yes';
+    const married = row[cols.MARRIED]?.toString().toLowerCase() === 'yes';
+    const efile = row[cols.EFILE]?.toString().toLowerCase() === 'yes';
+    const paper = row[cols.PAPER]?.toString().toLowerCase() === 'yes';
+    if (incomplete || (!efile && !paper)) continue;
+
+    const increment = married ? 2 : 1;
+    const reviewerEntries = getReviewerNamesFromReturn(row, cols);
+    if (reviewerEntries.length === 0) continue;
+
+    const timestamp = parseDateValue(row[cols.TIMESTAMP]);
+    const isOnTargetDate = targetDate && timestamp &&
+      timestamp.getFullYear() === targetDate.getFullYear() &&
+      timestamp.getMonth() === targetDate.getMonth() &&
+      timestamp.getDate() === targetDate.getDate();
+
+    reviewerEntries.forEach(({ key, display }) => {
+      allTimeCounts[key] = (allTimeCounts[key] || 0) + increment;
+      if (isOnTargetDate) {
+        dateCounts[key] = (dateCounts[key] || 0) + increment;
+      }
+      if (!reviewerDisplayNames[key]) {
+        reviewerDisplayNames[key] = display;
+      }
+    });
+  }
+
+  return { allTimeCounts, dateCounts, reviewerDisplayNames };
+}
+
+/**
  * Validates client ID format (e.g., A001, B123)
  * @param {string} clientID - Client ID to validate
  * @returns {boolean} True if valid format

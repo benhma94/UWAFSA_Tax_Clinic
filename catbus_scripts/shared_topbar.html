@@ -1,0 +1,48 @@
+<header class="catbus-topbar">
+  <div class="catbus-topbar-brand">
+    <span class="catbus-topbar-logo">🐱</span>
+    <div class="catbus-topbar-titles">
+      <span class="catbus-topbar-title">CATBUS</span>
+      <span class="catbus-topbar-subtitle">Client And Tax Booking Utility System</span>
+    </div>
+  </div>
+  <button class="toggle-theme" aria-label="Toggle dark mode" onclick="toggleTheme()"></button>
+</header>
+<style>
+  .catbus-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0 24px;
+    margin-bottom: 8px;
+    border-bottom: 2px solid var(--accent-color);
+  }
+  .catbus-topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .catbus-topbar-logo {
+    font-size: 2rem;
+    line-height: 1;
+  }
+  .catbus-topbar-titles {
+    display: flex;
+    flex-direction: column;
+  }
+  .catbus-topbar-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+  }
+  .catbus-topbar-subtitle {
+    font-size: 0.75rem;
+    color: #888;
+    letter-spacing: 0.3px;
+  }
+  body.dark .catbus-topbar-subtitle {
+    color: #aaa;
+  }
+</style>
