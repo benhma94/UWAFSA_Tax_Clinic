@@ -1,0 +1,21 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body{margin:0;padding:30px;background:#F8FAFC;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 14px;font-family:var(--font-heading);font-size:.82rem;font-weight:600;letter-spacing:.02em;text-transform:uppercase;border:1px solid}
+  .pill::before{content:'';width:8px;height:8px;border-radius:999px}
+  .open{color:#2e7d32;border-color:rgba(46,125,50,.5);background:rgba(46,125,50,.12)}
+  .open::before{background:#2e7d32}
+  .closed{color:#8e0000;border-color:rgba(142,0,0,.45);background:rgba(142,0,0,.1)}
+  .closed::before{background:#8e0000}
+  .load{color:#64748B;border-color:#CBD5E1;background:#F1F5F9}
+  .load::before{background:#64748B}
+  .bg{padding:14px 16px;border-radius:8px;border:1px solid #E2E8F0;border-left:5px solid #2e7d32;background:#fff;font-family:var(--font-body);font-size:13px;color:#334155;max-width:300px}
+  .bg b{display:block;font-family:var(--font-heading);color:#0F172A;font-size:14px}
+</style></head>
+<body>
+<span class="pill open">Status: Open now</span>
+<span class="pill closed">Status: Closed</span>
+<span class="pill load">Status: Loading…</span>
+<div class="bg"><b>Live clinic status</b>Queue: 3 waiting · Volunteers: 12 on floor</div>
+</body></html>

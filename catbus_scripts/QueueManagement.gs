@@ -145,8 +145,7 @@ function assignClientToVolunteer(clientId, volunteerName) {
     invalidateMultiple([
       CACHE_CONFIG.KEYS.QUEUE,
       CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
-      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
-      CACHE_CONFIG.KEYS.PUBLIC_CLINIC_STATUS
+      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
     ]);
 
     return true;
@@ -391,8 +390,7 @@ function setVolunteerBreakStatus(volunteerName, isOnBreak) {
     invalidateMultiple([
       CACHE_CONFIG.KEYS.QUEUE,
       CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
-      CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
-      CACHE_CONFIG.KEYS.PUBLIC_CLINIC_STATUS
+      CACHE_CONFIG.KEYS.VOLUNTEER_LIST
     ]);
 
     Logger.log(`Break status for ${volunteerName}: ${isOnBreak ? 'ON BREAK' : 'AVAILABLE'}`);
@@ -549,8 +547,7 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
     invalidateMultiple([
       CACHE_CONFIG.KEYS.QUEUE,
       CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
-      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
-      CACHE_CONFIG.KEYS.PUBLIC_CLINIC_STATUS
+      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
     ]);
 
     return { success: true, message: `Client ${clientId} has been reassigned to ${newVolunteerName}` };
@@ -612,8 +609,7 @@ function unassignClient(clientId) {
     invalidateMultiple([
       CACHE_CONFIG.KEYS.QUEUE,
       CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
-      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
-      CACHE_CONFIG.KEYS.PUBLIC_CLINIC_STATUS
+      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
     ]);
 
     return { success: true, message: `Client ${clientId} has been returned to the queue` };
@@ -705,8 +701,7 @@ function removeClientFromQueue(clientId, reason) {
     // Invalidate cache
     invalidateMultiple([
       CACHE_CONFIG.KEYS.QUEUE,
-      CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
-      CACHE_CONFIG.KEYS.PUBLIC_CLINIC_STATUS
+      CACHE_CONFIG.KEYS.VOLUNTEER_LIST
     ]);
 
     return {success: true, message: 'Client removed from queue'};

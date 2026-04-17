@@ -1,0 +1,246 @@
+/* ============================================================
+   UW AFSA Tax Clinic — Colors & Type
+   ============================================================
+   Two design contexts share the same red but differ in palette
+   temperature and typography:
+
+   • Public website (webpage/): cool slate neutrals, Lexend +
+     Source Sans 3, softer crimson (#c0392b).
+   • CATBUS internal tools (catbus_scripts/): warm off-white
+     neutrals, Segoe UI system stack, deeper red (rgb(142,0,0)).
+
+   Both are captured below as namespaced tokens; a single
+   semantic layer at the bottom picks sensible cross-product
+   defaults.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* -- Brand red (the non-negotiable) ------------------------- */
+  --afsa-red:            #8e0000;   /* CATBUS primary, deep brick red */
+  --afsa-red-web:        #c0392b;   /* Public site crimson */
+  --afsa-red-web-hover:  #922b21;   /* Public site crimson, pressed  */
+  --afsa-red-deep:       #980000;   /* Chart bars / emphasis */
+  --afsa-red-dark-mode:  #E05252;   /* Dark-mode accent (web) */
+  --afsa-red-subtle:     #FEF2F2;   /* Accent-tinted bg (web) */
+  --afsa-red-subtle-ink: rgba(142, 0, 0, 0.10); /* Accent-tinted bg (catbus) */
+  --afsa-red-focus:      rgba(142, 0, 0, 0.10); /* Focus ring tint */
+  --afsa-red-focus-web:  rgba(192, 57, 43, 0.12);
+
+  /* -- Public website palette (slate neutrals) --------------- */
+  --web-bg:            #F8FAFC;
+  --web-bg-secondary:  #F1F5F9;
+  --web-bg-tertiary:   #E8EDF3;
+  --web-surface:       #ffffff;
+  --web-text:          #0F172A;
+  --web-text-body:     #334155;
+  --web-text-muted:    #64748B;
+  --web-border:        #E2E8F0;
+  --web-border-light:  #F1F5F9;
+  --web-border-mid:    #CBD5E1;
+  --web-input-bg:      #ffffff;
+
+  /* -- Public website dark mode ------------------------------ */
+  --web-bg-dm:          #1a1a1a;
+  --web-bg-secondary-dm:#242424;
+  --web-bg-tertiary-dm: #2e2e2e;
+  --web-text-dm:        #F5F5F5;
+  --web-text-body-dm:   #D4D4D4;
+  --web-text-muted-dm:  #A3A3A3;
+  --web-border-dm:      #333333;
+
+  /* -- CATBUS internal palette (warm neutrals) --------------- */
+  --catbus-bg:        #f5f5f5;
+  --catbus-surface:   #ffffff;  /* light input bg */
+  --catbus-text:      #1a1a1a;
+  --catbus-border:    #e0e0e0;
+  --catbus-bg-dm:     #1e1e1e;
+  --catbus-surface-dm:#2a2a2a;
+  --catbus-text-dm:   #f0f0f0;
+  --catbus-border-dm: #444;
+
+  /* -- CATBUS role colors (volunteer typing) ----------------- */
+  --role-mentor:            #3498db;   /* blue */
+  --role-frontline:         #2ecc71;   /* green */
+  --role-filer:             #9b59b6;   /* purple */
+  --role-internal-services: #e74c3c;   /* red-orange */
+
+  /* -- Status / semantic ------------------------------------- */
+  --status-open-bg:        #ECFDF5;
+  --status-open-border:    #10B981;
+  --status-open-text:      #065F46;
+  --status-open-accent:    #2e7d32;    /* darker green for pills */
+  --status-closed-bg:      #FEF2F2;
+  --status-closed-border:  #F87171;
+  --status-closed-text:    #991B1B;
+  --status-closed-accent:  #8e0000;
+  --status-loading-bg:     #EFF6FF;
+  --status-loading-border: #60A5FA;
+  --status-loading-text:   #1D4ED8;
+  --status-success:        #27ae60;
+  --status-warning-bg:     #fff3cd;
+  --status-danger-bg:      #ffcccc;
+  --status-danger-border:  #dc3545;
+
+  /* -- Typography -------------------------------------------- */
+  --font-heading: 'Lexend', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body:    'Source Sans 3', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-catbus:  'Segoe UI', Verdana, sans-serif;   /* internal tools */
+  --font-chart:   'Roboto', Arial, sans-serif;
+
+  /* Type scale — public site */
+  --fs-h1:         2em;       /* Internal dashboards page title */
+  --fs-h2-web:     1.6rem;    /* Main section heading */
+  --fs-h2:         1.3em;
+  --fs-h3-web:     1.15rem;
+  --fs-h3:         1.1em;
+  --fs-body:       16px;
+  --fs-body-sm:    15px;      /* Mobile body */
+  --fs-small:      0.9rem;
+  --fs-xs:         0.85rem;
+  --fs-micro:      0.78rem;   /* uppercase labels */
+  --fs-eyebrow:    0.72rem;   /* uppercase section headers */
+
+  --lh-body:       1.65;
+  --lh-heading:    1.3;
+  --tracking-tight: -0.5px;   /* CATBUS h1 */
+  --tracking-heading: -0.01em;
+  --tracking-eyebrow: 0.10em;
+
+  /* -- Elevation -------------------------------------------- */
+  --shadow-sm:    0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
+  --shadow-md:    0 4px 12px rgba(15,23,42,0.08), 0 2px 4px rgba(15,23,42,0.04);
+  --shadow-lg:    0 8px 24px rgba(15,23,42,0.10), 0 4px 8px rgba(15,23,42,0.06);
+  --shadow-sm-catbus:    0 2px 8px rgba(0,0,0,0.1);
+  --shadow-hover-catbus: 0 4px 12px rgba(0,0,0,0.15);
+  --shadow-button-accent: 0 4px 8px rgba(142, 0, 0, 0.3);
+
+  /* -- Radii ------------------------------------------------ */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  /* -- Layout / spacing ------------------------------------ */
+  --nav-height:    56px;
+  --content-max:   860px;     /* Public page content width */
+  --app-max:       1200px;    /* Internal tools body max */
+  --form-max:      800px;     /* Internal form wrapper max */
+
+  /* -- Motion ---------------------------------------------- */
+  --ease-ui:       0.18s ease;
+  --ease-card:     0.2s ease;
+  --ease-theme:    0.3s;
+}
+
+/* ============================================================
+   Semantic layer — defaults to the PUBLIC website tokens
+   (most design work happens there). Override :root with
+   `.ctx-catbus` to swap in the internal-tools palette.
+   ============================================================ */
+
+:root {
+  --bg:           var(--web-bg);
+  --bg-secondary: var(--web-bg-secondary);
+  --bg-tertiary:  var(--web-bg-tertiary);
+  --surface:      var(--web-surface);
+  --text:         var(--web-text);
+  --text-body:    var(--web-text-body);
+  --text-muted:   var(--web-text-muted);
+  --border:       var(--web-border);
+  --border-light: var(--web-border-light);
+  --border-mid:   var(--web-border-mid);
+  --input-bg:     var(--web-input-bg);
+  --accent:       var(--afsa-red-web);
+  --accent-hover: var(--afsa-red-web-hover);
+  --accent-subtle:var(--afsa-red-subtle);
+}
+
+html.dark-mode {
+  --bg:           var(--web-bg-dm);
+  --bg-secondary: var(--web-bg-secondary-dm);
+  --bg-tertiary:  var(--web-bg-tertiary-dm);
+  --surface:      var(--web-bg-secondary-dm);
+  --text:         var(--web-text-dm);
+  --text-body:    var(--web-text-body-dm);
+  --text-muted:   var(--web-text-muted-dm);
+  --border:       var(--web-border-dm);
+  --input-bg:     var(--web-bg-secondary-dm);
+  --accent:       var(--afsa-red-dark-mode);
+  --accent-hover: var(--afsa-red-web);
+  --accent-subtle:rgba(192,57,43,0.15);
+}
+
+.ctx-catbus {
+  --bg:     var(--catbus-bg);
+  --surface:var(--catbus-surface);
+  --text:   var(--catbus-text);
+  --border: var(--catbus-border);
+  --accent: var(--afsa-red);
+  --accent-hover: #a00000;
+  --font-heading: var(--font-catbus);
+  --font-body:    var(--font-catbus);
+}
+
+.ctx-catbus.dark {
+  --bg:     var(--catbus-bg-dm);
+  --surface:var(--catbus-surface-dm);
+  --text:   var(--catbus-text-dm);
+  --border: var(--catbus-border-dm);
+}
+
+/* ============================================================
+   Semantic type elements — drop onto any page.
+   ============================================================ */
+
+body {
+  font-family: var(--font-body);
+  font-size:   var(--fs-body);
+  font-weight: 400;
+  line-height: var(--lh-body);
+  color:       var(--text-body);
+  background:  var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color:       var(--text);
+  line-height: var(--lh-heading);
+  font-weight: 600;
+  letter-spacing: var(--tracking-heading);
+}
+
+h1 { font-size: var(--fs-h1); letter-spacing: var(--tracking-tight); }
+h2 { font-size: var(--fs-h2-web); font-weight: 700; margin-top: 0; }
+h3 { font-size: var(--fs-h3-web); }
+
+/* "Section heading" — a red-barred subhead used throughout
+    the public site and the checklist pages. */
+.section-heading {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Eyebrow — uppercase micro label above titles */
+.eyebrow {
+  font-family: var(--font-heading);
+  font-size: var(--fs-eyebrow);
+  font-weight: 700;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  transition: color var(--ease-ui);
+}
+a:hover { color: var(--accent-hover); }

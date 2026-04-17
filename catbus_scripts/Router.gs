@@ -91,6 +91,8 @@ function doGet(e) {
     case 'control':
       return loadPage('control_sheet_form', 'AFSA Tax Clinic Control Sheet', { xframe: ALLOW, vars: { websiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/catbus' } });
     case 'admin':
+      return loadPage('master_dashboard', 'Master Dashboard', { vars: { baseUrl, adminWebsiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/admin' } });
+    case 'stats':
       return loadPage('stats_dashboard', 'Stats Dashboard', { vars: { baseUrl, adminWebsiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/admin' } });
     case 'alerts':
       return loadPage('alert_dashboard', 'Alert Dashboard', { vars: { baseUrl, adminWebsiteUrl: CONFIG.CLINIC_WEBSITE_URL + '/admin' } });
