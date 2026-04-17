@@ -605,6 +605,7 @@
   const SHIFT_CONFIG = { TIME_SLOTS: {} };
 
   let allVolunteerNames = [];
+  let allVolunteerNamesLoading = true;
   let currentVolunteerName = '';
   let currentVolunteerRole = '';
 
@@ -632,8 +633,8 @@
 
   function loadVolunteerNames() {
     google.script.run
-      .withSuccessHandler(names => { allVolunteerNames = names || []; })
-      .withFailureHandler(err => { console.error('Error loading volunteer names:', err); allVolunteerNames = []; })
+      .withSuccessHandler(names => { allVolunteerNames = names || []; allVolunteerNamesLoading = false; })
+      .withFailureHandler(err => { console.error('Error loading volunteer names:', err); allVolunteerNames = []; allVolunteerNamesLoading = false; })
       .getAllVolunteerNames();
   }
 
@@ -648,7 +649,9 @@
       filterItem: (name, term) => name.toLowerCase().includes(term),
       renderItem: (name, i, term) => autocompleteHighlightMatch(name, term),
       onSelect: () => searchByName(),
-      onEnterFallback: () => searchByName()
+      onEnterFallback: () => searchByName(),
+      isLoading: () => allVolunteerNamesLoading,
+      loadingText: 'Loading...'
     });
   }
 

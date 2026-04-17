@@ -4,9 +4,9 @@
 (function() {
   console.log('Ah! You found my Easter Egg!\n\nThis website was redesigned by Ben Ma, CPA, CFA, CFP, PhD Student at the University of Toronto. He is the unofficial Webmaster, Administrator, Organizer, and many other unofficial titles at the UWAFSA Tax Clinic.\nFind more on him here: https://benma.ca');
 
-  var HEADER = '<header>\n  <a href="https://uwafsa.com/">\n    <img src="images/logo.png" alt="Accounting &amp; Finance Student Association" />\n  </a>\n</header>';
+  var HEADER = '<header>\n  <a href="/">\n    <img src="images/logo.png" alt="Accounting &amp; Finance Student Association" />\n  </a>\n</header>';
 
-  var NAV = '<nav>\n  <button class="nav-toggle" aria-label="Toggle navigation">&#9776;</button>\n  <ul>\n    <li><a href="/">Eligibility and Details</a></li>\n    <li><a href="/checklist.html">Checklist</a></li>\n    <li><a href="/about.html">About Us</a></li>\n    <li><a href="/FAQ.html">FAQ</a></li>\n    <li><a href="/PostFiling.html">Post Tax Return Filing</a></li>\n    <li><a href="/volunteerapplications.html">Volunteer Applications</a></li>\n    <li class="nav-status-pill-wrap"><span id="clinic-status-nav" class="clinic-status-pill clinic-status-pill--loading" aria-live="polite">Status: loading...</span></li>\n  </ul>\n  <form class="nav-search" action="search.html" method="get"><input type="search" name="q" placeholder="Search\u2026" aria-label="Search this site"><button type="submit" aria-label="Search">&#128269;</button></form>\n</nav>';
+  var NAV = '<nav>\n  <button class="nav-toggle" aria-label="Toggle navigation">&#9776;</button>\n  <ul>\n    <li><a href="/">Tax Clinic Details</a></li>\n    <li><a href="/checklist.html">Checklist</a></li>\n    <li><a href="/about.html">About Us</a></li>\n    <li><a href="/FAQ.html">FAQ</a></li>\n    <li><a href="/PostFiling.html">Post Tax Return Filing</a></li>\n    <li><a href="/volunteerapplications.html">Volunteer Applications</a></li>\n  </ul>\n  <form class="nav-search" action="search.html" method="get"><input type="search" name="q" placeholder="Search\u2026" aria-label="Search this site"><button type="submit" aria-label="Search">&#128269;</button></form>\n</nav>';
 
   var FOOTER = '<footer>\n  <a href="#top">Back to Top</a> |\n  <a href="https://instagram.com/uwafsa" aria-label="Instagram"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a> |\n  <a href="mailto:taxclinic@uwafsa.com" aria-label="Email"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></a>\n</footer>\n<!-- Ah! You found my Easter Egg!\n\n     This website was redesigned by Ben Ma, CPA, CFA, CFP, PhD Student at the University of Toronto. He is the unofficial Webmaster, Administrator, Organizer, and many other unofficial titles at the UWAFSA Tax Clinic.\n     Find more on him here: https://benma.ca\n-->';
 
@@ -85,10 +85,9 @@
 
   function initPublicClinicStatus() {
     var endpoint = getClinicStatusEndpoint();
-    var navPill = document.getElementById('clinic-status-nav');
     var homePanelMount = document.getElementById('clinic-status-home') || document.getElementById('clinic-status-panel');
 
-    if ((!navPill && !homePanelMount) || typeof fetch !== 'function') return;
+    if (!homePanelMount || typeof fetch !== 'function') return;
 
     var timerId = null;
     var basePollMs = 90000;
@@ -115,15 +114,8 @@
 
     function applyStatusUi(data) {
       var status = data && data.status === 'open' ? 'open' : 'closed';
-      var navText = status === 'open' ? 'Status: Open now' : 'Status: Closed';
       var queueLabel = data && data.queueSignal && data.queueSignal.label ? data.queueSignal.label : 'Queue updating';
       var volunteerLabel = data && data.volunteerSignal && data.volunteerSignal.label ? data.volunteerSignal.label : 'Volunteer availability updating';
-
-      if (navPill) {
-        navPill.classList.remove('clinic-status-pill--loading', 'clinic-status-pill--open', 'clinic-status-pill--closed');
-        navPill.classList.add(status === 'open' ? 'clinic-status-pill--open' : 'clinic-status-pill--closed');
-        navPill.textContent = navText;
-      }
 
       if (homePanelMount) {
         var lastUpdatedText = data && data.lastUpdated ? new Date(data.lastUpdated).toLocaleTimeString() : '';
@@ -138,12 +130,6 @@
     }
 
     function showUnavailableUi() {
-      if (navPill) {
-        navPill.classList.remove('clinic-status-pill--open', 'clinic-status-pill--closed');
-        navPill.classList.add('clinic-status-pill--loading');
-        navPill.textContent = 'Status: updating...';
-      }
-
       if (homePanelMount) {
         homePanelMount.className = 'clinic-status-home is-closed';
         homePanelMount.innerHTML =

@@ -455,7 +455,7 @@ function readTrackerData_() {
   const lastRow = sheet.getLastRow();
   if (lastRow <= 1) return { data: [], lastRow: lastRow };
   const numRows = lastRow - 1;
-  const numCols = CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1;
+  const numCols = CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE + 1;
   const data = sheet.getRange(2, 1, numRows, numCols).getValues();
   return { data: data, lastRow: lastRow };
 }
@@ -489,7 +489,7 @@ function getReturnSummary(trackerData, filterDate) {
       const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
       const lastRow = sheet.getLastRow();
       if (lastRow <= 1) return { totalCompleted: 0, completedToday: 0, hourlyCounts: {} };
-      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1).getValues();
+      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE + 1).getValues();
     }
 
     if (!data.length) {
@@ -679,7 +679,7 @@ function getVolunteerPerformanceMetrics(trackerData, filterDate) {
       const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
       const lastRow = sheet.getLastRow();
       if (lastRow <= 1) return { topVolunteers: [], todayVolunteers: [], totalVolunteers: 0, avgReturnsPerVolunteer: 0 };
-      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1).getValues();
+      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE + 1).getValues();
     }
 
     if (!data.length) {
@@ -702,10 +702,11 @@ function getVolunteerPerformanceMetrics(trackerData, filterDate) {
       const volunteer = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.VOLUNTEER]?.toString().trim();
       const efile = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.EFILE]?.toString().toLowerCase() === 'yes';
       const paper = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER]?.toString().toLowerCase() === 'yes';
+      const incomplete = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE]?.toString().toLowerCase() === 'yes';
       const married = data[i][CONFIG.COLUMNS.TAX_RETURN_TRACKER.MARRIED]?.toString().toLowerCase() === 'yes';
       const increment = married ? 2 : 1;
 
-      if (!volunteer || (!efile && !paper)) continue;
+      if (!volunteer || (!efile && !paper) || incomplete) continue;
 
       // All-time counting
       volunteerCounts[volunteer] = (volunteerCounts[volunteer] || 0) + increment;
@@ -854,7 +855,7 @@ function getReviewerLeaderboard(trackerData, filterDate) {
       const sheet = getSheet(CONFIG.SHEETS.TAX_RETURN_TRACKER);
       const lastRow = sheet.getLastRow();
       if (lastRow <= 1) return { topReviewers: [], todayReviewers: [] };
-      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.PAPER + 1).getValues();
+      data = sheet.getRange(2, 1, lastRow - 1, CONFIG.COLUMNS.TAX_RETURN_TRACKER.INCOMPLETE + 1).getValues();
     }
 
     if (!data.length) {
@@ -873,10 +874,13 @@ function getReviewerLeaderboard(trackerData, filterDate) {
       const reviewer = data[i][cols.REVIEWER]?.toString().trim();
       const secondary = data[i][cols.SECONDARY_REVIEWER]?.toString().trim();
       const timestamp = data[i][cols.TIMESTAMP];
+      const incomplete = data[i][cols.INCOMPLETE]?.toString().toLowerCase() === 'yes';
       const married = data[i][cols.MARRIED]?.toString().toLowerCase() === 'yes';
+      const efile = data[i][cols.EFILE]?.toString().toLowerCase() === 'yes';
+      const paper = data[i][cols.PAPER]?.toString().toLowerCase() === 'yes';
       const increment = married ? 2 : 1;
 
-      if (!reviewer && !secondary) continue;
+      if ((!reviewer && !secondary) || incomplete || (!efile && !paper)) continue;
 
       const isToday = timestamp instanceof Date &&
         timestamp.getFullYear() === today.getFullYear() &&

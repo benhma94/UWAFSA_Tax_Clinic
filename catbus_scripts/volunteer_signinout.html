@@ -417,7 +417,9 @@
   document.getElementById('homeLink').href = WEBSITE_URL;
   let refreshInterval = null;
   let allSessions = []; // Store all sessions for autocomplete
+  let allSessionsLoading = true;
   let allVolunteers = []; // Store volunteer data: [{name: string, role: string}]
+  let allVolunteersLoading = true;
   let selectedSession = null; // Currently selected sign-out session object
 
 
@@ -429,6 +431,7 @@
     google.script.run
       .withSuccessHandler(volunteers => {
         allVolunteers = volunteers || [];
+        allVolunteersLoading = false;
         console.log(`✓ Loaded ${allVolunteers.length} volunteers for autocomplete`);
         if (allVolunteers.length > 0) {
           console.log('Sample volunteer:', allVolunteers[0]);
@@ -437,6 +440,7 @@
       .withFailureHandler(error => {
         console.error('✗ Error loading volunteer data:', error);
         allVolunteers = [];
+        allVolunteersLoading = false;
       })
       .getConsolidatedVolunteerData();
   }
@@ -457,7 +461,9 @@
           : '';
         return autocompleteHighlightMatch(v.name, term) + roleText;
       },
-      onSelect: (v) => selectVolunteer(v.name, v.role)
+      onSelect: (v) => selectVolunteer(v.name, v.role),
+      isLoading: () => allVolunteersLoading,
+      loadingText: 'Loading...'
     });
   }
 
@@ -564,9 +570,11 @@
     google.script.run
       .withSuccessHandler(sessions => {
         allSessions = normalizeActiveSessions(sessions);
+        allSessionsLoading = false;
       })
       .withFailureHandler(error => {
         allSessions = [];
+        allSessionsLoading = false;
         console.error('Error loading sessions:', error);
       })
       .getActiveSessions();
@@ -583,7 +591,9 @@
         s.name.toLowerCase().includes(term) ||
         s.displayText.toLowerCase().includes(term),
       renderItem: (s, i, term) => autocompleteHighlightMatch(s.displayText, term),
-      onSelect: (s) => { selectedSession = s; }
+      onSelect: (s) => { selectedSession = s; },
+      isLoading: () => allSessionsLoading,
+      loadingText: 'Loading...'
     });
   }
 

@@ -621,14 +621,14 @@
 
   // === Schedule Editor ===
   let editorVolunteerNames = [];
-  let editorVolunteerName = '';
+let editorVolunteerNamesLoading = true;
   let editorShiftMap = {};
 
   // Load volunteer names for the editor autocomplete on page load
   window.addEventListener('load', () => {
     google.script.run
-      .withSuccessHandler(names => { editorVolunteerNames = names || []; })
-      .withFailureHandler(() => { editorVolunteerNames = []; })
+      .withSuccessHandler(names => { editorVolunteerNames = names || []; editorVolunteerNamesLoading = false; })
+      .withFailureHandler(() => { editorVolunteerNames = []; editorVolunteerNamesLoading = false; })
       .getAllVolunteerNames();
 
     setupEditorAutocomplete();
@@ -643,7 +643,9 @@
       getItems: () => editorVolunteerNames,
       filterItem: (name, term) => name.toLowerCase().includes(term),
       renderItem: (name) => escapeHtml(name),
-      onSelect: (name) => selectEditorVolunteer(name)
+      onSelect: (name) => selectEditorVolunteer(name),
+      isLoading: () => editorVolunteerNamesLoading,
+      loadingText: 'Loading...'
     });
   }
 

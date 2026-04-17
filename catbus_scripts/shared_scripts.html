@@ -76,6 +76,9 @@
       onSelect,
       onInput,
       onEnterFallback,
+      isLoading = () => false,
+      loadingText = 'Loading...',
+      noMatchesText = 'No matches found',
       wrapAround = true
     } = config;
 
@@ -126,9 +129,12 @@
 
       filtered = getItems().filter(item => filterItem(item, term));
       highlightIndex = -1;
+      const loading = typeof isLoading === 'function' && isLoading();
 
-      if (filtered.length === 0) {
-        dropdown.innerHTML = '<div class="autocomplete-no-matches">No matches found</div>';
+      if (loading) {
+        dropdown.innerHTML = `<div class="autocomplete-no-matches">${escapeHtml(loadingText)}</div>`;
+      } else if (filtered.length === 0) {
+        dropdown.innerHTML = `<div class="autocomplete-no-matches">${escapeHtml(noMatchesText)}</div>`;
       } else {
         const displayCount = Math.min(filtered.length, 10);
         let html = '';

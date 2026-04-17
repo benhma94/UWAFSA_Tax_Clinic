@@ -1603,6 +1603,7 @@
     const WEBSITE_URL = <?!= JSON.stringify(websiteUrl) ?>;
     let volunteerMap = {};        // clientMap: { name: [clientIds] }
     let allVolunteerNames = [];   // all signed-in filers
+    let allVolunteerNamesLoading = true;
     let breakStatusMap = {};      // { name: true/false }
     let trainingVolunteerSet = new Set(); // names of volunteers at Training station
     let quizVolunteerSet = new Set();     // names of volunteers at Quiz station
@@ -1858,6 +1859,7 @@
       google.script.run.withSuccessHandler(data => {
         volunteerMap = data.clientMap || {};
         allVolunteerNames = (data.allFilerNames || Object.keys(volunteerMap)).sort();
+        allVolunteerNamesLoading = false;
         breakStatusMap = data.breakStatus || {};
         trainingVolunteerSet = new Set(data.trainingVolunteers || []);
         quizVolunteerSet     = new Set(data.quizVolunteers || []);
@@ -1865,6 +1867,7 @@
         checkAndShowDraftBanner(); // show restore banner if a draft exists
       }).withFailureHandler(error => {
         const message = (error && error.message) ? error.message : error;
+        allVolunteerNamesLoading = false;
         showError('Error loading volunteers and clients: ' + message, true);
       }).getVolunteersAndClients();
       setupVolunteerAutocomplete();
@@ -1898,7 +1901,9 @@
         filterItem: (name, term) => name.toLowerCase().includes(term),
         renderItem: (name, i, term) => autocompleteHighlightMatch(name, term),
         onSelect: (name) => selectVolunteerFromDropdown(name),
-        onInput: () => { updateClients(); checkFormReady(); }
+        onInput: () => { updateClients(); checkFormReady(); },
+        isLoading: () => allVolunteerNamesLoading,
+        loadingText: 'Loading...'
       });
 
       acQuizPartner = createAutocomplete({
@@ -1909,7 +1914,9 @@
         getItems: () => allVolunteerNames,
         filterItem: (name, term) => name.toLowerCase().includes(term),
         renderItem: (name, i, term) => autocompleteHighlightMatch(name, term),
-        onSelect: (name) => { document.getElementById('quizPartnerName').value = name; }
+        onSelect: (name) => { document.getElementById('quizPartnerName').value = name; },
+        isLoading: () => allVolunteerNamesLoading,
+        loadingText: 'Loading...'
       });
     }
 
