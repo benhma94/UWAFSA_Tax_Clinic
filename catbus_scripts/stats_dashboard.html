@@ -437,7 +437,6 @@
   <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 10px;">
     <div style="display: flex; align-items: center; gap: 12px;">
       <a class="nav-link" id="homeLink" href="#">🏠 Home</a>
-      <a class="nav-link" id="alertLink" href="#">🚨 Alert Dashboard</a>
       <button onclick="removeDuplicates()" style="padding: 8px 16px; font-size: 0.9em; background-color: #e67e22; color: white; border: none; border-radius: 5px; cursor: pointer;">🗑️ Remove Duplicates</button>
       <button onclick="refresh()" style="padding: 8px 16px; font-size: 0.9em; background-color: var(--accent-color); color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 Refresh</button>
     </div>
@@ -577,7 +576,6 @@
 
   // Build links using server-injected URLs
   document.getElementById('homeLink').href = ADMIN_WEBSITE_URL;
-  document.getElementById('alertLink').href = BASE_URL + '?app=alerts';
 
   function renderActiveReturns(returns) {
     const serialized = JSON.stringify(returns);

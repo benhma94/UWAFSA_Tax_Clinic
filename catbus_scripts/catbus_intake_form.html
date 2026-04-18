@@ -12,9 +12,9 @@
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      padding: 20px 24px;
+      padding: 10px 16px;
       border-bottom: 1px solid var(--border-light);
-      margin-bottom: 20px;
+      margin-bottom: 0;
     }
 
     body.dark header {
@@ -45,6 +45,7 @@
       flex-shrink: 0;
       height: 100%;
       line-height: 1;
+      margin-bottom: 0;
     }
 
     .toggle-theme { margin: 0; }
@@ -800,13 +801,10 @@
 </head>
 <body class="light" data-topbar-title="Client Intake Form">
   <?!= include('shared_topbar') ?>
-  <header>
+  <header style="justify-content: center;">
     <div id="receptionHelpArea">
       <button id="receptionHelpBtn" onclick="toggleReceptionHelp()">📞 Call for Help</button>
       <button id="receptionEscalateBtn" onclick="escalateReceptionHelp()" style="display: none;">🚨 Escalate to Senior Mentor</button>
-    </div>
-    <div class="header-actions">
-      <a href="<?= websiteUrl ?>" style="font-size:0.85em; color:var(--accent-color); text-decoration:none; font-weight:600; opacity:0.8;">🏠 Home</a>
     </div>
   </header>
 

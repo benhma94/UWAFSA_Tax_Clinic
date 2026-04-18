@@ -28,7 +28,11 @@
       display: flex;
       gap: 20px;
       flex-wrap: wrap;
-      margin-bottom: 20px;
+      margin-bottom: 0;
+    }
+
+    .form-row + h3 {
+      margin-top: 4px;
     }
 
     label {
@@ -1313,7 +1317,6 @@
 
   <header style="justify-content: flex-end;">
     <div style="display:flex; gap:10px; align-items:center;">
-      <a class="nav-link" id="homeLink" href="#" style="font-size:0.85em; color:var(--accent-color); text-decoration:none; font-weight:600; opacity:0.8;">🏠 Home</a>
       <button id="breakToggleBtn" style="display:none;" onclick="toggleBreak()">☕ Go On Break</button>
     </div>
   </header>
@@ -1854,7 +1857,7 @@
     }
 
     function loadDropdowns() {
-      document.getElementById('homeLink').href = WEBSITE_URL;
+      // Home link removed from header per current UI preference.
       google.script.run.withSuccessHandler(data => {
         volunteerMap = data.clientMap || {};
         allVolunteerNames = (data.allFilerNames || Object.keys(volunteerMap)).sort();
