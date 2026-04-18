@@ -42,6 +42,13 @@
       background: rgba(142,0,0,0.05);
     }
     body.dark .tab-btn.active { background: rgba(142,0,0,0.12); }
+    /* Override global button:hover specificity (0,2,1) that turns all buttons red */
+    button.tab-btn { background: transparent; color: #666; transform: none; box-shadow: none; }
+    body.dark button.tab-btn { color: #aaa; }
+    button.tab-btn:hover { color: var(--accent-color); background: transparent; transform: none; box-shadow: none; }
+    button.tab-btn.active { color: var(--accent-color); border-bottom-color: var(--accent-color); background: rgba(142,0,0,0.05); transform: none; box-shadow: none; }
+    body.dark button.tab-btn.active { background: rgba(142,0,0,0.12); }
+    button.tab-btn:active { transform: none; box-shadow: none; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
@@ -703,29 +710,6 @@
     // ===== Tab switching =====
     let initializedTabs = { queue: true, volunteers: false, schedule: false, coverage: false, stats: false };
 
-    function bindTabNavigation() {
-      document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
-        if (btn.dataset.tabBound === '1') return;
-        btn.dataset.tabBound = '1';
-        btn.addEventListener('click', function() {
-          const tab = this.dataset.tab;
-          if (tab) switchTab(tab);
-        });
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-      bindTabNavigation();
-    });
-
-    document.addEventListener('click', function(e) {
-      const btn = e.target.closest('.tab-btn[data-tab]');
-      if (!btn) return;
-      const tab = btn.dataset.tab;
-      if (!tab) return;
-      switchTab(tab);
-    });
-
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
@@ -1342,10 +1326,9 @@
       } catch (e) {
         // Keep dashboard interactive even if theme storage is unavailable.
       }
-      bindTabNavigation();
 
       // Set home link
-      var baseUrl = '<?= baseUrl ?>';
+      const baseUrl = <?!= JSON.stringify(baseUrl) ?>;
       if (typeof google !== 'undefined' && google.script && google.script.url) {
         google.script.url.getLocation(function(loc) {
           var base = loc.parameter && loc.parameter.base ? loc.parameter.base : '';
