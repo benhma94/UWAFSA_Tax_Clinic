@@ -28,7 +28,12 @@
       display: flex;
       gap: 20px;
       flex-wrap: wrap;
-      margin-bottom: 20px;
+      align-items: flex-start;
+      margin-bottom: 0;
+    }
+
+    .form-row + h3 {
+      margin-top: 4px;
     }
 
     label {
@@ -428,6 +433,7 @@
 
     hr {
       border: 1px solid #333;
+      margin: 10px 0 14px;
     }
 
     #draftBanner {
@@ -1304,21 +1310,18 @@
 
   </style>
 </head>
-<body class="light" onload="loadDropdowns()">
+<body class="light" onload="loadDropdowns()" data-topbar-title="Control Sheet">
   <?!= include('shared_topbar') ?>
   <button class="checklist-toggle-btn" onclick="toggleDocumentPanel()" aria-label="Toggle document checklist">
     📋
     <span class="checklist-badge">0/25</span>
   </button>
 
-  <header>
-    <h3>AFSA Tax Clinic Control Sheet</h3>
+  <div style="display:flex; justify-content:flex-end; margin-bottom:0;">
     <div style="display:flex; gap:10px; align-items:center;">
-      <a class="nav-link" id="homeLink" href="#" style="font-size:0.85em; color:var(--accent-color); text-decoration:none; font-weight:600; opacity:0.8;">🏠 Home</a>
       <button id="breakToggleBtn" style="display:none;" onclick="toggleBreak()">☕ Go On Break</button>
-      <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
-  </header>
+  </div>
 
   <!-- On Break banner -->
   <div id="breakBanner" role="alert" aria-live="polite">
@@ -1337,7 +1340,7 @@
 
   <div class="form-row">
     <div>
-      <label for="volunteer">Volunteer:</label><br>
+      <label for="volunteer">Volunteer:</label>
       <div class="autocomplete-container">
         <input type="text" id="volunteer" placeholder="Start typing volunteer name" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="volunteerDropdown">
         <div id="volunteerDropdown" class="autocomplete-dropdown" role="listbox"></div>
@@ -1345,7 +1348,7 @@
     </div>
     <div>
       <div id="clientSelectWrapper">
-        <label for="client">Assigned Client:</label><br>
+        <label for="client">Assigned Client:</label>
         <select id="client" onchange="checkFormReady();">
           <option value="">Select Client</option>
         </select>
@@ -1368,8 +1371,7 @@
         </div>
       </div>
     </div>
-    <div style="align-self: end;">
-      <label style="visibility: hidden; display: block;">_</label>
+    <div style="align-self:end; display:flex; flex-direction:column; gap:8px;">
       <button id="helpBtn" onclick="toggleHelpRequest()">📞 Quick Question!</button>
       <button id="escalateBtn" onclick="escalateHelpRequest()" style="display: none;">🚨 Escalate to Senior Mentor</button>
     </div>
@@ -1581,7 +1583,7 @@
   <!-- Document Checklist Side Panel -->
   <div id="documentChecklist" aria-hidden="true" role="complementary">
     <div class="panel-header">
-      <h3>📋 Document Checklist</h3>
+      <h3>Document Checklist</h3>
       <button class="panel-add-btn" onclick="toggleAddDocumentInput()" title="Add custom item" aria-label="Add custom document">➕</button>
     </div>
 
@@ -1856,7 +1858,7 @@
     }
 
     function loadDropdowns() {
-      document.getElementById('homeLink').href = WEBSITE_URL;
+      // Home link removed from header per current UI preference.
       google.script.run.withSuccessHandler(data => {
         volunteerMap = data.clientMap || {};
         allVolunteerNames = (data.allFilerNames || Object.keys(volunteerMap)).sort();
@@ -4111,6 +4113,6 @@
     });
 
   </script>
-<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
+<div class="footer-copyright"><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
 </body>
 </html>

@@ -14,6 +14,8 @@
       border-bottom: 2px solid var(--border-light);
       padding-bottom: 0;
       flex-wrap: wrap;
+      position: relative;
+      z-index: 10;
     }
     body.dark .tab-nav { border-color: var(--border-dark); }
     .tab-btn {
@@ -28,6 +30,9 @@
       margin-bottom: -2px;
       border-radius: 4px 4px 0 0;
       transition: color 0.2s, border-color 0.2s;
+      pointer-events: auto;
+      position: relative;
+      z-index: 11;
     }
     body.dark .tab-btn { color: #aaa; }
     .tab-btn:hover { color: var(--accent-color); }
@@ -172,6 +177,7 @@
       border-radius: 6px;
       cursor: pointer;
       font-weight: 600;
+      color: var(--text-color-light);
     }
     body.dark .btn-refresh { border-color: var(--border-dark); color: #ccc; }
 
@@ -395,8 +401,9 @@
       z-index: 1000;
       align-items: center;
       justify-content: center;
+      pointer-events: none;
     }
-    .modal-overlay.open { display: flex; }
+    .modal-overlay.open { display: flex; pointer-events: auto; }
     .modal-box {
       background: var(--input-bg-light);
       border-radius: 12px;
@@ -469,15 +476,15 @@
     .empty-state { color: #aaa; font-style: italic; font-size: 0.9em; padding: 16px 0; }
   </style>
 </head>
-<body class="light">
+<body class="light" data-topbar-title="Master Dashboard">
   <?!= include('shared_topbar') ?>
 
   <nav class="tab-nav" role="tablist">
-    <button class="tab-btn active" role="tab" data-tab="queue" onclick="switchTab('queue')">📋 Queue</button>
-    <button class="tab-btn" role="tab" data-tab="volunteers" onclick="switchTab('volunteers')">👥 Volunteers</button>
-    <button class="tab-btn" role="tab" data-tab="schedule" onclick="switchTab('schedule')">🗓️ Schedule</button>
-    <button class="tab-btn" role="tab" data-tab="coverage" onclick="switchTab('coverage')">🔥 Coverage</button>
-    <button class="tab-btn" role="tab" data-tab="stats" onclick="switchTab('stats')">📊 Stats</button>
+    <button type="button" class="tab-btn active" role="tab" data-tab="queue" onclick="switchTab('queue')">📋 Queue</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="volunteers" onclick="switchTab('volunteers')">👥 Volunteers</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="schedule" onclick="switchTab('schedule')">🗓️ Schedule</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="coverage" onclick="switchTab('coverage')">🔥 Coverage</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="stats" onclick="switchTab('stats')">📊 Stats</button>
   </nav>
 
   <!-- ===== QUEUE TAB ===== -->
@@ -505,7 +512,7 @@
       <h3>Waiting Clients</h3>
       <div style="display:flex;gap:10px;align-items:center;">
         <span class="last-updated" id="q-lastUpdated"></span>
-        <button class="btn-refresh" onclick="loadQueueData()">🔄 Refresh</button>
+        <button type="button" class="btn-refresh" onclick="loadQueueData()">🔄 Refresh</button>
       </div>
     </div>
     <div class="data-table-wrap">
@@ -541,7 +548,7 @@
   <div id="tab-volunteers" class="tab-panel" role="tabpanel">
     <div class="section-header">
       <h3>Signed-In Volunteers</h3>
-      <button class="btn-refresh" onclick="refreshVolunteers()">🔄 Refresh</button>
+      <button type="button" class="btn-refresh" onclick="refreshVolunteers()">🔄 Refresh</button>
     </div>
     <div id="vol-grid" class="vol-card-grid">
       <p class="empty-state">Loading volunteers…</p>
@@ -597,7 +604,7 @@
           </div>
         </label>
       </div>
-      <button class="btn-primary" id="sch-generateBtn" onclick="generateSchedule()" style="width:100%;padding:14px;font-size:1em;">
+      <button type="button" class="btn-primary" id="sch-generateBtn" onclick="generateSchedule()" style="width:100%;padding:14px;font-size:1em;">
         Generate Schedule
       </button>
     </div>
@@ -609,7 +616,7 @@
     </div>
 
     <div class="section-box" style="margin-top:8px;">
-      <h3>✏️ Schedule Editor</h3>
+      <h3>Schedule Editor</h3>
       <p style="font-size:0.85em;color:#888;margin-top:-8px;margin-bottom:12px;">Search for a volunteer to manually adjust their shift assignments.</p>
       <div class="form-group-inline" style="margin-bottom:12px;">
         <label for="sch-editorName">Volunteer Name</label>
@@ -626,7 +633,7 @@
   <div id="tab-coverage" class="tab-panel" role="tabpanel">
     <div class="section-header">
       <h3>Shift Coverage Heatmap</h3>
-      <button class="btn-refresh" onclick="loadCoverage(true)">🔄 Refresh</button>
+      <button type="button" class="btn-refresh" onclick="loadCoverage(true)">🔄 Refresh</button>
     </div>
     <p style="font-size:0.85em;color:#888;margin-bottom:16px;">
       Totals per shift. Thresholds: <span style="color:#1a7a40;font-weight:600;">≥12 full</span> · <span style="color:#9a7d0a;font-weight:600;">≥9 adequate</span> · <span style="color:#a93226;font-weight:600;">&lt;9 short</span>
@@ -650,7 +657,7 @@
     </div>
 
     <div class="section-box">
-      <h3>👤 Client Situations Served</h3>
+      <h3>Client Situations Served</h3>
       <p style="font-size:0.88em;color:#888;margin:-8px 0 12px;">
         Unique completed clients: <strong id="st-featureTotal">–</strong>
         <span id="st-featureAvg"></span>
@@ -661,14 +668,14 @@
     </div>
 
     <div class="section-box">
-      <h3>🏆 Top Volunteers Today</h3>
+      <h3>Top Volunteers Today</h3>
       <div id="st-topToday">
         <p class="empty-state">Loading…</p>
       </div>
     </div>
 
     <div class="section-box">
-      <h3>🏆 Top Volunteers All-Time</h3>
+      <h3>Top Volunteers All-Time</h3>
       <div id="st-topAllTime">
         <p class="empty-state">Loading…</p>
       </div>
@@ -682,8 +689,8 @@
       <p id="reassignModalDesc" style="font-size:0.9em;color:#666;margin-bottom:14px;"></p>
       <select id="reassignVolSelect" aria-label="Select volunteer"></select>
       <div class="modal-actions">
-        <button class="btn-modal-cancel" onclick="closeReassignModal()">Cancel</button>
-        <button class="btn-primary" onclick="confirmReassign()" id="reassignConfirmBtn" style="padding:8px 20px;">Confirm</button>
+        <button type="button" class="btn-modal-cancel" onclick="closeReassignModal()">Cancel</button>
+        <button type="button" class="btn-primary" onclick="confirmReassign()" id="reassignConfirmBtn" style="padding:8px 20px;">Confirm</button>
       </div>
     </div>
   </div>
@@ -695,6 +702,29 @@
   <script>
     // ===== Tab switching =====
     let initializedTabs = { queue: true, volunteers: false, schedule: false, coverage: false, stats: false };
+
+    function bindTabNavigation() {
+      document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+        if (btn.dataset.tabBound === '1') return;
+        btn.dataset.tabBound = '1';
+        btn.addEventListener('click', function() {
+          const tab = this.dataset.tab;
+          if (tab) switchTab(tab);
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      bindTabNavigation();
+    });
+
+    document.addEventListener('click', function(e) {
+      const btn = e.target.closest('.tab-btn[data-tab]');
+      if (!btn) return;
+      const tab = btn.dataset.tab;
+      if (!tab) return;
+      switchTab(tab);
+    });
 
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -1307,7 +1337,12 @@
 
     // ===== INITIAL LOAD =====
     window.addEventListener('load', function() {
-      loadThemePreference();
+      try {
+        loadThemePreference();
+      } catch (e) {
+        // Keep dashboard interactive even if theme storage is unavailable.
+      }
+      bindTabNavigation();
 
       // Set home link
       var baseUrl = '<?= baseUrl ?>';
@@ -1346,5 +1381,6 @@
       setTimeout(function() { queuePoller.start(); }, 22000);
     });
   </script>
+  <div class="footer-copyright"><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
 </body>
 </html>

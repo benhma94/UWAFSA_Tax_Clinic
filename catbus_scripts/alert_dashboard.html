@@ -94,27 +94,18 @@
     }
   </style>
 </head>
-<body class="light">
+<body class="light" data-topbar-title="Alert Dashboard">
   <?!= include('shared_topbar') ?>
-  <header>
-    <div>
-      <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
-    </div>
-  </header>
-
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-    <h3 style="margin: 0;">🚨 Alert Dashboard</h3>
+  <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 10px;">
     <div style="display: flex; align-items: center; gap: 12px;">
-      <a class="nav-link" id="homeLink" href="#">🏠 Home</a>
-      <a class="nav-link" id="adminLink" href="#">📊 Admin Dashboard</a>
       <button onclick="refresh()" style="padding: 8px 16px; font-size: 0.9em; background-color: var(--accent-color); color: white; border: none; border-radius: 5px; cursor: pointer;">🔄 Refresh</button>
     </div>
   </div>
 
-  <h3>🆘 Help Requests</h3>
+  <h3>Help Requests</h3>
   <div id="container">Loading help requests...</div>
 
-  <h3>📋 Review Requests</h3>
+  <h3>Review Requests</h3>
   <div id="reviewContainer">Loading review requests...</div>
 
   <div id="messageBox"></div>
@@ -134,10 +125,6 @@
     const m = minutes % 60;
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
-
-  // Build link to admin dashboard using server-injected deployment URL
-  document.getElementById('homeLink').href = ADMIN_WEBSITE_URL;
-  document.getElementById('adminLink').href = BASE_URL + '?app=admin';
 
   function render(requests) {
     const serialized = JSON.stringify(requests);
@@ -255,6 +242,6 @@
     startAutoRefresh();
   });
 </script>
-<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
+<div class="footer-copyright"><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
 </body>
 </html>

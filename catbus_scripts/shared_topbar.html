@@ -1,19 +1,23 @@
 <header class="catbus-topbar">
   <div class="catbus-topbar-brand">
-    <span class="catbus-topbar-logo">🐱</span>
+    <img class="catbus-topbar-logo" src="https://taxclinic.uwaterloo.ca/images/logo.png" alt="AFSA Tax Clinic logo">
     <div class="catbus-topbar-titles">
       <span class="catbus-topbar-title">CATBUS</span>
       <span class="catbus-topbar-subtitle">Client And Tax Booking Utility System</span>
     </div>
   </div>
-  <button class="toggle-theme" aria-label="Toggle dark mode" onclick="toggleTheme()"></button>
+  <div class="catbus-topbar-app-title" id="catbusTopbarAppTitle"></div>
+  <div class="catbus-topbar-actions">
+    <button class="toggle-theme" aria-label="Toggle dark mode" onclick="toggleTheme()"></button>
+  </div>
 </header>
 <style>
   .catbus-topbar {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    padding: 16px 0 24px;
+    gap: 12px;
+    padding: 8px 0 8px;
     margin-bottom: 8px;
     border-bottom: 2px solid var(--accent-color);
   }
@@ -21,10 +25,15 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    min-width: 0;
+    justify-self: start;
   }
   .catbus-topbar-logo {
-    font-size: 2rem;
-    line-height: 1;
+    width: 108px;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    flex-shrink: 0;
   }
   .catbus-topbar-titles {
     display: flex;
@@ -42,7 +51,57 @@
     color: #888;
     letter-spacing: 0.3px;
   }
+  .catbus-topbar-app-title {
+    justify-self: center;
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: min(56vw, 640px);
+  }
+  .catbus-topbar-actions {
+    justify-self: end;
+    display: flex;
+    align-items: center;
+  }
   body.dark .catbus-topbar-subtitle {
     color: #aaa;
+  }
+
+  @media (max-width: 900px) {
+    .catbus-topbar {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'brand actions'
+        'title title';
+      row-gap: 8px;
+    }
+    .catbus-topbar-brand {
+      grid-area: brand;
+    }
+    .catbus-topbar-actions {
+      grid-area: actions;
+    }
+    .catbus-topbar-app-title {
+      grid-area: title;
+      max-width: 100%;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .catbus-topbar-logo {
+      width: 28px;
+      height: auto;
+    }
+    .catbus-topbar-subtitle {
+      display: none;
+    }
+    .catbus-topbar-app-title {
+      font-size: 1.25rem;
+    }
   }
 </style>

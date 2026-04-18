@@ -311,7 +311,7 @@
 <body class="light">
   <?!= include('_PasswordGate') ?>
   <header>
-    <h1>📅 Tax Clinic Schedule Generator</h1>
+    <h1>Tax Clinic Schedule Generator</h1>
     <div>
       <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
@@ -370,7 +370,7 @@
   <div id="messageBox"></div>
 
   <div id="diagnosticBox" style="display: none; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #3498db;">
-    <h3 style="margin-top: 0;">📊 Diagnostic Results</h3>
+    <h3 style="margin-top: 0;">Diagnostic Results</h3>
     <pre id="diagnosticContent" style="background: white; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 12px; line-height: 1.5;"></pre>
   </div>
 
@@ -385,7 +385,7 @@
   </div>
 
   <div class="form-section">
-    <h2>✏️ Schedule Editor</h2>
+    <h2>Schedule Editor</h2>
     <p style="color: #666; font-size: 13px; margin-top: 0;">Search for a volunteer to manually adjust their shift assignments.</p>
     <div class="form-group">
       <label for="editorSearchName">Volunteer Name:</label>
@@ -534,7 +534,7 @@
     if (shortfalls && shortfalls.length > 0) {
       html += `
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-light);">
-          <h4 style="margin: 0 0 10px 0; color: var(--error-color);">⚠️ Shifts Under Minimum</h4>
+          <h4 style="margin: 0 0 10px 0; color: var(--error-color);">Shifts Under Minimum</h4>
       `;
       shortfalls.forEach(sf => {
         html += `
@@ -867,6 +867,6 @@ let editorVolunteerNamesLoading = true;
   }
 
 </script>
-<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
+<div class="footer-copyright"><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
 </body>
 </html>
