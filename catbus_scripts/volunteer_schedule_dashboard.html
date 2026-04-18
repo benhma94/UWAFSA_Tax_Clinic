@@ -371,13 +371,8 @@
     }
   </style>
 </head>
-<body class="light">
-  <header>
-    <h1>📅 Schedule by Day</h1>
-    <div>
-      <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
-    </div>
-  </header>
+<body class="light" data-topbar-title="Schedule by Day">
+  <?!= include('shared_topbar') ?>
 
   <div class="form-section">
     <h2>View Schedule by Day</h2>
@@ -693,6 +688,6 @@
   }
 
 </script>
-<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
+<div class="footer-copyright"><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
 </body>
 </html>

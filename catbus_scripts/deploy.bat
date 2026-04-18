@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 
 echo ============================================
@@ -39,7 +40,7 @@ if "%DEPLOYMENT_ID%"=="" (
 echo Deployment ID: %DEPLOYMENT_ID%
 echo.
 echo Pushing local project files before deployment...
-clasp push
+call clasp push
 if %errorlevel% neq 0 (
     echo.
     echo ERROR: Push failed!
@@ -55,7 +56,7 @@ echo.
 echo Updating existing deployment...
 echo.
 
-clasp deploy --deploymentId "%DEPLOYMENT_ID%" --description "Updated - %date% %time%"
+call clasp deploy --deploymentId "%DEPLOYMENT_ID%" --description "Updated - %date% %time%"
 
 if %errorlevel% neq 0 (
     echo.

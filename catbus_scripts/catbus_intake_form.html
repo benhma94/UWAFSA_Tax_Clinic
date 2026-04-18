@@ -798,17 +798,15 @@
     }
   </script>
 </head>
-<body class="light">
+<body class="light" data-topbar-title="Client Intake Form">
   <?!= include('shared_topbar') ?>
   <header>
     <div id="receptionHelpArea">
       <button id="receptionHelpBtn" onclick="toggleReceptionHelp()">📞 Call for Help</button>
       <button id="receptionEscalateBtn" onclick="escalateReceptionHelp()" style="display: none;">🚨 Escalate to Senior Mentor</button>
     </div>
-    <h3>Client Intake Form</h3>
     <div class="header-actions">
       <a href="<?= websiteUrl ?>" style="font-size:0.85em; color:var(--accent-color); text-decoration:none; font-weight:600; opacity:0.8;">🏠 Home</a>
-      <button aria-label="Toggle dark mode" class="toggle-theme" onclick="toggleTheme()">☀️</button>
     </div>
   </header>
 
@@ -981,7 +979,7 @@
   <div id="intakeDocumentModal" class="modal-overlay" style="display:none;" onclick="handleModalOverlayClick(event)" role="dialog" aria-modal="true" aria-labelledby="docModalTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 id="docModalTitle">📋 Document Checklist</h3>
+        <h3 id="docModalTitle">Document Checklist</h3>
       </div>
       <div class="modal-body" id="intakeDocumentModalBody">
         <!-- Document categories will be rendered here by JavaScript -->
@@ -994,12 +992,12 @@
 
   <div id="confirmationModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center;" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
     <div style="background:white; padding:40px; border-radius:12px; text-align:center; max-width:400px; margin:auto; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
-      <h3 id="confirmModalTitle" style="margin-bottom:20px; color: #27ae60; font-weight: 600;">✅ Client Submitted Successfully</h3>
+      <h3 id="confirmModalTitle" style="margin-bottom:20px; color: #27ae60; font-weight: 600;">Client Submitted Successfully</h3>
       <p style="margin-bottom:10px; font-size: 0.95em;">Please note the Client ID and direct the client to the next stage.</p>
       <p style="margin-bottom:25px; font-size: 1.5em; font-weight: 600; color: var(--accent-color);">Client ID: <span id="clientIDDisplay"></span></p>
       <button onclick="closeModal()" style="padding:12px 24px; background-color:#8e0000; color:white; border:none; border-radius:8px; cursor:pointer; font-weight: 600;">Reset Form</button>
     </div>
   </div>
-<div class="footer-copyright"><span class="footer-left">Client And Tax Booking Utility System (CATBUS)</span><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
+<div class="footer-copyright"><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
 </body>
 </html>

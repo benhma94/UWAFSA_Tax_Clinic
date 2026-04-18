@@ -239,7 +239,7 @@
     left: 0;
     right: 0;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: flex-end;
     padding: 8px 20px;
     font-size: 11px;
@@ -251,11 +251,12 @@
   }
 
   .footer-left {
-    text-align: left;
+    display: none;
   }
 
   .footer-right {
     text-align: right;
+    max-width: 100%;
   }
 
   body.light .footer-copyright {

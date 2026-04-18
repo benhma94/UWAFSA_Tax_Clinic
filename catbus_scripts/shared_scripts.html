@@ -1,13 +1,40 @@
 <script>
   // Theme helpers - use unified key 'theme' with values 'dark' or 'light'
+  function syncThemeToggles(isDark) {
+    document.querySelectorAll('.toggle-theme').forEach((toggle) => {
+      toggle.textContent = isDark ? '🌙' : '☀️';
+      toggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+      toggle.setAttribute('title', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+    });
+  }
+
+  function setTopbarAppTitle() {
+    const titleEl = document.getElementById('catbusTopbarAppTitle');
+    if (!titleEl) return;
+
+    const explicitTitle = (document.body && document.body.dataset && document.body.dataset.topbarTitle) || '';
+    if (explicitTitle.trim()) {
+      titleEl.textContent = explicitTitle.trim();
+      return;
+    }
+
+    const firstHeading = document.querySelector('h1, h2, h3');
+    if (firstHeading && firstHeading.textContent.trim()) {
+      titleEl.textContent = firstHeading.textContent.trim();
+      return;
+    }
+
+    titleEl.textContent = document.title || '';
+  }
+
   function toggleTheme() {
     const body = document.body;
-    const toggle = document.querySelector('.toggle-theme');
     const isDark = body.classList.contains('dark');
     body.classList.toggle('dark', !isDark);
     body.classList.toggle('light', isDark);
-    if (toggle) toggle.textContent = body.classList.contains('dark') ? '🌙' : '☀️';
-    localStorage.setItem('theme', body.classList.contains('dark') ? 'dark' : 'light');
+    const darkModeEnabled = body.classList.contains('dark');
+    syncThemeToggles(darkModeEnabled);
+    localStorage.setItem('theme', darkModeEnabled ? 'dark' : 'light');
   }
 
   function loadThemePreference() {
@@ -15,17 +42,18 @@
     if (theme === 'dark') {
       document.body.classList.remove('light');
       document.body.classList.add('dark');
-      const toggle = document.querySelector('.toggle-theme');
-      if (toggle) toggle.textContent = '🌙';
     } else if (theme === 'light') {
       document.body.classList.remove('dark');
       document.body.classList.add('light');
-      const toggle = document.querySelector('.toggle-theme');
-      if (toggle) toggle.textContent = '☀️';
     }
+
+    syncThemeToggles(document.body.classList.contains('dark'));
   }
 
-  window.addEventListener('load', loadThemePreference);
+  window.addEventListener('load', function() {
+    loadThemePreference();
+    setTopbarAppTitle();
+  });
 
   function escapeHtml(text) {
     const div = document.createElement('div');
