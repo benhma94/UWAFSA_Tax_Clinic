@@ -480,11 +480,11 @@
   <?!= include('shared_topbar') ?>
 
   <nav class="tab-nav" role="tablist">
-    <button type="button" class="tab-btn active" role="tab" data-tab="queue">📋 Queue</button>
-    <button type="button" class="tab-btn" role="tab" data-tab="volunteers">👥 Volunteers</button>
-    <button type="button" class="tab-btn" role="tab" data-tab="schedule">🗓️ Schedule</button>
-    <button type="button" class="tab-btn" role="tab" data-tab="coverage">🔥 Coverage</button>
-    <button type="button" class="tab-btn" role="tab" data-tab="stats">📊 Stats</button>
+    <button type="button" class="tab-btn active" role="tab" data-tab="queue" onclick="switchTab('queue')">📋 Queue</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="volunteers" onclick="switchTab('volunteers')">👥 Volunteers</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="schedule" onclick="switchTab('schedule')">🗓️ Schedule</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="coverage" onclick="switchTab('coverage')">🔥 Coverage</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="stats" onclick="switchTab('stats')">📊 Stats</button>
   </nav>
 
   <!-- ===== QUEUE TAB ===== -->
@@ -716,6 +716,14 @@
 
     document.addEventListener('DOMContentLoaded', function() {
       bindTabNavigation();
+    });
+
+    document.addEventListener('click', function(e) {
+      const btn = e.target.closest('.tab-btn[data-tab]');
+      if (!btn) return;
+      const tab = btn.dataset.tab;
+      if (!tab) return;
+      switchTab(tab);
     });
 
     function switchTab(tab) {

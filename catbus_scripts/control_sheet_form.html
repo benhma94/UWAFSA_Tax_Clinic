@@ -28,6 +28,7 @@
       display: flex;
       gap: 20px;
       flex-wrap: wrap;
+      align-items: flex-start;
       margin-bottom: 0;
     }
 
@@ -432,6 +433,7 @@
 
     hr {
       border: 1px solid #333;
+      margin: 10px 0 14px;
     }
 
     #draftBanner {
@@ -1338,7 +1340,7 @@
 
   <div class="form-row">
     <div>
-      <label for="volunteer">Volunteer:</label><br>
+      <label for="volunteer">Volunteer:</label>
       <div class="autocomplete-container">
         <input type="text" id="volunteer" placeholder="Start typing volunteer name" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="volunteerDropdown">
         <div id="volunteerDropdown" class="autocomplete-dropdown" role="listbox"></div>
@@ -1346,7 +1348,7 @@
     </div>
     <div>
       <div id="clientSelectWrapper">
-        <label for="client">Assigned Client:</label><br>
+        <label for="client">Assigned Client:</label>
         <select id="client" onchange="checkFormReady();">
           <option value="">Select Client</option>
         </select>
@@ -1369,8 +1371,7 @@
         </div>
       </div>
     </div>
-    <div style="align-self: end;">
-      <label style="visibility: hidden; display: block;">_</label>
+    <div style="align-self:end; display:flex; flex-direction:column; gap:8px;">
       <button id="helpBtn" onclick="toggleHelpRequest()">📞 Quick Question!</button>
       <button id="escalateBtn" onclick="escalateHelpRequest()" style="display: none;">🚨 Escalate to Senior Mentor</button>
     </div>
