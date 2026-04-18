@@ -271,6 +271,38 @@
       font-style: italic;
     }
 
+    /* ===== Per-year escalation rows ===== */
+    .vol-card-years { display: flex; flex-direction: column; gap: 5px; margin-top: 2px; }
+    .year-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .year-pill {
+      font-size: 0.78em;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+    .year-pill.senior  { background: #ede7f6; color: #6a1b9a; }
+    .year-pill.regular { background: #e8eaf6; color: #3949ab; }
+    body.dark .year-pill.senior  { background: rgba(106,27,154,0.25); color: #ce93d8; }
+    body.dark .year-pill.regular { background: rgba(57,73,171,0.2);   color: #9fa8da; }
+    .btn-escalate {
+      font-size: 0.72em;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 8px;
+      border: 1px solid currentColor;
+      cursor: pointer;
+      background: transparent;
+      transition: opacity 0.15s;
+      flex-shrink: 0;
+    }
+    button.btn-escalate { background: transparent; transform: none; box-shadow: none; }
+    button.btn-escalate:hover { opacity: 0.8; background: transparent; transform: none; box-shadow: none; }
+    button.btn-escalate:active { transform: none; box-shadow: none; }
+    button.btn-escalate:disabled { opacity: 0.45; cursor: default; }
+    .btn-escalate.escalate   { color: #6a1b9a; border-color: #6a1b9a; }
+    .btn-escalate.deescalate { color: #c0392b; border-color: #c0392b; }
+
     /* ===== Coverage Heatmap ===== */
     .coverage-table-wrap { overflow-x: auto; }
     .coverage-table {
@@ -319,7 +351,19 @@
       background: var(--input-bg-light);
       color: inherit;
     }
+    .form-group-inline select {
+      padding: 8px 10px;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      font-size: 0.9em;
+      background: var(--input-bg-light);
+      color: inherit;
+    }
     body.dark .form-group-inline input {
+      border-color: var(--border-dark);
+      background: var(--input-bg-dark);
+    }
+    body.dark .form-group-inline select {
       border-color: var(--border-dark);
       background: var(--input-bg-dark);
     }
@@ -347,6 +391,13 @@
     .schedule-msg.error { background: #fde8e8; color: #a93226; border-left: 3px solid #e74c3c; }
     body.dark .schedule-msg.success { background: rgba(39,174,96,0.1); }
     body.dark .schedule-msg.error { background: rgba(231,76,60,0.1); }
+    .product-msg { padding: 10px 14px; border-radius: 6px; font-size: 0.9em; margin-top: 12px; display: none; }
+    .product-msg.success { background: #e8f8f0; color: #1a6b3a; border-left: 3px solid #27ae60; }
+    .product-msg.error { background: #fde8e8; color: #a93226; border-left: 3px solid #e74c3c; }
+    .product-msg.loading { background: #f7f7f7; color: #555; border-left: 3px solid #888; }
+    body.dark .product-msg.success { background: rgba(39,174,96,0.1); }
+    body.dark .product-msg.error { background: rgba(231,76,60,0.1); }
+    body.dark .product-msg.loading { background: rgba(255,255,255,0.05); color: #ccc; }
     .stats-results { display: none; }
     .stat-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
     body.dark .stat-item { border-color: var(--border-dark); }
@@ -492,6 +543,7 @@
     <button type="button" class="tab-btn" role="tab" data-tab="schedule" onclick="switchTab('schedule')">🗓️ Schedule</button>
     <button type="button" class="tab-btn" role="tab" data-tab="coverage" onclick="switchTab('coverage')">🔥 Coverage</button>
     <button type="button" class="tab-btn" role="tab" data-tab="stats" onclick="switchTab('stats')">📊 Stats</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="productKeys" onclick="switchTab('productKeys')">🔑 Product Keys</button>
   </nav>
 
   <!-- ===== QUEUE TAB ===== -->
@@ -642,9 +694,15 @@
       <h3>Shift Coverage Heatmap</h3>
       <button type="button" class="btn-refresh" onclick="loadCoverage(true)">🔄 Refresh</button>
     </div>
-    <p style="font-size:0.85em;color:#888;margin-bottom:16px;">
+    <p style="font-size:0.85em;color:#888;margin-bottom:16px;" id="cov-threshold-label">
       Totals per shift. Thresholds: <span style="color:#1a7a40;font-weight:600;">≥12 full</span> · <span style="color:#9a7d0a;font-weight:600;">≥9 adequate</span> · <span style="color:#a93226;font-weight:600;">&lt;9 short</span>
     </p>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;" id="cov-filter-bar">
+      <button type="button" class="tab-btn active" data-role="all" onclick="setCovFilter('all')">All</button>
+      <button type="button" class="tab-btn" data-role="filer" onclick="setCovFilter('filer')">Filers</button>
+      <button type="button" class="tab-btn" data-role="mentor" onclick="setCovFilter('mentor')">Mentors</button>
+      <button type="button" class="tab-btn" data-role="frontline" onclick="setCovFilter('frontline')">Frontline</button>
+    </div>
     <div id="cov-container">
       <p class="empty-state">Loading coverage data…</p>
     </div>
@@ -689,6 +747,38 @@
     </div>
   </div>
 
+  <!-- ===== PRODUCT KEYS TAB ===== -->
+  <div id="tab-productKeys" class="tab-panel" role="tabpanel">
+    <div class="section-box">
+      <div class="section-header">
+        <h3>Send Product Key to Individual</h3>
+        <button type="button" class="btn-refresh" onclick="loadProductKeyVolunteers(true)">🔄 Refresh</button>
+      </div>
+      <p style="font-size:0.88em;color:#888;margin-top:-8px;margin-bottom:14px;">
+        Send a UFILE key to one volunteer for the selected year.
+      </p>
+
+      <div class="form-row" style="margin-bottom:10px;">
+        <div class="form-group-inline">
+          <label for="pk-year">Year</label>
+          <input type="number" id="pk-year" min="2024" max="2099" step="1">
+        </div>
+        <div class="form-group-inline">
+          <label for="pk-volunteerSelect">Volunteer</label>
+          <select id="pk-volunteerSelect" onchange="updateProductKeySendButton()" aria-label="Select volunteer">
+            <option value="">Loading volunteers…</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button type="button" class="btn-primary" id="pk-sendBtn" onclick="sendProductKeyToIndividual()" disabled>Send Key</button>
+      </div>
+
+      <div id="pk-msg" class="product-msg"></div>
+    </div>
+  </div>
+
   <!-- ===== Reassign Modal ===== -->
   <div id="reassignModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reassignModalTitle">
     <div class="modal-box">
@@ -697,6 +787,7 @@
       <select id="reassignVolSelect" aria-label="Select volunteer"></select>
       <div class="modal-actions">
         <button type="button" class="btn-modal-cancel" onclick="closeReassignModal()">Cancel</button>
+        <button type="button" class="btn-modal-cancel" id="reassignReturnBtn" onclick="confirmUnassign()" style="background:#c0392b;color:white;border:none;display:none;">Return to Queue</button>
         <button type="button" class="btn-primary" onclick="confirmReassign()" id="reassignConfirmBtn" style="padding:8px 20px;">Confirm</button>
       </div>
     </div>
@@ -708,7 +799,7 @@
   <?!= include('shared_scripts') ?>
   <script>
     // ===== Tab switching =====
-    let initializedTabs = { queue: true, volunteers: false, schedule: false, coverage: false, stats: false };
+    let initializedTabs = { queue: true, volunteers: false, schedule: false, coverage: false, stats: false, productKeys: false };
 
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -726,6 +817,7 @@
         if (tab === 'schedule') initScheduleTab();
         if (tab === 'coverage') loadCoverage(false);
         if (tab === 'stats') loadStats();
+        if (tab === 'productKeys') initProductKeysTab();
       }
     }
 
@@ -832,6 +924,7 @@
       document.getElementById('reassignModalTitle').textContent = isReassign ? 'Reassign Client' : 'Assign Client';
       document.getElementById('reassignModalDesc').textContent = 'Client ' + clientId + ' → Select a volunteer:';
       document.getElementById('reassignConfirmBtn').disabled = true;
+      document.getElementById('reassignReturnBtn').style.display = isReassign ? 'inline-block' : 'none';
 
       const sel = document.getElementById('reassignVolSelect');
       sel.innerHTML = '<option value="">Loading volunteers…</option>';
@@ -893,6 +986,32 @@
       }
     }
 
+    function confirmUnassign() {
+      const clientId = modalClientId;
+      const btn = document.getElementById('reassignReturnBtn');
+      btn.disabled = true;
+      btn.textContent = 'Returning…';
+
+      google.script.run
+        .withSuccessHandler(result => {
+          btn.disabled = false;
+          btn.textContent = 'Return to Queue';
+          closeReassignModal();
+          if (result && result.success === false) {
+            showToast(result.message || 'Failed', 'error');
+          } else {
+            showToast('Client ' + clientId + ' returned to queue', 'success');
+            loadQueueData();
+          }
+        })
+        .withFailureHandler(err => {
+          btn.disabled = false;
+          btn.textContent = 'Return to Queue';
+          showToast('Error: ' + (err.message || err), 'error');
+        })
+        .unassignClient(clientId);
+    }
+
     // Close modal on overlay click
     document.getElementById('reassignModal').addEventListener('click', function(e) {
       if (e.target === this) closeReassignModal();
@@ -934,9 +1053,30 @@
         const active = activeMap[name];
         let returnHtml = '';
         if (active) {
+          const years = active.filingYears
+            ? active.filingYears.split(',').map(y => y.trim()).filter(y => y)
+            : [];
+          const seniorYears = active.seniorYears;
+          const isYearSenior = year =>
+            seniorYears !== null
+              ? seniorYears.includes(year)
+              : (active.needsSeniorReview || false);
+
+          const yearRowsHtml = years.map(year => {
+            const senior = isYearSenior(year);
+            return `<div class="year-row">
+              <span class="year-pill ${senior ? 'senior' : 'regular'}">📅 ${escapeHtml(year)} — ${senior ? '★ Senior' : 'Regular'}</span>
+              <button type="button" class="btn-escalate ${senior ? 'deescalate' : 'escalate'}"
+                title="${escapeHtml(senior ? 'Remove senior review for ' + year : 'Escalate ' + year + ' to senior review')}"
+                onclick="toggleYearEscalation(${JSON.stringify(name)},${JSON.stringify(active.clientId)},${JSON.stringify(year)},${!senior},this)">
+                ${senior ? 'De-escalate' : 'Escalate'}
+              </button>
+            </div>`;
+          }).join('');
+
           returnHtml = `<hr class="vol-card-divider">
             <div class="vol-card-client-id">Client ${escapeHtml(active.clientId)}</div>
-            ${active.filingYears ? `<div class="vol-card-detail">📅 ${escapeHtml(active.filingYears)}</div>` : ''}
+            ${years.length > 0 ? `<div class="vol-card-years">${yearRowsHtml}</div>` : ''}
             ${active.situations ? `<div class="vol-card-detail">📋 ${escapeHtml(active.situations)}</div>` : ''}
             ${active.minutesOnClient !== null ? `<div class="vol-card-timing">⏱️ ${fmtMins(active.minutesOnClient)} on client</div>` : ''}`;
         } else {
@@ -971,6 +1111,35 @@
           showToast('Error: ' + (err.message || err), 'error');
         })
         .getMasterDashboardData();
+    }
+
+    function toggleYearEscalation(volBaseName, clientId, taxYear, isSenior, btn) {
+      if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+      google.script.run
+        .withSuccessHandler(result => {
+          if (!result || !result.ok) {
+            showToast('Escalation failed', 'error');
+            if (btn) { btn.disabled = false; btn.textContent = isSenior ? 'Escalate' : 'De-escalate'; }
+            return;
+          }
+          if (cachedActiveReturns) {
+            for (const r of cachedActiveReturns) {
+              const base = r.volunteer.includes('–') ? r.volunteer.split('–')[1].trim() : r.volunteer.trim();
+              if (base === volBaseName && r.clientId === clientId) {
+                r.seniorYears = result.seniorYears;
+                break;
+              }
+            }
+          }
+          renderVolunteers(cachedSignedIn, cachedActiveReturns);
+          showToast(`${taxYear} ${isSenior ? 'escalated to senior review' : 'de-escalated'}`, 'success');
+        })
+        .withFailureHandler(err => {
+          showToast('Error: ' + (err.message || err), 'error');
+          if (btn) { btn.disabled = false; btn.textContent = isSenior ? 'Escalate' : 'De-escalate'; }
+        })
+        .setTaxYearEscalation(clientId, taxYear, isSenior);
     }
 
     // ===== SCHEDULE TAB =====
@@ -1208,6 +1377,8 @@
 
     // ===== COVERAGE TAB =====
     let coverageLoaded = false;
+    let coverageData = null;
+    let covActiveRole = 'all';
 
     function loadCoverage(force) {
       if (coverageLoaded && !force) return;
@@ -1216,6 +1387,7 @@
       google.script.run
         .withSuccessHandler(data => {
           coverageLoaded = true;
+          coverageData = data;
           renderCoverage(data);
         })
         .withFailureHandler(err => {
@@ -1223,6 +1395,14 @@
           showToast('Coverage error: ' + (err.message || err), 'error');
         })
         .getVolunteerDistribution();
+    }
+
+    function setCovFilter(role) {
+      covActiveRole = role;
+      document.querySelectorAll('#cov-filter-bar .tab-btn').forEach(
+        b => b.classList.toggle('active', b.dataset.role === role)
+      );
+      if (coverageData) renderCoverage(coverageData);
     }
 
     function renderCoverage(data) {
@@ -1234,6 +1414,16 @@
       const counts = data.shiftRoleCounts || {};
       const slotLabels = { A: 'Morning', B: 'Afternoon', C: 'Evening' };
 
+      const roleConfig = {
+        all:       { key: null,        full: 50, adequate: 30, label: 'Total volunteers per shift. Thresholds: <span style="color:#1a7a40;font-weight:600;">≥50 full</span> · <span style="color:#9a7d0a;font-weight:600;">≥30 adequate</span> · <span style="color:#a93226;font-weight:600;">&lt;30 short</span>' },
+        filer:     { key: 'filer',     full: 30, adequate: 20, label: 'Filers per shift. Thresholds: <span style="color:#1a7a40;font-weight:600;">≥30 full</span> · <span style="color:#9a7d0a;font-weight:600;">≥20 adequate</span> · <span style="color:#a93226;font-weight:600;">&lt;20 short</span>' },
+        mentor:    { key: 'mentor',    full: 15, adequate: 10, label: 'Mentors per shift. Thresholds: <span style="color:#1a7a40;font-weight:600;">≥15 full</span> · <span style="color:#9a7d0a;font-weight:600;">≥10 adequate</span> · <span style="color:#a93226;font-weight:600;">&lt;10 short</span>' },
+        frontline: { key: 'frontline', full: 5,  adequate: 3,  label: 'Frontline per shift. Thresholds: <span style="color:#1a7a40;font-weight:600;">≥5 full</span> · <span style="color:#9a7d0a;font-weight:600;">≥3 adequate</span> · <span style="color:#a93226;font-weight:600;">&lt;3 short</span>' }
+      };
+
+      const cfg = roleConfig[covActiveRole] || roleConfig.all;
+      document.getElementById('cov-threshold-label').innerHTML = cfg.label;
+
       let html = '<div class="coverage-table-wrap"><table class="coverage-table"><thead><tr><th>Shift</th>';
       for (let d = 1; d <= 4; d++) html += '<th>Day ' + d + '</th>';
       html += '</tr></thead><tbody>';
@@ -1242,9 +1432,9 @@
         for (let d = 1; d <= 4; d++) {
           const shiftId = 'D' + d + sk;
           const c = counts[shiftId] || { filer:0, mentor:0, frontline:0, internalServices:0 };
-          const total = c.filer + c.mentor + c.frontline + c.internalServices;
-          const cls = total >= 12 ? 'heat-green' : total >= 9 ? 'heat-yellow' : 'heat-red';
-          html += `<td class="${cls}">${total}</td>`;
+          const count = cfg.key ? c[cfg.key] : (c.filer + c.mentor + c.frontline + c.internalServices);
+          const cls = count >= cfg.full ? 'heat-green' : count >= cfg.adequate ? 'heat-yellow' : 'heat-red';
+          html += `<td class="${cls}">${count}</td>`;
         }
         html += '</tr>';
       }
@@ -1317,6 +1507,127 @@
           <span class="stat-value">${v.count || v.returnsCompleted || 0}</span>
         </div>`
       ).join('');
+    }
+
+    // ===== PRODUCT KEYS TAB =====
+    let productKeySending = false;
+
+    function initProductKeysTab() {
+      const yearEl = document.getElementById('pk-year');
+      yearEl.value = yearEl.value || new Date().getFullYear();
+      yearEl.addEventListener('change', function() {
+        loadProductKeyVolunteers(false);
+      });
+      loadProductKeyVolunteers(false);
+    }
+
+    function showProductKeyMsg(msg, type) {
+      const el = document.getElementById('pk-msg');
+      el.textContent = msg;
+      el.className = 'product-msg ' + type;
+      el.style.display = 'block';
+    }
+
+    function hideProductKeyMsg() {
+      const el = document.getElementById('pk-msg');
+      el.style.display = 'none';
+    }
+
+    function getProductKeyYear() {
+      const y = parseInt(document.getElementById('pk-year').value, 10);
+      return Number.isFinite(y) ? y : new Date().getFullYear();
+    }
+
+    function updateProductKeySendButton() {
+      const btn = document.getElementById('pk-sendBtn');
+      const sel = document.getElementById('pk-volunteerSelect');
+      btn.disabled = productKeySending || !sel.value;
+    }
+
+    function renderProductKeyVolunteers(list) {
+      const sel = document.getElementById('pk-volunteerSelect');
+      const volunteers = list || [];
+
+      if (volunteers.length === 0) {
+        sel.innerHTML = '<option value="">No eligible volunteers found</option>';
+        updateProductKeySendButton();
+        return;
+      }
+
+      const options = ['<option value="">-- Select a volunteer --</option>'];
+      for (const v of volunteers) {
+        const roleLabel = v.role ? ' [' + v.role + ']' : '';
+        const hasCode = v.hasCode ? ' ✓ has code' : '';
+        const label = escapeHtml((v.name || v.email) + roleLabel + ' (' + (v.email || '') + ')' + hasCode);
+        options.push('<option value="' + escapeHtml(v.email || '') + '">' + label + '</option>');
+      }
+      sel.innerHTML = options.join('');
+      updateProductKeySendButton();
+    }
+
+    function loadProductKeyVolunteers(showSuccessToast) {
+      const sel = document.getElementById('pk-volunteerSelect');
+      sel.innerHTML = '<option value="">Loading volunteers…</option>';
+      updateProductKeySendButton();
+      hideProductKeyMsg();
+
+      google.script.run
+        .withSuccessHandler(list => {
+          renderProductKeyVolunteers(list);
+          if (showSuccessToast) showToast('Volunteer list refreshed', 'success');
+        })
+        .withFailureHandler(err => {
+          sel.innerHTML = '<option value="">Failed to load volunteers</option>';
+          updateProductKeySendButton();
+          const msg = 'Failed to load volunteers: ' + (err.message || err);
+          showProductKeyMsg(msg, 'error');
+          showToast(msg, 'error');
+        })
+        .getVolunteerListForDropdown(getProductKeyYear());
+    }
+
+    function sendProductKeyToIndividual() {
+      const sel = document.getElementById('pk-volunteerSelect');
+      const email = (sel.value || '').trim();
+      if (!email) {
+        showProductKeyMsg('Please select a volunteer first.', 'error');
+        updateProductKeySendButton();
+        return;
+      }
+
+      const btn = document.getElementById('pk-sendBtn');
+      const originalText = btn.textContent;
+      productKeySending = true;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading-inline"></span> Sending…';
+      showProductKeyMsg('Sending code...', 'loading');
+
+      google.script.run
+        .withSuccessHandler(result => {
+          productKeySending = false;
+          btn.textContent = originalText;
+
+          const success = result && result.success;
+          const msg = (result && result.message) || (success ? 'Code sent successfully.' : 'Failed to send code.');
+          showProductKeyMsg(msg, success ? 'success' : 'error');
+          showToast(msg, success ? 'success' : 'error');
+
+          if (success) {
+            loadProductKeyVolunteers(false);
+          } else {
+            updateProductKeySendButton();
+          }
+        })
+        .withFailureHandler(err => {
+          productKeySending = false;
+          btn.textContent = originalText;
+          updateProductKeySendButton();
+
+          const msg = 'Failed to send code: ' + (err.message || err);
+          showProductKeyMsg(msg, 'error');
+          showToast(msg, 'error');
+        })
+        .sendCodeToIndividual(email, getProductKeyYear());
     }
 
     // ===== INITIAL LOAD =====

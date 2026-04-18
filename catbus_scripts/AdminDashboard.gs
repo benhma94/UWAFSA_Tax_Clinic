@@ -13,8 +13,21 @@ function getAlertDashboardData() {
   const hasClientIds = liveReviewRequests.some(req => req.clientId);
   const intakeMap = hasClientIds ? buildClientIntakeMap_() : {};
   const reviewRequests = liveReviewRequests.map(req => {
+    let needsSeniorReview = false;
+    if (req.clientId) {
+      const intake = intakeMap[req.clientId];
+      if (intake) {
+        if (intake.seniorYears !== null) {
+          needsSeniorReview = req.taxYear
+            ? intake.seniorYears.includes(req.taxYear.toString().trim())
+            : intake.seniorYears.length > 0;
+        } else {
+          needsSeniorReview = intake.needsSeniorReview || false;
+        }
+      }
+    }
     return Object.assign({}, req, {
-      needsSeniorReview: req.clientId ? (intakeMap[req.clientId]?.needsSeniorReview || false) : false,
+      needsSeniorReview,
       station: stationMap[req.volunteer] || ''
     });
   });
@@ -127,7 +140,7 @@ function buildClientIntakeMap_() {
     const sheet = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
     const lastRow = sheet.getLastRow();
     if (lastRow <= 1) return map;
-    const numCols = CONFIG.COLUMNS.CLIENT_INTAKE.DOCUMENTS + 1;
+    const numCols = CONFIG.COLUMNS.CLIENT_INTAKE.SENIOR_YEARS + 1;
     const data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
     for (const row of data) {
       const clientId = row[CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID]?.toString().trim();
@@ -136,11 +149,16 @@ function buildClientIntakeMap_() {
         row[CONFIG.COLUMNS.CLIENT_INTAKE.NEEDS_SENIOR_REVIEW]?.toString().toLowerCase() === 'true';
       let documents = [];
       try { documents = JSON.parse(row[CONFIG.COLUMNS.CLIENT_INTAKE.DOCUMENTS]?.toString().trim() || '[]'); } catch (e) {}
+      const seniorYearsRaw = row[CONFIG.COLUMNS.CLIENT_INTAKE.SENIOR_YEARS]?.toString().trim() || '';
+      const seniorYears = seniorYearsRaw
+        ? seniorYearsRaw.split(',').map(y => y.trim()).filter(y => y)
+        : null;
       map[clientId] = {
         filingYears: row[CONFIG.COLUMNS.CLIENT_INTAKE.FILING_YEARS]?.toString().split(',').map(y => y.trim()) || [],
         situations:  row[CONFIG.COLUMNS.CLIENT_INTAKE.SITUATIONS]?.toString().split(',').map(s => s.trim()) || [],
         notes:       row[CONFIG.COLUMNS.CLIENT_INTAKE.NOTES]?.toString().trim() || '',
         needsSeniorReview,
+        seniorYears,
         documents
       };
     }
@@ -304,6 +322,7 @@ function getActiveReturns(stationMap_) {
         notes: intakeInfo.notes || '',
         isHighPriority: clientId.startsWith('P'),
         needsSeniorReview: intakeInfo.needsSeniorReview || false,
+        seniorYears: intakeInfo.seniorYears !== undefined ? intakeInfo.seniorYears : null,
         isOnBreak: breakMap[baseName] || false,
         minutesOnClient,
         minutesUntilShiftEnd
@@ -1040,6 +1059,65 @@ function getClientFeatureBreakdown(trackerData) {
 
     return { total: clientMap.size, avgMinutes: overallAvg, baselineAvg: baselineAvg, features: features };
   }, 'getClientFeatureBreakdown');
+}
+
+/**
+ * Sets or clears senior-review escalation for a specific tax year on a client.
+ * First-touch initialization: when SENIOR_YEARS column is blank, the global
+ * needsSeniorReview flag is expanded to per-year state before applying the change.
+ * @param {string} clientId - The client ID (e.g. "A001")
+ * @param {string} taxYear - The tax year string (e.g. "2023")
+ * @param {boolean} isSenior - true = escalate this year, false = de-escalate
+ * @returns {{ ok: boolean, seniorYears: string[] }}
+ */
+function setTaxYearEscalation(clientId, taxYear, isSenior) {
+  return safeExecute(() => {
+    clientId = sanitizeInput(clientId, 20);
+    taxYear  = sanitizeInput(taxYear, 10);
+    if (!clientId || !taxYear) throw new Error('clientId and taxYear are required');
+
+    const sheet   = getSheet(CONFIG.SHEETS.CLIENT_INTAKE);
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) throw new Error('CLIENT_INTAKE sheet is empty');
+
+    const numCols = CONFIG.COLUMNS.CLIENT_INTAKE.SENIOR_YEARS + 1;
+    const data    = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
+
+    let rowIndex = -1;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i][CONFIG.COLUMNS.CLIENT_INTAKE.CLIENT_ID]?.toString().trim() === clientId) {
+        rowIndex = i;
+        break;
+      }
+    }
+    if (rowIndex === -1) throw new Error('Client not found: ' + clientId);
+
+    const row = data[rowIndex];
+    const seniorYearsRaw = row[CONFIG.COLUMNS.CLIENT_INTAKE.SENIOR_YEARS]?.toString().trim() || '';
+    let seniorYears;
+
+    if (seniorYearsRaw === '') {
+      const globalFlag = row[CONFIG.COLUMNS.CLIENT_INTAKE.NEEDS_SENIOR_REVIEW] === true ||
+        row[CONFIG.COLUMNS.CLIENT_INTAKE.NEEDS_SENIOR_REVIEW]?.toString().toLowerCase() === 'true';
+      const allYears = row[CONFIG.COLUMNS.CLIENT_INTAKE.FILING_YEARS]
+        ?.toString().split(',').map(y => y.trim()).filter(y => y) || [];
+      seniorYears = globalFlag ? [...allYears] : [];
+    } else {
+      seniorYears = seniorYearsRaw.split(',').map(y => y.trim()).filter(y => y);
+    }
+
+    if (isSenior) {
+      if (!seniorYears.includes(taxYear)) seniorYears.push(taxYear);
+    } else {
+      seniorYears = seniorYears.filter(y => y !== taxYear);
+    }
+
+    const sheetRow = rowIndex + 2;
+    const sheetCol = CONFIG.COLUMNS.CLIENT_INTAKE.SENIOR_YEARS + 1;
+    sheet.getRange(sheetRow, sheetCol).setValue(seniorYears.join(','));
+
+    return { ok: true, seniorYears };
+  }, 'setTaxYearEscalation');
 }
 
 /**
