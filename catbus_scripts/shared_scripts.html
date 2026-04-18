@@ -34,11 +34,20 @@
     body.classList.toggle('light', isDark);
     const darkModeEnabled = body.classList.contains('dark');
     syncThemeToggles(darkModeEnabled);
-    localStorage.setItem('theme', darkModeEnabled ? 'dark' : 'light');
+    try {
+      localStorage.setItem('theme', darkModeEnabled ? 'dark' : 'light');
+    } catch (e) {
+      // Ignore storage errors so UI behavior is not blocked.
+    }
   }
 
   function loadThemePreference() {
-    const theme = localStorage.getItem('theme');
+    let theme = null;
+    try {
+      theme = localStorage.getItem('theme');
+    } catch (e) {
+      theme = null;
+    }
     if (theme === 'dark') {
       document.body.classList.remove('light');
       document.body.classList.add('dark');
@@ -51,8 +60,17 @@
   }
 
   window.addEventListener('load', function() {
-    loadThemePreference();
-    setTopbarAppTitle();
+    try {
+      loadThemePreference();
+    } catch (e) {
+      syncThemeToggles(document.body.classList.contains('dark'));
+    }
+
+    try {
+      setTopbarAppTitle();
+    } catch (e) {
+      // Title fallback is non-critical.
+    }
   });
 
   function escapeHtml(text) {

@@ -705,12 +705,18 @@
 
     function bindTabNavigation() {
       document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+        if (btn.dataset.tabBound === '1') return;
+        btn.dataset.tabBound = '1';
         btn.addEventListener('click', function() {
           const tab = this.dataset.tab;
           if (tab) switchTab(tab);
         });
       });
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      bindTabNavigation();
+    });
 
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -1323,7 +1329,11 @@
 
     // ===== INITIAL LOAD =====
     window.addEventListener('load', function() {
-      loadThemePreference();
+      try {
+        loadThemePreference();
+      } catch (e) {
+        // Keep dashboard interactive even if theme storage is unavailable.
+      }
       bindTabNavigation();
 
       // Set home link
