@@ -321,6 +321,34 @@
     }
     .vol-header-name { font-size: 1.1em; font-weight: 700; }
 
+    .profile-summary {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 10px;
+    }
+    .profile-summary-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      font-size: 0.95em;
+    }
+    .profile-summary-label {
+      color: #666;
+      font-weight: 600;
+      min-width: 80px;
+      white-space: nowrap;
+    }
+    .profile-summary-value {
+      font-weight: 700;
+    }
+    .profile-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
     /* ===== Autocomplete ===== */
     .autocomplete-container { position: relative; width: 100%; }
     .autocomplete-dropdown {
@@ -564,6 +592,32 @@
     <span id="volHeaderTag"></span>
   </div>
 
+  <div id="profileSummary" class="section-box" style="display:none; margin-bottom: 18px;">
+    <div class="section-header">
+      <div>
+        <h3>Volunteer Profile</h3>
+      </div>
+      <div class="profile-actions">
+        <button type="button" class="btn-secondary" id="profileEditBtn" onclick="toggleEmailEditor(true)">Edit Email</button>
+      </div>
+    </div>
+    <div class="profile-summary">
+      <div class="profile-summary-line"><span class="profile-summary-label">Name</span><span id="profileNameText" class="profile-summary-value">&nbsp;</span></div>
+      <div class="profile-summary-line"><span class="profile-summary-label">Email</span><span id="profileEmailText" class="profile-summary-value">&nbsp;</span></div>
+    </div>
+    <div id="profileEmailEditor" style="display:none; margin-top: 14px;">
+      <div class="credential-row">
+        <label for="profileEmailInput">Email</label>
+        <div class="credential-input-wrap"><input type="email" id="profileEmailInput" placeholder="name@example.com" autocomplete="email"></div>
+      </div>
+      <div class="profile-actions" style="padding-top: 8px;">
+        <button type="button" class="btn-submit-creds" id="profileEmailSaveBtn" onclick="saveVolunteerEmail()">Save Email</button>
+        <button type="button" class="btn-secondary" onclick="toggleEmailEditor(false)">Cancel</button>
+      </div>
+      <div id="profileEmailFeedback" class="creds-feedback"></div>
+    </div>
+  </div>
+
   <!-- Tab Navigation -->
   <nav class="tab-nav" role="tablist">
     <button type="button" class="tab-btn" role="tab" data-tab="availability" onclick="switchTab('availability')">🗓️ Availability</button>
@@ -718,6 +772,7 @@
   let volunteerRoster = [];
   let currentVolunteerName = '';
   let currentVolunteerRole = '';
+  let currentVolunteerEmail = '';
 
   window.addEventListener('load', () => {
     loadVolunteerNames();
@@ -813,6 +868,8 @@
     document.getElementById('credentialsEmptyState').style.display = '';
     currentVolunteerName = '';
     currentVolunteerRole = '';
+    currentVolunteerEmail = '';
+    renderVolunteerProfileSummary();
   }
 
   function searchByName() {
@@ -821,6 +878,9 @@
       showToast('Please enter a name to search.', '');
       return;
     }
+
+    document.getElementById('profileSummary').style.display = 'none';
+    currentVolunteerEmail = '';
 
     // Show volunteer header as loading
     document.getElementById('volHeader').style.display = '';
@@ -863,41 +923,118 @@
   }
 
   function displayScheduleResults(result, searchTerm) {
+    currentVolunteerName = (result && result.volunteerName) || searchTerm;
+    currentVolunteerRole = (result && result.volunteerRole) || '';
+    currentVolunteerEmail = null;
+    renderVolunteerProfileSummary();
+
+    // Update volunteer header
+    const roleCls = (currentVolunteerRole || '').toLowerCase().replace(/\s+/g, '');
+    document.getElementById('volHeaderName').textContent = currentVolunteerName;
+    document.getElementById('volHeaderBadge').innerHTML = currentVolunteerRole
+      ? `<span class="role-badge ${escapeHtml(roleCls)}">${escapeHtml(currentVolunteerRole)}</span>`
+      : '';
+    document.getElementById('volHeaderTag').innerHTML = result && result.volunteerTag
+      ? `<span class="volunteer-tag">${escapeHtml(result.volunteerTag)}</span>`
+      : '';
+
     if (!result || !result.shifts || result.shifts.length === 0) {
-      document.getElementById('volHeaderName').textContent = searchTerm;
       document.getElementById('scheduleTableBody').innerHTML =
         `<tr><td colspan="2" class="empty-state">No scheduled shifts found for "${escapeHtml(searchTerm)}".</td></tr>`;
       document.getElementById('shiftCountVal').textContent = '0';
       document.getElementById('sc-filed').textContent = '—';
       document.getElementById('sc-totalTime').textContent = '—';
-      document.getElementById('credentialsContent').innerHTML =
-        '<div class="empty-state">Name not found — check spelling.</div>';
-      return;
+    } else {
+      document.getElementById('shiftCountVal').textContent = result.shifts.length;
+      document.getElementById('scheduleTableBody').innerHTML = result.shifts.map(shift =>
+        `<tr><td>${escapeHtml(shift.day)}</td><td>${escapeHtml(shift.time)}</td></tr>`
+      ).join('');
     }
-
-    currentVolunteerName = result.volunteerName || searchTerm;
-    currentVolunteerRole = result.volunteerRole || '';
-
-    // Update volunteer header
-    const roleCls = (currentVolunteerRole || '').toLowerCase().replace(/\s+/g, '');
-    document.getElementById('volHeaderName').textContent = result.volunteerName || searchTerm;
-    document.getElementById('volHeaderBadge').innerHTML = currentVolunteerRole
-      ? `<span class="role-badge ${escapeHtml(roleCls)}">${escapeHtml(currentVolunteerRole)}</span>`
-      : '';
-    document.getElementById('volHeaderTag').innerHTML = result.volunteerTag
-      ? `<span class="volunteer-tag">${escapeHtml(result.volunteerTag)}</span>`
-      : '';
-
-    // Populate schedule table
-    document.getElementById('shiftCountVal').textContent = result.shifts.length;
-    document.getElementById('scheduleTableBody').innerHTML = result.shifts.map(shift =>
-      `<tr><td>${escapeHtml(shift.day)}</td><td>${escapeHtml(shift.time)}</td></tr>`
-    ).join('');
 
     // Load stats and credentials in parallel
     refreshStats();
     loadAvailabilityForVolunteer();
     loadCredentialStatus();
+  }
+
+  function renderVolunteerProfileSummary() {
+    const summary = document.getElementById('profileSummary');
+    const nameText = document.getElementById('profileNameText');
+    const emailText = document.getElementById('profileEmailText');
+    const emailInput = document.getElementById('profileEmailInput');
+
+    if (!currentVolunteerName) {
+      summary.style.display = 'none';
+      return;
+    }
+
+    summary.style.display = '';
+    nameText.textContent = currentVolunteerName;
+    if (currentVolunteerEmail === null) {
+      emailText.textContent = 'Loading…';
+    } else {
+      emailText.textContent = currentVolunteerEmail || 'Not on file';
+    }
+    if (emailInput) emailInput.value = currentVolunteerEmail || '';
+    toggleEmailEditor(false);
+  }
+
+  function toggleEmailEditor(show) {
+    const editor = document.getElementById('profileEmailEditor');
+    const button = document.getElementById('profileEditBtn');
+    if (!editor || !button) return;
+    editor.style.display = show ? '' : 'none';
+    button.style.display = show ? 'none' : '';
+    if (!show) {
+      document.getElementById('profileEmailFeedback').innerHTML = '';
+    }
+  }
+
+  function validateEmailFormat(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  }
+
+  function saveVolunteerEmail() {
+    const emailInput = document.getElementById('profileEmailInput');
+    const feedback = document.getElementById('profileEmailFeedback');
+    const button = document.getElementById('profileEmailSaveBtn');
+
+    if (!emailInput || !feedback || !button) return;
+
+    const email = emailInput.value.trim();
+    if (!email) {
+      feedback.innerHTML = '<span style="color:#e74c3c;">Please enter an email address.</span>';
+      return;
+    }
+    if (!validateEmailFormat(email)) {
+      feedback.innerHTML = '<span style="color:#e74c3c;">Please enter a valid email address.</span>';
+      return;
+    }
+    if (!currentVolunteerName) {
+      feedback.innerHTML = '<span style="color:#e74c3c;">No volunteer selected.</span>';
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Saving...';
+    feedback.innerHTML = '';
+
+    google.script.run
+      .withSuccessHandler(result => {
+        button.disabled = false;
+        button.textContent = 'Save Email';
+        currentVolunteerEmail = result.email || email;
+        renderVolunteerProfileSummary();
+        feedback.innerHTML = `<span style="color:#27ae60;">${escapeHtml(result.message || 'Email updated successfully.')}</span>`;
+        loadAvailabilityForVolunteer();
+        showToast('Email updated.', 'success');
+      })
+      .withFailureHandler(err => {
+        button.disabled = false;
+        button.textContent = 'Save Email';
+        feedback.innerHTML = `<span style="color:#e74c3c;">Error: ${escapeHtml(err.message || String(err))}</span>`;
+      })
+      .updateVolunteerEmail(currentVolunteerName, email);
   }
 
   // ── Stats ─────────────────────────────────────────────────────────────────
@@ -927,15 +1064,29 @@
 
   function formatMinutesShort(mins) {
     if (!mins) return '0m';
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    if (h > 100) {
-      const d = Math.floor(h / 24);
-      return d + 'd ' + (h % 24) + 'h';
+    const totalMinutes = Math.round(mins);
+    const totalHours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const totalDays = Math.floor(totalHours / 24);
+    const totalMonths = Math.floor(totalDays / 30);
+    const totalYears = Math.floor(totalMonths / 12);
+
+    if (totalYears >= 1) {
+      const remMonths = totalMonths % 12;
+      return remMonths ? `${totalYears}y ${remMonths}mo` : `${totalYears}y`;
     }
-    if (h > 0 && m > 0) return h + 'h ' + m + 'm';
-    if (h > 0) return h + 'h';
-    return m + 'm';
+    if (totalMonths >= 1) {
+      const remDays = totalDays % 30;
+      return remDays ? `${totalMonths}mo ${remDays}d` : `${totalMonths}mo`;
+    }
+    if (totalDays >= 1) {
+      const remHours = totalHours % 24;
+      return remHours ? `${totalDays}d ${remHours}h` : `${totalDays}d`;
+    }
+    if (totalHours > 0) {
+      return minutes ? `${totalHours}h ${minutes}m` : `${totalHours}h`;
+    }
+    return `${minutes}m`;
   }
 
   function renderStats(stats, filterDateStr) {
@@ -1173,6 +1324,9 @@
     document.getElementById('availNumShifts').value = data.numShifts || '';
     document.getElementById('availConsecutive').value = data.consecutive || 'No';
     document.getElementById('availNotes').value = data.notes || '';
+
+    currentVolunteerEmail = data.email || fallbackEmail || '';
+    renderVolunteerProfileSummary();
 
     document.querySelectorAll('input[name="dashboardAvailability"]').forEach(cb => { cb.checked = false; });
     if (Array.isArray(data.availability)) {

@@ -122,6 +122,97 @@ function updateVolunteerRole(email, newRole) {
 }
 
 /**
+ * Updates a volunteer's email in the Consolidated Volunteer List and all matching
+ * Schedule Availability rows for the same volunteer name.
+ *
+ * @param {string} name     - Volunteer display name (case-insensitive)
+ * @param {string} newEmail - New email address
+ * @returns {{ success: true, email: string, updatedAvailabilityRows: number, message: string }}
+ */
+function updateVolunteerEmail(name, newEmail) {
+  const displayName = (name || '').toString().trim();
+  const normalizedEmail = normalizeEmail(newEmail);
+
+  if (!displayName) throw new Error('Volunteer name is required.');
+  if (!normalizedEmail) throw new Error('A valid email is required.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    throw new Error('Please enter a valid email address.');
+  }
+
+  const ss = getSpreadsheet();
+  const rosterSheet = ss.getSheetByName(CONFIG.SHEETS.CONSOLIDATED_VOLUNTEER_LIST);
+  if (!rosterSheet || rosterSheet.getLastRow() <= 1) throw new Error('Consolidated Volunteer List sheet not found.');
+
+  const cols = CONFIG.COLUMNS.CONSOLIDATED_VOLUNTEER_LIST;
+  const numCols = cols.ATTENDED_TRAINING + 1;
+  const rosterData = rosterSheet.getRange(2, 1, rosterSheet.getLastRow() - 1, numCols).getValues();
+
+  let rosterMatchRow = null;
+  let rosterFirstName = '';
+  let rosterLastName = '';
+
+  const targetLower = displayName.toLowerCase();
+  for (let i = 0; i < rosterData.length; i++) {
+    const row = rosterData[i];
+    const legal = (row[cols.FIRST_NAME_LEGAL] || '').toString().trim();
+    const preferred = (row[cols.PREFERRED_NAME] || '').toString().trim();
+    const last = (row[cols.LAST_NAME] || '').toString().trim();
+    const firstName = preferred || legal;
+    const display = `${firstName} ${last}`.trim();
+    if (display.toLowerCase() === targetLower) {
+      rosterMatchRow = i + 2;
+      rosterFirstName = firstName;
+      rosterLastName = last;
+      break;
+    }
+  }
+
+  if (!rosterMatchRow) {
+    throw new Error('Volunteer not found in Consolidated Volunteer List.');
+  }
+
+  // Prevent email duplication across roster rows.
+  for (let i = 0; i < rosterData.length; i++) {
+    const rowEmail = normalizeEmail(rosterData[i][cols.EMAIL] || '');
+    if (rowEmail && rowEmail === normalizedEmail && i + 2 !== rosterMatchRow) {
+      throw new Error('That email is already assigned to another volunteer.');
+    }
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    rosterSheet.getRange(rosterMatchRow, cols.EMAIL + 1).setValue(normalizedEmail);
+
+    const availabilitySheet = getOrCreateAvailabilitySheet();
+    const lastRow = availabilitySheet.getLastRow();
+    let updatedRows = 0;
+
+    if (lastRow > 1) {
+      const availabilityData = availabilitySheet.getRange(2, 1, lastRow - 1, 10).getValues();
+      for (let i = 0; i < availabilityData.length; i++) {
+        const row = availabilityData[i];
+        const first = (row[1] || '').toString().trim().toLowerCase();
+        const last = (row[2] || '').toString().trim().toLowerCase();
+        if (first === rosterFirstName.toLowerCase() && last === rosterLastName.toLowerCase()) {
+          const currentRowEmail = normalizeEmail(row[3] || '');
+          if (currentRowEmail !== normalizedEmail) {
+            availabilitySheet.getRange(i + 2, 4).setValue(normalizedEmail);
+            updatedRows++;
+          }
+        }
+      }
+    }
+
+    const message = `Email updated for ${displayName}. ${updatedRows} availability row${updatedRows === 1 ? '' : 's'} updated.`;
+    return { success: true, email: normalizedEmail, updatedAvailabilityRows: updatedRows, message };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
  * Updates the role of multiple volunteers in the Consolidated Volunteer List in one call.
  * Much faster than calling updateVolunteerRole() once per volunteer.
  *
