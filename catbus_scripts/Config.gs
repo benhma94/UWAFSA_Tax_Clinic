@@ -625,3 +625,5 @@ const VOLUNTEER_ONBOARDING_CONFIG = {
          selfComplete: false
        }
      ]
+   }
+};
