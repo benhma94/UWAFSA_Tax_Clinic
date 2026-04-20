@@ -8,12 +8,37 @@
  * Called client-side via google.script.run.getVolunteerManagementData()
  *
  * @returns {Array<Object>} Array of {name, firstName, lastName, email, role,
- *                          efileNum, attendedTraining}, sorted alphabetically by name.
+ *                          efileNum, attendedTraining, quizPassed}, sorted alphabetically by name.
  */
 function getVolunteerManagementData() {
   const volunteers = getConsolidatedVolunteerList_();
+  const passedQuizNames = getVolunteerQuizPassNames_();
+  volunteers.forEach(volunteer => {
+    const normalizedName = (volunteer.name || '').toString().trim().toLowerCase();
+    volunteer.quizPassed = normalizedName ? passedQuizNames.has(normalizedName) : false;
+  });
   volunteers.sort((a, b) => a.name.localeCompare(b.name));
   return volunteers;
+}
+
+function getVolunteerQuizPassNames_() {
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.SHEETS.QUIZ_SUBMISSIONS);
+  if (!sheet || sheet.getLastRow() <= 1) return new Set();
+
+  const cols = CONFIG.COLUMNS.QUIZ_SUBMISSIONS;
+  const data = sheet.getRange(2, cols.VOLUNTEER + 1, sheet.getLastRow() - 1, cols.FILE_URLS + 1).getValues();
+  const passedNames = new Set();
+
+  data.forEach(row => {
+    const name = (row[cols.VOLUNTEER] || '').toString().trim().toLowerCase();
+    const status = (row[cols.STATUS] || '').toString().trim().toUpperCase();
+    if (name && status === 'PASS') {
+      passedNames.add(name);
+    }
+  });
+
+  return passedNames;
 }
 
 /**

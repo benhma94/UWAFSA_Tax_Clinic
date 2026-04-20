@@ -911,7 +911,7 @@
       </div>
       <div class="filter-dropdown">
         <button type="button" class="filter-dropdown-button" onclick="toggleRosterDropdown('training')">
-          Training
+          Attended Training
           <span class="filter-summary" id="trainingFilterSummary">All</span>
         </button>
         <div class="filter-dropdown-panel" id="trainingFilterPanel">
@@ -933,7 +933,8 @@
             <th>Name</th>
             <th>Email</th>
             <th>E-file #</th>
-            <th>Training</th>
+            <th>Attended Training</th>
+            <th>Quiz passed?</th>
           </tr>
         </thead>
         <tbody id="rosterBody"></tbody>
@@ -1794,6 +1795,7 @@
         '<td style="font-size:0.82rem;">' + esc(v.email) + '</td>' +
         '<td>' + esc(v.efileNum || '') + '</td>' +
         '<td>' + (v.attendedTraining ? 'Yes' : '') + '</td>' +
+        '<td>' + (v.quizPassed ? 'Yes' : '') + '</td>' +
         '</tr>';
     }
     tbody.innerHTML = html;
