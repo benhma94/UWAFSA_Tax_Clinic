@@ -4,7 +4,9 @@
   <base target="_top">
   <?!= include('shared_styles') ?>
   <style>
-    /* File-specific input/select styling */
+    body { padding: 20px; }
+
+    /* ===== Input/select styling ===== */
     input[type="text"],
     input[type="password"],
     select,
@@ -34,95 +36,206 @@
       color: var(--text-color-dark);
     }
 
-    .results-section {
-      margin-top: 25px;
-      animation: fadeIn 0.4s ease-in;
-    }
-
-    .schedule-table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      margin-top: 15px;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-
-    .schedule-table th,
-    .schedule-table td {
-      padding: 14px 16px;
-      text-align: left;
-      border-bottom: 1px solid var(--border-light);
-    }
-
-    body.dark .schedule-table th,
-    body.dark .schedule-table td {
-      border-bottom-color: var(--border-dark);
-    }
-
-    .schedule-table th {
-      background-color: var(--accent-color);
-      color: white;
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 0.85em;
-      letter-spacing: 0.5px;
-      position: sticky;
-      top: 0;
+    /* ===== Tabs ===== */
+    .tab-nav {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--border-light);
+      padding-bottom: 0;
+      flex-wrap: wrap;
+      position: relative;
       z-index: 10;
     }
-
-    .schedule-table tbody tr {
-      transition: background-color 0.2s;
-    }
-
-    .schedule-table tbody tr:hover {
-      background-color: rgba(142, 0, 0, 0.05);
-    }
-
-    body.dark .schedule-table tbody tr:hover {
-      background-color: rgba(142, 0, 0, 0.15);
-    }
-
-    .schedule-table tr:nth-child(even) {
-      background-color: rgba(0, 0, 0, 0.02);
-    }
-
-    body.dark .schedule-table tr:nth-child(even) {
-      background-color: rgba(255, 255, 255, 0.02);
-    }
-
-    .schedule-table tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    .no-results {
-      padding: 20px;
-      text-align: center;
+    body.dark .tab-nav { border-color: var(--border-dark); }
+    .tab-btn {
+      padding: 10px 18px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.95em;
+      font-weight: 600;
       color: #666;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      border-radius: 4px 4px 0 0;
+      transition: color 0.2s, border-color 0.2s;
+      pointer-events: auto;
+      position: relative;
+      z-index: 11;
     }
-
-    body.dark .no-results {
-      color: #aaa;
+    body.dark .tab-btn { color: #aaa; }
+    .tab-btn:hover { color: var(--accent-color); }
+    .tab-btn.active {
+      color: var(--accent-color);
+      border-bottom-color: var(--accent-color);
+      background: rgba(142,0,0,0.05);
     }
+    body.dark .tab-btn.active { background: rgba(142,0,0,0.12); }
+    /* Override global button:hover specificity that turns all buttons red */
+    button.tab-btn { background: transparent; color: #666; transform: none; box-shadow: none; }
+    body.dark button.tab-btn { color: #aaa; }
+    button.tab-btn:hover { color: var(--accent-color); background: transparent; transform: none; box-shadow: none; }
+    button.tab-btn.active { color: var(--accent-color); border-bottom-color: var(--accent-color); background: rgba(142,0,0,0.05); transform: none; box-shadow: none; }
+    body.dark button.tab-btn.active { background: rgba(142,0,0,0.12); }
+    button.tab-btn:active { transform: none; box-shadow: none; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
 
-    .loading {
+    /* ===== Stat Cards ===== */
+    .stat-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--input-bg-light);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow-light);
+    }
+    body.dark .stat-card {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+    .stat-card-label {
+      font-size: 0.75em;
+      color: #888;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    body.dark .stat-card-label { color: #aaa; }
+    .stat-card-value {
+      font-size: 2em;
+      font-weight: 700;
+      color: var(--accent-color);
+      line-height: 1;
+    }
+    .stat-card-sub {
+      font-size: 0.75em;
+      color: #888;
+      margin-top: 4px;
+    }
+    body.dark .stat-card-sub { color: #aaa; }
+
+    /* ===== Data Table ===== */
+    .data-table-wrap { overflow-x: auto; }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9em;
+    }
+    .data-table th {
+      text-align: left;
+      padding: 10px 12px;
+      background: var(--input-bg-light);
+      border-bottom: 2px solid var(--border-light);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    body.dark .data-table th {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+    .data-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border-light);
+      vertical-align: middle;
+    }
+    body.dark .data-table td { border-color: var(--border-dark); }
+
+    /* ===== Section Header ===== */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .section-header h3 { margin: 0; }
+
+    /* ===== Section Box ===== */
+    .section-box {
+      background: var(--input-bg-light);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 20px 22px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-light);
+    }
+    body.dark .section-box {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+    .section-box h3 { margin-top: 0; margin-bottom: 16px; color: var(--accent-color); font-size: 1.05em; }
+
+    /* ===== Buttons ===== */
+    .btn-secondary {
+      background: transparent;
+      color: var(--accent-color);
+      border: 2px solid var(--accent-color);
+      border-radius: 6px;
+      padding: 8px 18px;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      width: auto;
+    }
+    .btn-secondary:hover { background: rgba(142,0,0,0.07); transform: none; box-shadow: none; }
+    .btn-secondary:active { transform: none; box-shadow: none; }
+
+    /* ===== Stat Item Rows (clinic medians) ===== */
+    .stat-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
+    body.dark .stat-item { border-color: var(--border-dark); }
+    .stat-item:last-child { border-bottom: none; }
+    .stat-label { font-size: 0.88em; color: #555; }
+    body.dark .stat-label { color: #bbb; }
+    .stat-value { font-weight: 700; font-size: 0.95em; }
+
+    /* ===== Toast ===== */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #2c3e50;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      font-weight: 600;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+      z-index: 2000;
+      max-width: 320px;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: #27ae60; }
+    .toast.error { background: var(--accent-color); }
+
+    /* ===== Loading spinner ===== */
+    .loading-inline {
       display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid var(--accent-color);
+      width: 16px; height: 16px;
+      border: 2px solid #ccc;
+      border-top-color: var(--accent-color);
       border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-left: 10px;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    /* ===== Empty state ===== */
+    .empty-state { color: #aaa; font-style: italic; font-size: 0.9em; padding: 16px 0; }
 
+    /* ===== Role badges ===== */
     .role-badge {
       display: inline-block;
       padding: 4px 12px;
@@ -132,47 +245,32 @@
       margin-left: 8px;
       transition: transform 0.2s;
     }
-
     .role-badge.mentor {
       background-color: rgba(52, 152, 219, 0.15);
       color: var(--mentor-color);
       border: 1px solid var(--mentor-color);
     }
-
     .role-badge.frontline {
       background-color: rgba(46, 204, 113, 0.15);
       color: var(--frontline-color);
       border: 1px solid var(--frontline-color);
     }
-
     .role-badge.filer {
       background-color: rgba(155, 89, 182, 0.15);
       color: var(--filer-color);
       border: 1px solid var(--filer-color);
     }
-
-    body.dark .role-badge.mentor {
-      background-color: rgba(52, 152, 219, 0.25);
-    }
-
-    body.dark .role-badge.frontline {
-      background-color: rgba(46, 204, 113, 0.25);
-    }
-
-    body.dark .role-badge.filer {
-      background-color: rgba(155, 89, 182, 0.25);
-    }
-
+    body.dark .role-badge.mentor { background-color: rgba(52, 152, 219, 0.25); }
+    body.dark .role-badge.frontline { background-color: rgba(46, 204, 113, 0.25); }
+    body.dark .role-badge.filer { background-color: rgba(155, 89, 182, 0.25); }
     .role-badge.internalservices {
       background-color: rgba(231, 76, 60, 0.15);
       color: var(--internal-services-color);
       border: 1px solid var(--internal-services-color);
     }
+    body.dark .role-badge.internalservices { background-color: rgba(231, 76, 60, 0.25); }
 
-    body.dark .role-badge.internalservices {
-      background-color: rgba(231, 76, 60, 0.25);
-    }
-
+    /* ===== Volunteer tag ===== */
     .volunteer-tag {
       display: inline-block;
       padding: 3px 10px;
@@ -186,33 +284,36 @@
       border: 1px dashed rgba(255, 152, 0, 0.4);
       transition: transform 0.2s, box-shadow 0.2s;
     }
-
-    .volunteer-tag::before {
-      content: '✨ ';
-      font-style: normal;
-    }
-
-    .volunteer-tag:hover {
-      transform: scale(1.05);
-      box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2);
-    }
-
+    .volunteer-tag::before { content: '✨ '; font-style: normal; }
+    .volunteer-tag:hover { transform: scale(1.05); box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2); }
     body.dark .volunteer-tag {
       background: linear-gradient(135deg, rgba(255, 193, 7, 0.25) 0%, rgba(255, 152, 0, 0.25) 100%);
       color: #ffc107;
       border-color: rgba(255, 193, 7, 0.5);
     }
+    body.dark .volunteer-tag:hover { box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3); }
 
-    body.dark .volunteer-tag:hover {
-      box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+    /* ===== Volunteer header card ===== */
+    .vol-header-card {
+      background: var(--input-bg-light);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-light);
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
     }
-
-    /* Autocomplete dropdown styles */
-    .autocomplete-container {
-      position: relative;
-      width: 100%;
+    body.dark .vol-header-card {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
     }
+    .vol-header-name { font-size: 1.1em; font-weight: 700; }
 
+    /* ===== Autocomplete ===== */
+    .autocomplete-container { position: relative; width: 100%; }
     .autocomplete-dropdown {
       position: absolute;
       top: 100%;
@@ -228,154 +329,45 @@
       display: none;
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
-
     body.dark .autocomplete-dropdown {
       background-color: #333;
       border-color: var(--border-dark);
     }
-
     .autocomplete-item {
       padding: 12px;
       cursor: pointer;
       transition: background 0.2s;
       border-bottom: 1px solid var(--border-light);
     }
+    body.dark .autocomplete-item { border-bottom-color: var(--border-dark); }
+    .autocomplete-item:hover { background-color: rgba(142, 0, 0, 0.1); }
+    body.dark .autocomplete-item:hover { background-color: rgba(142, 0, 0, 0.2); }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item.highlighted { background-color: rgba(142, 0, 0, 0.15); }
+    body.dark .autocomplete-item.highlighted { background-color: rgba(142, 0, 0, 0.3); }
+    .no-matches { padding: 12px; color: #666; font-style: italic; }
+    body.dark .no-matches { color: #aaa; }
 
-    body.dark .autocomplete-item {
-      border-bottom-color: var(--border-dark);
-    }
+    /* ===== Search buttons ===== */
+    .search-buttons { display: flex; gap: 10px; margin-top: 10px; }
+    .search-buttons button { width: auto; min-width: 120px; }
 
-    .autocomplete-item:hover {
-      background-color: rgba(142, 0, 0, 0.1);
-    }
+    /* ===== Help text ===== */
+    .help-text { font-size: 0.9em; color: #666; margin-top: 8px; font-style: italic; }
+    body.dark .help-text { color: #999; }
 
-    body.dark .autocomplete-item:hover {
-      background-color: rgba(142, 0, 0, 0.2);
-    }
-
-    .autocomplete-item:last-child {
-      border-bottom: none;
-    }
-
-    .autocomplete-item.highlighted {
-      background-color: rgba(142, 0, 0, 0.15);
-    }
-
-    body.dark .autocomplete-item.highlighted {
-      background-color: rgba(142, 0, 0, 0.3);
-    }
-
-    .search-buttons {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    .search-buttons button {
-      width: auto;
-      min-width: 120px;
-    }
-
-    .no-matches {
-      padding: 12px;
-      color: #666;
-      font-style: italic;
-    }
-
-    body.dark .no-matches {
-      color: #aaa;
-    }
-
-    .help-text {
-      font-size: 0.9em;
-      color: #666;
-      margin-top: 8px;
-      font-style: italic;
-    }
-
-    body.dark .help-text {
-      color: #999;
-    }
-
-    .total-shifts {
-      margin-top: 20px;
-      padding: 12px 16px;
-      background-color: rgba(142, 0, 0, 0.05);
-      border-left: 4px solid var(--accent-color);
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    body.dark .total-shifts {
-      background-color: rgba(142, 0, 0, 0.15);
-    }
-
+    /* ===== Stats day filter ===== */
     .stats-day-filter {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 10px;
+      margin-bottom: 16px;
       flex-wrap: wrap;
     }
+    .stats-day-filter label { font-size: 0.9em; font-weight: 500; white-space: nowrap; }
+    .stats-day-filter select { width: auto; flex: 1; min-width: 160px; padding: 8px 12px; font-size: 0.9em; }
 
-    .stats-day-filter label {
-      font-size: 0.9em;
-      font-weight: 500;
-      white-space: nowrap;
-    }
-
-    .stats-day-filter select {
-      width: auto;
-      flex: 1;
-      min-width: 160px;
-      padding: 8px 12px;
-      font-size: 0.9em;
-    }
-
-    .stats-numbers {
-      display: flex;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-
-    .stat-item {
-      font-size: 0.95em;
-    }
-
-    .stat-item strong {
-      font-size: 1.2em;
-    }
-
-    .stat-alltime {
-      font-size: 0.85em;
-      opacity: 0.65;
-    }
-
-    .stats-benchmarks {
-      margin-top: 14px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border-light);
-    }
-
-    body.dark .stats-benchmarks {
-      border-top-color: var(--border-dark);
-    }
-
-    .stats-benchmarks-title {
-      font-size: 0.8em;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      opacity: 0.55;
-      margin-bottom: 8px;
-    }
-
-    .stat-benchmark {
-      opacity: 0.7;
-      font-size: 0.9em;
-    }
-
-    /* Credential section */
+    /* ===== Credentials ===== */
     .credential-row {
       display: flex;
       align-items: center;
@@ -383,22 +375,9 @@
       margin-bottom: 16px;
       flex-wrap: wrap;
     }
-
-    .credential-row label {
-      font-weight: 600;
-      min-width: 90px;
-      flex-shrink: 0;
-    }
-
-    .credential-input-wrap {
-      flex: 1;
-      min-width: 180px;
-    }
-
-    .credential-input-wrap input {
-      margin: 0;
-    }
-
+    .credential-row label { font-weight: 600; min-width: 90px; flex-shrink: 0; }
+    .credential-input-wrap { flex: 1; min-width: 180px; }
+    .credential-input-wrap input { margin: 0; }
     .badge-on-file {
       display: inline-block;
       padding: 4px 12px;
@@ -410,11 +389,7 @@
       border: 1px solid #27ae60;
       white-space: nowrap;
     }
-
-    body.dark .badge-on-file {
-      background-color: rgba(39, 174, 96, 0.25);
-    }
-
+    body.dark .badge-on-file { background-color: rgba(39, 174, 96, 0.25); }
     .badge-missing {
       display: inline-block;
       padding: 4px 12px;
@@ -426,13 +401,11 @@
       border: 1px solid #bbb;
       white-space: nowrap;
     }
-
     body.dark .badge-missing {
       background-color: rgba(255, 255, 255, 0.06);
       color: #aaa;
       border-color: #555;
     }
-
     .btn-submit-creds {
       display: inline-block;
       width: auto;
@@ -447,113 +420,33 @@
       transition: background 0.2s, transform 0.1s;
       margin-top: 8px;
     }
+    .btn-submit-creds:hover:not(:disabled) { background-color: #6e0000; transform: translateY(-1px); }
+    .btn-submit-creds:disabled { opacity: 0.5; cursor: not-allowed; }
+    .creds-feedback { margin-top: 10px; font-size: 0.9em; }
 
-    .btn-submit-creds:hover:not(:disabled) {
-      background-color: #6e0000;
-      transform: translateY(-1px);
-    }
-
-    .btn-submit-creds:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .creds-feedback {
-      margin-top: 10px;
-      font-size: 0.9em;
-    }
-
-    /* Mobile */
+    /* ===== Mobile ===== */
     @media (max-width: 768px) {
-      body {
-        padding: 10px;
-      }
-
-      h1 {
-        font-size: 1.3em;
-      }
-
-      header {
-        margin-bottom: 20px;
-      }
-
-      .form-section {
-        padding: 15px;
-        margin-bottom: 15px;
-      }
-
-      select, input[type="text"], input[type="password"], button {
-        width: 100%;
-        min-height: 44px;
-        font-size: 1em;
-        box-sizing: border-box;
-      }
-
-      .search-buttons {
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .search-buttons button {
-        width: 100%;
-        min-width: unset;
-      }
-
-      .schedule-table th,
-      .schedule-table td {
-        padding: 10px 8px;
-        font-size: 0.9em;
-      }
-
-      .role-badge {
-        display: block;
-        margin: 6px 0 0 0;
-      }
-
-      .volunteer-tag {
-        display: block;
-        margin: 4px 0 0 0;
-      }
-
-      .stats-numbers {
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .stats-benchmarks {
-        margin-top: 12px;
-        padding-top: 10px;
-      }
-
-      .stats-day-filter {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .stats-day-filter select {
-        width: 100%;
-      }
-
-      .credential-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-      }
-
-      .credential-input-wrap {
-        width: 100%;
-      }
-
-      .footer-copyright {
-        font-size: 9px;
-      }
+      body { padding: 10px; }
+      h1 { font-size: 1.3em; }
+      .tab-btn { padding: 8px 12px; font-size: 0.88em; }
+      .stat-card-value { font-size: 1.6em; }
+      .data-table th, .data-table td { padding: 8px 10px; font-size: 0.88em; }
+      .search-buttons { flex-direction: column; gap: 8px; }
+      .search-buttons button { width: 100%; min-width: unset; }
+      .role-badge { display: block; margin: 6px 0 0 0; }
+      .volunteer-tag { display: block; margin: 4px 0 0 0; }
+      .stats-day-filter { flex-direction: column; align-items: flex-start; }
+      .stats-day-filter select { width: 100%; }
+      .credential-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .credential-input-wrap { width: 100%; }
+      .footer-copyright { font-size: 9px; }
     }
   </style>
 </head>
 <body class="light" data-topbar-title="Volunteer Dashboard">
   <?!= include('shared_topbar') ?>
 
-  <!-- Section 1: Find Me -->
+  <!-- Search Section -->
   <div class="form-section">
     <h2>Find Me</h2>
     <div class="form-group">
@@ -564,36 +457,93 @@
       </div>
       <div class="search-buttons">
         <button type="button" onclick="searchByName()">🔍 Search</button>
-        <button type="button" onclick="clearSearch()" style="background-color: #666;">✖️ Clear</button>
+        <button type="button" class="btn-secondary" onclick="clearSearch()">✖️ Clear</button>
       </div>
     </div>
   </div>
 
-  <!-- Section 2: My Schedule -->
-  <div class="form-section" id="scheduleSection" style="display: none;">
-    <h2>My Schedule</h2>
-    <div id="nameResultsContent"><div class="loading"></div></div>
+  <!-- Volunteer Header (shown after search) -->
+  <div id="volHeader" class="vol-header-card" style="display:none;">
+    <span class="vol-header-name" id="volHeaderName"></span>
+    <span id="volHeaderBadge"></span>
+    <span id="volHeaderTag"></span>
   </div>
 
-  <!-- Section 3: My Stats -->
-  <div class="form-section" id="statsSection" style="display: none;">
-    <h2>My Stats</h2>
-    <div class="stats-day-filter">
-      <label for="statsDay">Filter by day:</label>
-      <select id="statsDay" onchange="refreshStats()">
-        <option value="">All Time</option>
-      </select>
+  <!-- Tab Navigation -->
+  <nav class="tab-nav" role="tablist">
+    <button type="button" id="tab-btn-schedule" class="tab-btn active" role="tab" data-tab="schedule" aria-selected="true" aria-controls="tab-schedule" onclick="switchTab('schedule')">📅 My Schedule</button>
+    <button type="button" id="tab-btn-stats" class="tab-btn" role="tab" data-tab="stats" aria-selected="false" aria-controls="tab-stats" onclick="switchTab('stats')">📊 My Stats</button>
+    <button type="button" id="tab-btn-credentials" class="tab-btn" role="tab" data-tab="credentials" aria-selected="false" aria-controls="tab-credentials" onclick="switchTab('credentials')">🔑 My Credentials</button>
+  </nav>
+
+  <!-- ===== My Schedule Tab ===== -->
+  <div id="tab-schedule" class="tab-panel active" role="tabpanel" aria-labelledby="tab-btn-schedule">
+    <p class="empty-state" id="scheduleEmptyState">Search for your name above to view your schedule.</p>
+    <div id="scheduleContent" style="display:none;">
+      <div class="stat-cards">
+        <div class="stat-card">
+          <div class="stat-card-label">Total Shifts</div>
+          <div class="stat-card-value" id="shiftCountVal">–</div>
+        </div>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Day</th><th>Time Slot</th></tr></thead>
+          <tbody id="scheduleTableBody"></tbody>
+        </table>
+      </div>
     </div>
-    <div id="statsContent"><div class="loading"></div></div>
   </div>
 
-  <!-- Section 4: My Credentials -->
-  <div class="form-section" id="credentialsSection" style="display: none;">
-    <h2>My Credentials</h2>
-    <p class="help-text" style="margin-top: 0; margin-bottom: 16px;">Your EFILE# and password are used to file tax returns. Submit them here if not yet on file.</p>
-
-    <div id="credentialsContent"><div class="loading"></div></div>
+  <!-- ===== My Stats Tab ===== -->
+  <div id="tab-stats" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-stats">
+    <p class="empty-state" id="statsEmptyState">Search for your name above to view your stats.</p>
+    <div id="statsLoaded" style="display:none;">
+      <div class="stats-day-filter">
+        <label for="statsDay">Filter by day:</label>
+        <select id="statsDay" onchange="refreshStats()">
+          <option value="">All Time</option>
+        </select>
+      </div>
+      <div class="stat-cards">
+        <div class="stat-card">
+          <div class="stat-card-label">Returns Filed</div>
+          <div class="stat-card-value" id="sc-filed">–</div>
+          <div class="stat-card-sub" id="sc-filedSub"></div>
+        </div>
+        <div class="stat-card" id="sc-reviewedCard" style="display:none;">
+          <div class="stat-card-label">Returns Reviewed</div>
+          <div class="stat-card-value" id="sc-reviewed">–</div>
+          <div class="stat-card-sub" id="sc-reviewedSub"></div>
+        </div>
+        <div class="stat-card" id="sc-medianCard" style="display:none;">
+          <div class="stat-card-label">Median Time / Return</div>
+          <div class="stat-card-value" id="sc-median">–</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Total Vol. Time</div>
+          <div class="stat-card-value" id="sc-totalTime">–</div>
+        </div>
+      </div>
+      <div class="section-box" id="statsDetailBox" style="display:none;">
+        <h3>Clinic Medians</h3>
+        <div id="statsDetailContent"></div>
+      </div>
+    </div>
   </div>
+
+  <!-- ===== My Credentials Tab ===== -->
+  <div id="tab-credentials" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-credentials">
+    <p class="empty-state" id="credentialsEmptyState">Search for your name above to view your credentials.</p>
+    <div class="section-box" id="credentialsSectionBox" style="display:none;">
+      <h3>EFILE Credentials</h3>
+      <p class="help-text" style="margin-top:-8px;margin-bottom:16px;">Your EFILE# and password are used to file tax returns. Submit them here if not yet on file.</p>
+      <div id="credentialsContent"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
 <?!= include('shared_scripts') ?>
 <script>
@@ -650,12 +600,36 @@
     });
   }
 
+  // ===== Tab switching =====
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      const active = b.dataset.tab === tab;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
+  }
+
+  // ===== Toast =====
+  let toastTimer = null;
+  function showToast(msg, type) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (type ? ' ' + type : '');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = 'toast'; }, 3500);
+  }
+
   function clearSearch() {
     document.getElementById('searchName').value = '';
     if (vsAutocomplete) vsAutocomplete.clear();
-    document.getElementById('scheduleSection').style.display = 'none';
-    document.getElementById('statsSection').style.display = 'none';
-    document.getElementById('credentialsSection').style.display = 'none';
+    document.getElementById('volHeader').style.display = 'none';
+    document.getElementById('scheduleContent').style.display = 'none';
+    document.getElementById('scheduleEmptyState').style.display = '';
+    document.getElementById('statsLoaded').style.display = 'none';
+    document.getElementById('statsEmptyState').style.display = '';
+    document.getElementById('credentialsSectionBox').style.display = 'none';
+    document.getElementById('credentialsEmptyState').style.display = '';
     currentVolunteerName = '';
     currentVolunteerRole = '';
   }
@@ -663,61 +637,81 @@
   function searchByName() {
     const searchTerm = document.getElementById('searchName').value.trim().toLowerCase();
     if (!searchTerm) {
-      alert('Please enter a name to search');
+      showToast('Please enter a name to search.', '');
       return;
     }
 
-    // Show all downstream sections in loading state
-    document.getElementById('nameResultsContent').innerHTML = '<div class="loading"></div> Loading...';
-    document.getElementById('scheduleSection').style.display = 'block';
+    // Show volunteer header as loading
+    document.getElementById('volHeader').style.display = '';
+    document.getElementById('volHeaderName').textContent = 'Loading…';
+    document.getElementById('volHeaderBadge').innerHTML = '';
+    document.getElementById('volHeaderTag').innerHTML = '';
 
-    document.getElementById('statsContent').innerHTML = '<div class="loading"></div>';
+    // Show schedule loading
+    document.getElementById('scheduleEmptyState').style.display = 'none';
+    document.getElementById('scheduleContent').style.display = 'block';
+    document.getElementById('shiftCountVal').textContent = '–';
+    document.getElementById('scheduleTableBody').innerHTML =
+      '<tr><td colspan="2" style="padding:16px;"><span class="loading-inline"></span></td></tr>';
+
+    // Show stats loading
+    document.getElementById('statsEmptyState').style.display = 'none';
+    document.getElementById('statsLoaded').style.display = 'block';
     document.getElementById('statsDay').value = '';
-    document.getElementById('statsSection').style.display = 'block';
+    document.getElementById('sc-filed').textContent = '–';
+    document.getElementById('sc-filedSub').textContent = '';
+    document.getElementById('sc-totalTime').textContent = '–';
+    document.getElementById('sc-reviewedCard').style.display = 'none';
+    document.getElementById('sc-medianCard').style.display = 'none';
+    document.getElementById('statsDetailBox').style.display = 'none';
 
-    document.getElementById('credentialsContent').innerHTML = '<div class="loading"></div>';
-    document.getElementById('credentialsSection').style.display = 'block';
+    // Show credentials loading
+    document.getElementById('credentialsEmptyState').style.display = 'none';
+    document.getElementById('credentialsSectionBox').style.display = 'block';
+    document.getElementById('credentialsContent').innerHTML =
+      '<span class="loading-inline"></span> Loading credentials…';
 
     google.script.run
       .withSuccessHandler(result => displayScheduleResults(result, searchTerm))
       .withFailureHandler(err => {
-        document.getElementById('nameResultsContent').innerHTML =
-          `<div class="no-results">Error loading schedule: ${escapeHtml(err.message || String(err))}</div>`;
+        document.getElementById('scheduleTableBody').innerHTML =
+          `<tr><td colspan="2" class="empty-state">Error loading schedule: ${escapeHtml(err.message || String(err))}</td></tr>`;
+        document.getElementById('volHeaderName').textContent = 'Error';
       })
       .getVolunteerScheduleByName(searchTerm);
   }
 
   function displayScheduleResults(result, searchTerm) {
-    const content = document.getElementById('nameResultsContent');
-
     if (!result || !result.shifts || result.shifts.length === 0) {
-      content.innerHTML = `<div class="no-results">No scheduled shifts found for "${escapeHtml(searchTerm)}"</div>`;
-      document.getElementById('statsContent').innerHTML = '<span style="color:#999; font-size:0.9em;">No stats available.</span>';
-      document.getElementById('credentialsContent').innerHTML = '<div class="no-results">Name not found — check spelling.</div>';
+      document.getElementById('volHeaderName').textContent = searchTerm;
+      document.getElementById('scheduleTableBody').innerHTML =
+        `<tr><td colspan="2" class="empty-state">No scheduled shifts found for "${escapeHtml(searchTerm)}".</td></tr>`;
+      document.getElementById('shiftCountVal').textContent = '0';
+      document.getElementById('sc-filed').textContent = '—';
+      document.getElementById('sc-totalTime').textContent = '—';
+      document.getElementById('credentialsContent').innerHTML =
+        '<div class="empty-state">Name not found — check spelling.</div>';
       return;
     }
 
     currentVolunteerName = result.volunteerName || searchTerm;
     currentVolunteerRole = result.volunteerRole || '';
 
-    const tagHtml = result.volunteerTag
+    // Update volunteer header
+    const roleCls = (currentVolunteerRole || '').toLowerCase().replace(/\s+/g, '');
+    document.getElementById('volHeaderName').textContent = result.volunteerName || searchTerm;
+    document.getElementById('volHeaderBadge').innerHTML = currentVolunteerRole
+      ? `<span class="role-badge ${escapeHtml(roleCls)}">${escapeHtml(currentVolunteerRole)}</span>`
+      : '';
+    document.getElementById('volHeaderTag').innerHTML = result.volunteerTag
       ? `<span class="volunteer-tag">${escapeHtml(result.volunteerTag)}</span>`
       : '';
 
-    let html = `<div style="margin-bottom: 12px; font-size: 1em;">
-      <strong>${escapeHtml(result.volunteerName || searchTerm)}</strong>${tagHtml}
-    </div>`;
-
-    html += `<table class="schedule-table">
-      <thead><tr><th>Day</th><th>Time</th></tr></thead>
-      <tbody>`;
-    result.shifts.forEach(shift => {
-      html += `<tr><td>${escapeHtml(shift.day)}</td><td>${escapeHtml(shift.time)}</td></tr>`;
-    });
-    html += `</tbody></table>
-      <div class="total-shifts">📅 Total Shifts: ${result.shifts.length}</div>`;
-
-    content.innerHTML = html;
+    // Populate schedule table
+    document.getElementById('shiftCountVal').textContent = result.shifts.length;
+    document.getElementById('scheduleTableBody').innerHTML = result.shifts.map(shift =>
+      `<tr><td>${escapeHtml(shift.day)}</td><td>${escapeHtml(shift.time)}</td></tr>`
+    ).join('');
 
     // Load stats and credentials in parallel
     refreshStats();
@@ -729,13 +723,14 @@
   function refreshStats() {
     if (!currentVolunteerName) return;
     const filterDateStr = document.getElementById('statsDay').value || '';
-    document.getElementById('statsContent').innerHTML = '<div class="loading"></div>';
+    document.getElementById('sc-filed').textContent = '…';
+    document.getElementById('sc-totalTime').textContent = '…';
 
     google.script.run
       .withSuccessHandler(stats => renderStats(stats, filterDateStr))
       .withFailureHandler(err => {
-        document.getElementById('statsContent').innerHTML =
-          `<span style="color:#999; font-size:0.9em;">Could not load stats.</span>`;
+        document.getElementById('sc-filed').textContent = '–';
+        document.getElementById('sc-totalTime').textContent = '–';
         console.error('Stats error:', err);
       })
       .getVolunteerPersonalStats(currentVolunteerName, filterDateStr || null);
@@ -748,70 +743,83 @@
     return h > 0 ? `${h} hr ${m} min` : `${m} min`;
   }
 
+  function formatMinutesShort(mins) {
+    if (!mins) return '0m';
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h > 100) {
+      const d = Math.floor(h / 24);
+      return d + 'd ' + (h % 24) + 'h';
+    }
+    if (h > 0 && m > 0) return h + 'h ' + m + 'm';
+    if (h > 0) return h + 'h';
+    return m + 'm';
+  }
+
   function renderStats(stats, filterDateStr) {
-    const statsContent = document.getElementById('statsContent');
     const roleLower = (currentVolunteerRole || '').toLowerCase();
     const showReviewed = roleLower.includes('mentor') || roleLower.includes('senior');
 
-    let filedLabel, filedValue, reviewedValue;
+    // Returns filed
+    let filedNum, filedSub;
     if (filterDateStr) {
-      const dayFiled    = stats.returnsFiltered  !== null ? stats.returnsFiltered  : 0;
-      const dayReviewed = stats.reviewedFiltered !== null ? stats.reviewedFiltered : 0;
-      filedLabel    = escapeHtml(filterDateStr);
-      filedValue    = `<strong>${dayFiled}</strong> <span class="stat-alltime">(${stats.returnsAllTime} all‑time)</span>`;
-      reviewedValue = `<strong>${dayReviewed}</strong> <span class="stat-alltime">(${stats.reviewedAllTime} all‑time)</span>`;
+      filedNum = stats.returnsFiltered !== null ? stats.returnsFiltered : 0;
+      filedSub = stats.returnsAllTime + ' all-time';
     } else {
-      filedLabel    = 'All time';
-      filedValue    = `<strong>${stats.returnsAllTime}</strong>`;
-      reviewedValue = `<strong>${stats.reviewedAllTime}</strong>`;
+      filedNum = stats.returnsAllTime;
+      filedSub = '';
     }
+    document.getElementById('sc-filed').textContent = filedNum;
+    document.getElementById('sc-filedSub').textContent = filedSub;
 
-    const totalMin   = Math.round(stats.totalVolunteerMinutes || 0);
-    const totalHours = Math.floor(totalMin / 60);
-    const mins       = totalMin % 60;
-    let timeStr;
-    if (totalHours > 100) {
-      const days  = Math.floor(totalMin / (60 * 24));
-      const hours = Math.floor((totalMin % (60 * 24)) / 60);
-      timeStr = `${days} day${days > 1 ? 's' : ''} ${hours} hr ${mins} min`;
-    } else if (totalHours > 0) {
-      timeStr = `${totalHours} hr ${mins} min`;
-    } else {
-      timeStr = `${mins} min`;
-    }
-
-    let html = '<div class="stats-numbers">';
-    html += `<span class="stat-item">📄 Returns filed (${filedLabel}): ${filedValue}</span>`;
+    // Returns reviewed
+    const reviewedCard = document.getElementById('sc-reviewedCard');
     if (showReviewed) {
-      html += `<span class="stat-item">✅ Returns reviewed: ${reviewedValue}</span>`;
+      const revNum = filterDateStr
+        ? (stats.reviewedFiltered !== null ? stats.reviewedFiltered : 0)
+        : stats.reviewedAllTime;
+      const revSub = filterDateStr ? (stats.reviewedAllTime + ' all-time') : '';
+      document.getElementById('sc-reviewed').textContent = revNum;
+      document.getElementById('sc-reviewedSub').textContent = revSub;
+      reviewedCard.style.display = '';
+    } else {
+      reviewedCard.style.display = 'none';
     }
-    if (stats.medianMinutesPerReturn !== null) {
-      html += `<span class="stat-item">⏱️ Median time/return: <strong>${formatMinutes(stats.medianMinutesPerReturn)}</strong></span>`;
-    }
-    html += `<span class="stat-item">🕐 Total volunteer time: <strong>${timeStr}</strong></span>`;
-    html += '</div>';
 
+    // Median time per return
+    const medianCard = document.getElementById('sc-medianCard');
+    if (stats.medianMinutesPerReturn !== null) {
+      document.getElementById('sc-median').textContent = formatMinutesShort(stats.medianMinutesPerReturn);
+      medianCard.style.display = '';
+    } else {
+      medianCard.style.display = 'none';
+    }
+
+    // Total volunteer time
+    const totalMin = Math.round(stats.totalVolunteerMinutes || 0);
+    document.getElementById('sc-totalTime').textContent = formatMinutesShort(totalMin);
+
+    // Clinic medians
     const hasAnyBenchmark = stats.overallMedianReturnsPerFiler !== null
       || stats.overallMedianReviewsPerReviewer !== null
-      || stats.overallMedianMinutesPerReturn   !== null;
-
+      || stats.overallMedianMinutesPerReturn !== null;
+    const detailBox = document.getElementById('statsDetailBox');
     if (hasAnyBenchmark) {
-      html += '<div class="stats-benchmarks">';
-      html += '<div class="stats-benchmarks-title">Clinic Medians</div>';
-      html += '<div class="stats-numbers">';
+      let html = '';
       if (stats.overallMedianReturnsPerFiler !== null) {
-        html += `<span class="stat-item stat-benchmark">📊 Returns filed / filer: <strong>${stats.overallMedianReturnsPerFiler}</strong></span>`;
+        html += `<div class="stat-item"><span class="stat-label">📊 Returns filed / filer</span><span class="stat-value">${stats.overallMedianReturnsPerFiler}</span></div>`;
       }
       if (showReviewed && stats.overallMedianReviewsPerReviewer !== null) {
-        html += `<span class="stat-item stat-benchmark">📊 Reviews / reviewer: <strong>${stats.overallMedianReviewsPerReviewer}</strong></span>`;
+        html += `<div class="stat-item"><span class="stat-label">📊 Reviews / reviewer</span><span class="stat-value">${stats.overallMedianReviewsPerReviewer}</span></div>`;
       }
       if (stats.overallMedianMinutesPerReturn !== null) {
-        html += `<span class="stat-item stat-benchmark">⏱️ Median time / return: <strong>${formatMinutes(stats.overallMedianMinutesPerReturn)}</strong></span>`;
+        html += `<div class="stat-item"><span class="stat-label">⏱️ Median time / return</span><span class="stat-value">${formatMinutes(stats.overallMedianMinutesPerReturn)}</span></div>`;
       }
-      html += '</div></div>';
+      document.getElementById('statsDetailContent').innerHTML = html;
+      detailBox.style.display = '';
+    } else {
+      detailBox.style.display = 'none';
     }
-
-    statsContent.innerHTML = html;
   }
 
   // ── Credentials ───────────────────────────────────────────────────────────
@@ -822,7 +830,7 @@
       .withSuccessHandler(renderCredentials)
       .withFailureHandler(err => {
         document.getElementById('credentialsContent').innerHTML =
-          `<div class="no-results">Could not load credential status: ${escapeHtml(err.message || String(err))}</div>`;
+          `<div class="empty-state">Could not load credential status: ${escapeHtml(err.message || String(err))}</div>`;
       })
       .getVolunteerCredentialStatus(currentVolunteerName);
 
