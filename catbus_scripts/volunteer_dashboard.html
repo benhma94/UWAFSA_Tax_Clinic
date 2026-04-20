@@ -72,8 +72,17 @@
       background: rgba(142,0,0,0.05);
     }
     body.dark .tab-btn.active { background: rgba(142,0,0,0.12); }
-    /* Override global button:hover specificity that turns all buttons red */
-    button.tab-btn { background: transparent; color: #666; transform: none; box-shadow: none; }
+    /* Override global button sizing and hover specificity for tabs */
+    button.tab-btn {
+      width: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      color: #666;
+      transform: none;
+      box-shadow: none;
+    }
     body.dark button.tab-btn { color: #aaa; }
     button.tab-btn:hover { color: var(--accent-color); background: transparent; transform: none; box-shadow: none; }
     button.tab-btn.active { color: var(--accent-color); border-bottom-color: var(--accent-color); background: rgba(142,0,0,0.05); transform: none; box-shadow: none; }
@@ -557,9 +566,9 @@
 
   <!-- Tab Navigation -->
   <nav class="tab-nav" role="tablist">
+    <button type="button" class="tab-btn" role="tab" data-tab="availability" onclick="switchTab('availability')">🗓️ Availability</button>
     <button type="button" class="tab-btn active" role="tab" data-tab="schedule" onclick="switchTab('schedule')">📅 My Schedule</button>
     <button type="button" class="tab-btn" role="tab" data-tab="stats" onclick="switchTab('stats')">📊 My Stats</button>
-    <button type="button" class="tab-btn" role="tab" data-tab="availability" onclick="switchTab('availability')">🗓️ Availability</button>
     <button type="button" class="tab-btn" role="tab" data-tab="credentials" onclick="switchTab('credentials')">🔑 My Credentials</button>
   </nav>
 
