@@ -21,6 +21,24 @@
 
     h1 { margin: 0 0 20px; color: var(--accent); }
 
+    .migration-note {
+      border: 1px solid #f0c36d;
+      background: #fff7e6;
+      color: #7a4e00;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 0.88rem;
+      margin: 0 0 16px;
+    }
+
+    .migration-note a {
+      color: #8e0000;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .migration-note a:hover { text-decoration: underline; }
+
     .card {
       background: var(--card-bg);
       padding: 20px;
@@ -181,6 +199,11 @@
   <?!= include('_PasswordGate') ?>
 
   <h1>Volunteer Management</h1>
+  <div class="migration-note">
+    Integrated workflow is now available in
+    <a href="?app=volunteermgmt#section-appreview">Volunteer Management &rarr; Application Review</a>
+    for decision batches, acceptance/rejection emails, and accepted-volunteer handoff.
+  </div>
 
   <!-- Role Filter -->
   <div class="card">

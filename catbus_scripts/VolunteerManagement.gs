@@ -175,12 +175,7 @@ function getAcceptedApplications() {
   }
 
   const results = [];
-
-  const SOURCES = [
-    { sheetName: 'Filer Applications',     role: 'Filer',     dataColCount: 13, emailCol: 4, firstCol: 1, prefCol: 2, lastCol: 3 },
-    { sheetName: 'Frontline Applications', role: 'Frontline', dataColCount: 13, emailCol: 4, firstCol: 1, prefCol: 2, lastCol: 3 },
-    { sheetName: 'Mentor Applications',    role: 'Mentor',    dataColCount: 14, emailCol: 1, firstCol: 2, prefCol: 3, lastCol: 4 }
-  ];
+  const SOURCES = getAllApplicationSourceConfigs_();
 
   var ss = getSpreadsheet();
   for (var s = 0; s < SOURCES.length; s++) {
@@ -188,12 +183,15 @@ function getAcceptedApplications() {
     var sheet = ss.getSheetByName(src.sheetName);
     if (!sheet) continue;
 
+    ensureApplicationLifecycleColumns_(sheet, src.dataColCount);
+
     var lastRow = sheet.getLastRow();
     if (lastRow < 2) continue;
 
-    var lastCol = Math.max(sheet.getLastColumn(), src.dataColCount + 2);
+    var lifecycle = getApplicationLifecycleColumns_(src.dataColCount);
+    var lastCol = Math.max(sheet.getLastColumn(), src.dataColCount + APPLICATION_LIFECYCLE_HEADERS.length);
     var data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
-    var decisionCol = src.dataColCount; // 0-based index
+    var decisionCol = lifecycle.decisionIdx; // 0-based index
 
     for (var r = 0; r < data.length; r++) {
       var row = data[r];
@@ -204,11 +202,14 @@ function getAcceptedApplications() {
 
       var email = (row[src.emailCol] || '').toString().trim();
       results.push({
-        role:         src.role,
+        rowIndex:     r + 2,
+        role:         src.roleLabel,
         email:        email,
         firstName:    (row[src.firstCol] || '').toString().trim(),
         preferredName:(row[src.prefCol]  || '').toString().trim(),
         lastName:     (row[src.lastCol]  || '').toString().trim(),
+        decisionEmailSentAt: formatApplicationDateTime_(row[lifecycle.decisionEmailSentAtIdx]),
+        transferredAt: formatApplicationDateTime_(row[lifecycle.transferredAtIdx]),
         alreadyOnList: !!existingEmails[email.toLowerCase()]
       });
     }
@@ -220,6 +221,336 @@ function getAcceptedApplications() {
   });
 
   return results;
+}
+
+/**
+ * Returns the integrated volunteer application queue for the management UI.
+ *
+ * @returns {{byRole: Object, all: Object[], summary: Object}}
+ */
+function getVolunteerApplicationWorkflowData() {
+  var roleOrder = ['mentor', 'frontline', 'filer'];
+  var byRole = {};
+  var all = [];
+  var summary = {
+    total: 0,
+    pendingReview: 0,
+    acceptedAwaitingEmail: 0,
+    rejectedAwaitingEmail: 0,
+    acceptedEmailed: 0,
+    rejectedEmailed: 0,
+    transferred: 0
+  };
+
+  for (var i = 0; i < roleOrder.length; i++) {
+    var role = roleOrder[i];
+    var apps = getVolunteerApplications(role) || [];
+    byRole[role] = [];
+
+    for (var j = 0; j < apps.length; j++) {
+      var app = apps[j];
+      var displayFirst = app.preferredName || app.firstName || '';
+      var displayName = (displayFirst + ' ' + (app.lastName || '')).trim();
+      var stage = getVolunteerApplicationStage_(app);
+      var enriched = Object.assign({}, app, {
+        role: role,
+        roleLabel: app.roleLabel || role.charAt(0).toUpperCase() + role.slice(1),
+        displayName: displayName,
+        workflowStage: stage,
+        workflowKey: role + ':' + app.rowIndex
+      });
+
+      byRole[role].push(enriched);
+      all.push(enriched);
+      summary.total++;
+      if (stage === 'pending-review') summary.pendingReview++;
+      else if (stage === 'accepted-awaiting-email') summary.acceptedAwaitingEmail++;
+      else if (stage === 'rejected-awaiting-email') summary.rejectedAwaitingEmail++;
+      else if (stage === 'accepted-emailed') summary.acceptedEmailed++;
+      else if (stage === 'rejected-emailed') summary.rejectedEmailed++;
+      else if (stage === 'transferred') summary.transferred++;
+    }
+  }
+
+  return { byRole: byRole, all: all, summary: summary };
+}
+
+/**
+ * Sends acceptance or rejection emails in batch for selected application rows.
+ *
+ * @param {{decision: string, items: Array<{role: string, rowIndex: number}>}} request
+ * @returns {{success: boolean, sent: number, skippedAlreadySent: number, skippedDecisionMismatch: number, skippedMissingData: number, errors: string[]}}
+ */
+function sendVolunteerApplicationDecisionEmails(request) {
+  var payload = request || {};
+  var decision = (payload.decision || '').toString().trim();
+  if (decision !== 'Accept' && decision !== 'Reject') {
+    throw new Error('Decision must be Accept or Reject.');
+  }
+
+  var items = normalizeWorkflowItems_(payload.items);
+  if (!items.length) {
+    throw new Error('No applications selected.');
+  }
+
+  var messageConfig = VOLUNTEER_APPLICATION_WORKFLOW_CONFIG.DECISION_EMAIL;
+  var subject = decision === 'Accept' ? messageConfig.ACCEPT_SUBJECT : messageConfig.REJECT_SUBJECT;
+  var template = decision === 'Accept' ? messageConfig.ACCEPT_BODY : messageConfig.REJECT_BODY;
+
+  var ss = getSpreadsheet();
+  var sent = 0;
+  var skippedAlreadySent = 0;
+  var skippedDecisionMismatch = 0;
+  var skippedMissingData = 0;
+  var errors = [];
+
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var src = getApplicationSourceConfig_(item.role);
+    if (!src) {
+      skippedMissingData++;
+      continue;
+    }
+
+    var sheet = ss.getSheetByName(src.sheetName);
+    if (!sheet) {
+      skippedMissingData++;
+      continue;
+    }
+
+    ensureApplicationLifecycleColumns_(sheet, src.dataColCount);
+    var lifecycle = getApplicationLifecycleColumns_(src.dataColCount);
+    if (item.rowIndex < 2 || item.rowIndex > sheet.getLastRow()) {
+      skippedMissingData++;
+      continue;
+    }
+
+    var lastCol = Math.max(sheet.getLastColumn(), src.dataColCount + APPLICATION_LIFECYCLE_HEADERS.length);
+    var row = sheet.getRange(item.rowIndex, 1, 1, lastCol).getValues()[0];
+    var rowDecision = (row[lifecycle.decisionIdx] || '').toString().trim();
+    if (rowDecision !== decision) {
+      skippedDecisionMismatch++;
+      continue;
+    }
+
+    var alreadySent = (row[lifecycle.decisionEmailSentAtIdx] || '').toString().trim();
+    if (alreadySent) {
+      skippedAlreadySent++;
+      continue;
+    }
+
+    var email = (row[src.emailCol] || '').toString().trim();
+    if (!email) {
+      skippedMissingData++;
+      continue;
+    }
+
+    var preferredName = (row[src.prefCol] || '').toString().trim();
+    var legalName = (row[src.firstCol] || '').toString().trim();
+    var firstName = preferredName || legalName || 'Volunteer';
+    var body = buildApplicationWorkflowTextTemplate_(template, {
+      firstName: firstName,
+      role: src.roleLabel,
+      clinicEmail: CONFIG.CLINIC_EMAIL
+    });
+
+    try {
+      sendEmail({
+        to: email,
+        subject: subject,
+        body: body,
+        name: 'AFSA Tax Clinic',
+        replyTo: CONFIG.CLINIC_EMAIL
+      }, 'VolunteerApplicationDecisionEmail');
+      sheet.getRange(item.rowIndex, lifecycle.decisionEmailSentAtCol).setValue(new Date());
+      sent++;
+    } catch (err) {
+      errors.push(item.role + ' row ' + item.rowIndex + ': ' + err.message);
+    }
+  }
+
+  return {
+    success: errors.length === 0,
+    sent: sent,
+    skippedAlreadySent: skippedAlreadySent,
+    skippedDecisionMismatch: skippedDecisionMismatch,
+    skippedMissingData: skippedMissingData,
+    errors: errors
+  };
+}
+
+/**
+ * Transfers accepted applications to the consolidated roster and sends onboarding steps.
+ * Marks Transferred At only after instruction email succeeds.
+ *
+ * @param {{items: Array<{role: string, rowIndex: number}>}} request
+ * @returns {{success: boolean, added: number, alreadyOnList: number, instructionEmailsSent: number, skippedAlreadyTransferred: number, skippedDecisionMismatch: number, skippedMissingData: number, errors: string[]}}
+ */
+function transferAcceptedApplicationsAndSendInstructions(request) {
+  var payload = request || {};
+  var items = normalizeWorkflowItems_(payload.items);
+  if (!items.length) {
+    throw new Error('No applications selected.');
+  }
+
+  var ss = getSpreadsheet();
+  var rosterSheet = ss.getSheetByName(CONFIG.SHEETS.CONSOLIDATED_VOLUNTEER_LIST);
+  if (!rosterSheet) throw new Error('Consolidated Volunteer List sheet not found.');
+
+  var cols = CONFIG.COLUMNS.CONSOLIDATED_VOLUNTEER_LIST;
+  var existingEmails = {};
+  var rosterLastRow = rosterSheet.getLastRow();
+  if (rosterLastRow >= 2) {
+    var emailCol = cols.EMAIL + 1;
+    var emailData = rosterSheet.getRange(2, emailCol, rosterLastRow - 1, 1).getValues();
+    for (var e = 0; e < emailData.length; e++) {
+      var rosterEmail = (emailData[e][0] || '').toString().trim().toLowerCase();
+      if (rosterEmail) existingEmails[rosterEmail] = true;
+    }
+  }
+
+  var template = VOLUNTEER_APPLICATION_WORKFLOW_CONFIG.HANDOFF_EMAIL.BODY;
+  var subject = VOLUNTEER_APPLICATION_WORKFLOW_CONFIG.HANDOFF_EMAIL.SUBJECT;
+
+  var added = 0;
+  var alreadyOnList = 0;
+  var instructionEmailsSent = 0;
+  var skippedAlreadyTransferred = 0;
+  var skippedDecisionMismatch = 0;
+  var skippedMissingData = 0;
+  var errors = [];
+
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var src = getApplicationSourceConfig_(item.role);
+    if (!src) {
+      skippedMissingData++;
+      continue;
+    }
+
+    var sheet = ss.getSheetByName(src.sheetName);
+    if (!sheet) {
+      skippedMissingData++;
+      continue;
+    }
+
+    ensureApplicationLifecycleColumns_(sheet, src.dataColCount);
+    var lifecycle = getApplicationLifecycleColumns_(src.dataColCount);
+    if (item.rowIndex < 2 || item.rowIndex > sheet.getLastRow()) {
+      skippedMissingData++;
+      continue;
+    }
+
+    var lastCol = Math.max(sheet.getLastColumn(), src.dataColCount + APPLICATION_LIFECYCLE_HEADERS.length);
+    var row = sheet.getRange(item.rowIndex, 1, 1, lastCol).getValues()[0];
+    var decision = (row[lifecycle.decisionIdx] || '').toString().trim();
+    if (decision !== 'Accept') {
+      skippedDecisionMismatch++;
+      continue;
+    }
+
+    var transferredAt = (row[lifecycle.transferredAtIdx] || '').toString().trim();
+    if (transferredAt) {
+      skippedAlreadyTransferred++;
+      continue;
+    }
+
+    var email = (row[src.emailCol] || '').toString().trim();
+    if (!email) {
+      skippedMissingData++;
+      continue;
+    }
+
+    var firstName = (row[src.firstCol] || '').toString().trim();
+    var preferredName = (row[src.prefCol] || '').toString().trim();
+    var lastName = (row[src.lastCol] || '').toString().trim();
+    var emailKey = email.toLowerCase();
+
+    if (!existingEmails[emailKey]) {
+      var newRow = ['', '', '', '', '', '', '', ''];
+      newRow[cols.ROLE] = src.roleLabel;
+      newRow[cols.EMAIL] = email;
+      newRow[cols.FIRST_NAME_LEGAL] = firstName;
+      newRow[cols.PREFERRED_NAME] = preferredName;
+      newRow[cols.LAST_NAME] = lastName;
+      rosterSheet.appendRow(newRow);
+      existingEmails[emailKey] = true;
+      added++;
+    } else {
+      alreadyOnList++;
+    }
+
+    var displayFirst = preferredName || firstName || 'Volunteer';
+    var body = buildApplicationWorkflowTextTemplate_(template, {
+      firstName: displayFirst,
+      role: src.roleLabel,
+      clinicEmail: CONFIG.CLINIC_EMAIL
+    });
+
+    try {
+      sendEmail({
+        to: email,
+        subject: subject,
+        body: body,
+        name: 'AFSA Tax Clinic',
+        replyTo: CONFIG.CLINIC_EMAIL
+      }, 'VolunteerApplicationHandoffEmail');
+      sheet.getRange(item.rowIndex, lifecycle.transferredAtCol).setValue(new Date());
+      instructionEmailsSent++;
+    } catch (err) {
+      errors.push(item.role + ' row ' + item.rowIndex + ': ' + err.message);
+    }
+  }
+
+  return {
+    success: errors.length === 0,
+    added: added,
+    alreadyOnList: alreadyOnList,
+    instructionEmailsSent: instructionEmailsSent,
+    skippedAlreadyTransferred: skippedAlreadyTransferred,
+    skippedDecisionMismatch: skippedDecisionMismatch,
+    skippedMissingData: skippedMissingData,
+    errors: errors
+  };
+}
+
+function getVolunteerApplicationStage_(app) {
+  var status = (app.status || '').toString().trim();
+  var emailed = !!(app.decisionEmailSentAt || '').toString().trim();
+  var transferred = !!(app.transferredAt || '').toString().trim();
+
+  if (!status) return 'pending-review';
+  if (status === 'Reject') return emailed ? 'rejected-emailed' : 'rejected-awaiting-email';
+  if (status === 'Accept') {
+    if (transferred) return 'transferred';
+    return emailed ? 'accepted-emailed' : 'accepted-awaiting-email';
+  }
+  return 'pending-review';
+}
+
+function normalizeWorkflowItems_(items) {
+  if (!Array.isArray(items)) return [];
+  var seen = {};
+  var out = [];
+
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i] || {};
+    var role = (item.role || '').toString().trim().toLowerCase();
+    var rowIndex = parseInt(item.rowIndex, 10);
+    if (!role || !rowIndex || rowIndex < 2) continue;
+    var key = role + ':' + rowIndex;
+    if (seen[key]) continue;
+    seen[key] = true;
+    out.push({ role: role, rowIndex: rowIndex });
+  }
+
+  return out;
+}
+
+function buildApplicationWorkflowTextTemplate_(template, values) {
+  return String(template || '').replace(/\{\{(\w+)\}\}/g, function(match, key) {
+    return values && values.hasOwnProperty(key) ? String(values[key]) : '';
+  });
 }
 
 /**
@@ -403,10 +734,14 @@ function sendVolunteerBccEmail(emails, subject, body) {
   if (!body || !body.trim()) throw new Error('Body is required.');
 
   // Send from clinic account. "to" is the clinic address so the BCC list isn't exposed.
-  GmailApp.sendEmail(SECRETS.CLINIC_EMAIL, subject.trim(), body.trim(), {
+  sendEmail({
+    to: CONFIG.CLINIC_EMAIL,
+    subject: subject.trim(),
+    body: body.trim(),
     bcc: emails.join(','),
-    name: 'AFSA Tax Clinic'
-  });
+    name: 'AFSA Tax Clinic',
+    replyTo: CONFIG.CLINIC_EMAIL
+  }, 'VolunteerMassBccEmail');
 
   return { success: true };
 }

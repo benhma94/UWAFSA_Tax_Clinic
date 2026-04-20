@@ -257,6 +257,244 @@
     body.dark .role-pill.filer     { background: #1d3a2a; color: #86efac; }
     body.dark .role-pill.frontline { background: #3d2817; color: #fed7aa; }
 
+    .stage-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      background: #ecf0f1;
+      color: #34495e;
+    }
+
+    .stage-pill.pending-review { background: #fdf2e9; color: #9c640c; }
+    .stage-pill.accepted-awaiting-email { background: #e8f8f0; color: #1e8449; }
+    .stage-pill.rejected-awaiting-email { background: #fdeaea; color: #922b21; }
+    .stage-pill.accepted-emailed { background: #d6eaf8; color: #21618c; }
+    .stage-pill.rejected-emailed { background: #ebdef0; color: #6c3483; }
+    .stage-pill.transferred { background: #e8eaf6; color: #1a237e; }
+
+    .appreview-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .subcard {
+      background: rgba(0,0,0,0.02);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    body.dark .subcard {
+      background: rgba(255,255,255,0.03);
+      border-color: var(--border-dark);
+    }
+
+    .subcard h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+      color: var(--accent-color);
+    }
+
+    .review-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .review-tab {
+      background: #fff;
+      border: 1px solid var(--border-light);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: #555;
+    }
+
+    body.dark .review-tab {
+      background: #2b2b2b;
+      border-color: var(--border-dark);
+      color: #ccc;
+    }
+
+    .review-tab.active {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+      color: #fff;
+    }
+
+    .review-select,
+    .review-textarea,
+    .workflow-filter {
+      width: 100%;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.86rem;
+      box-sizing: border-box;
+      background: var(--input-bg-light);
+      color: inherit;
+    }
+
+    body.dark .review-select,
+    body.dark .review-textarea,
+    body.dark .workflow-filter {
+      border-color: var(--border-dark);
+      background: var(--input-bg-dark);
+      color: var(--text-color-dark);
+    }
+
+    .review-stats {
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.84rem;
+      margin-bottom: 10px;
+      background: #fff;
+      color: #555;
+    }
+
+    body.dark .review-stats {
+      border-color: var(--border-dark);
+      background: #1f1f1f;
+      color: #bbb;
+    }
+
+    .review-stats strong { color: var(--accent-color); }
+
+    .review-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(140px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+      margin-bottom: 8px;
+    }
+
+    .review-detail-item {
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: #fff;
+    }
+
+    body.dark .review-detail-item {
+      border-color: var(--border-dark);
+      background: #1f1f1f;
+    }
+
+    .review-detail-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--accent-color);
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+
+    .review-detail-value {
+      font-size: 0.84rem;
+      word-break: break-word;
+    }
+
+    .review-answer-block {
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-top: 8px;
+      background: #fff;
+    }
+
+    body.dark .review-answer-block {
+      border-color: var(--border-dark);
+      background: #1f1f1f;
+    }
+
+    .review-answer-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--accent-color);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .review-answer-text {
+      font-size: 0.84rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .review-verdict-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      margin-bottom: 8px;
+    }
+
+    .review-verdict-btn {
+      flex: 1;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: #fff;
+      color: #555;
+    }
+
+    body.dark .review-verdict-btn {
+      background: #2a2a2a;
+      border-color: var(--border-dark);
+      color: #ccc;
+    }
+
+    .review-verdict-btn.selected.accept {
+      border-color: #27ae60;
+      background: #d5f5e3;
+      color: #1e8449;
+    }
+
+    .review-verdict-btn.selected.reject {
+      border-color: #e74c3c;
+      background: #fadbd8;
+      color: #922b21;
+    }
+
+    .workflow-toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .workflow-toolbar .workflow-filter {
+      width: 180px;
+    }
+
+    .workflow-meta {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: #666;
+    }
+
+    body.dark .workflow-meta { color: #aaa; }
+
+    /* App review and transfer were moved to appreviewer page */
+    .vm-nav-item[data-section="section-appreview"],
+    .vm-nav-item[data-section="section-transfer"],
+    #section-appreview,
+    #section-transfer {
+      display: none !important;
+    }
+
     /* ── Filter row ─────────────────────────────────────────────────── */
     .filter-row {
       display: flex;
@@ -458,6 +696,9 @@
       }
       .vm-nav-icon { font-size: 1.2rem; margin-bottom: 2px; }
       .vm-main { padding: 16px; }
+      .appreview-grid { grid-template-columns: 1fr; }
+      .workflow-toolbar .workflow-filter { width: 100%; }
+      .workflow-meta { margin-left: 0; width: 100%; }
     }
   </style>
 </head>
@@ -468,6 +709,12 @@
   <div class="vm-layout">
     <!-- Sidebar Navigation -->
     <nav class="vm-sidebar" role="navigation" aria-label="Volunteer Management sections">
+      <div class="vm-nav-item" data-section="section-appreview" onclick="vmShowSection('section-appreview')">
+        <span class="vm-nav-icon">&#128221;</span>
+        <span class="vm-nav-label">Application Review</span>
+        <span class="vm-nav-badge" id="nav-badge-appreview"></span>
+      </div>
+
       <div class="vm-nav-item" data-section="section-transfer" onclick="vmShowSection('section-transfer')">
         <span class="vm-nav-icon">&#128257;</span>
         <span class="vm-nav-label">Transfer Applicants</span>
@@ -501,6 +748,103 @@
 
     <!-- Main Content Area -->
     <main class="vm-main">
+      <!-- Section 0: Integrated Application Review -->
+      <div class="card" id="section-appreview">
+        <div class="card-header">
+          <h2>Application Review Workflow <span class="badge" id="reviewPendingBadge" style="display:none">0</span></h2>
+          <div class="btn-row">
+            <button class="btn-blue" onclick="loadApplicationWorkflow()">Refresh Queue</button>
+            <button class="btn-muted" onclick="clearWorkflowSelection()">Clear Selection</button>
+          </div>
+        </div>
+
+        <p style="margin:0 0 10px;color:#555;font-size:0.88rem;">
+          End-to-end flow: review applications, send acceptance/rejection emails in batch, then transfer accepted volunteers and send onboarding instructions.
+        </p>
+
+        <div id="appReviewStatus" class="status" style="display:none"></div>
+
+        <div class="appreview-grid">
+          <div class="subcard">
+            <h3>1) Review and Save Decisions</h3>
+            <div class="review-tabs">
+              <button type="button" class="review-tab active" id="reviewTabMentor" onclick="setReviewRole('mentor')">Mentor</button>
+              <button type="button" class="review-tab" id="reviewTabFrontline" onclick="setReviewRole('frontline')">Frontline</button>
+              <button type="button" class="review-tab" id="reviewTabFiler" onclick="setReviewRole('filer')">Filer</button>
+            </div>
+
+            <div class="review-stats" id="reviewStatsBar">Loading application counts...</div>
+
+            <label for="reviewApplicationSelect" style="font-size:0.82rem;font-weight:700;margin-bottom:6px;display:block;">Application</label>
+            <select id="reviewApplicationSelect" class="review-select" onchange="onReviewApplicationSelected()">
+              <option value="">Loading applications...</option>
+            </select>
+
+            <div id="reviewDetailPanel" style="display:none;">
+              <div class="review-detail-grid" id="reviewDetailGrid"></div>
+              <div id="reviewLongTextBlocks"></div>
+              <div id="reviewCaseStudyBlocks"></div>
+
+              <div class="review-verdict-row">
+                <button type="button" class="review-verdict-btn accept" id="reviewBtnAccept" onclick="selectReviewVerdict('Accept')">Accept</button>
+                <button type="button" class="review-verdict-btn reject" id="reviewBtnReject" onclick="selectReviewVerdict('Reject')">Reject</button>
+              </div>
+
+              <label for="reviewComments" style="font-size:0.82rem;font-weight:700;margin-bottom:6px;display:block;">Comments</label>
+              <textarea id="reviewComments" class="review-textarea" placeholder="Optional review notes..."></textarea>
+
+              <button class="btn-primary" id="btnSaveReviewDecision" style="margin-top:8px;" onclick="saveReviewDecision()">Save Decision</button>
+            </div>
+          </div>
+
+          <div class="subcard">
+            <h3>2) Batch Email and Handoff</h3>
+
+            <div class="workflow-toolbar">
+              <select id="workflowDecisionFilter" class="workflow-filter" onchange="renderWorkflowQueue()">
+                <option value="all">All statuses</option>
+                <option value="pending">Pending review</option>
+                <option value="accept">Accepted</option>
+                <option value="reject">Rejected</option>
+              </select>
+              <select id="workflowStageFilter" class="workflow-filter" onchange="renderWorkflowQueue()">
+                <option value="all">All stages</option>
+                <option value="actionable">Needs action</option>
+                <option value="emailed">Decision emailed</option>
+                <option value="transferred">Transferred</option>
+              </select>
+              <span class="workflow-meta" id="workflowSelectionMeta">0 selected</span>
+            </div>
+
+            <div class="btn-row" style="margin-bottom:10px;">
+              <button class="btn-muted" onclick="selectAllVisibleWorkflow()">Select All Visible</button>
+              <button class="btn-muted" onclick="clearWorkflowSelection()">Clear</button>
+              <button class="btn-blue" id="btnSendAcceptEmails" onclick="runDecisionEmailBatch('Accept')" disabled>Send Acceptance Emails</button>
+              <button class="btn-blue" id="btnSendRejectEmails" onclick="runDecisionEmailBatch('Reject')" disabled>Send Rejection Emails</button>
+              <button class="btn-primary" id="btnTransferAcceptedBatch" onclick="runAcceptedHandoff()" disabled>Transfer Accepted + Send Instructions</button>
+            </div>
+
+            <div class="data-table-wrap" style="max-height:370px;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width:36px;"><input type="checkbox" id="checkAllWorkflow" onchange="toggleAllVisibleWorkflow(this.checked)"></th>
+                    <th>Role</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Decision</th>
+                    <th>Stage</th>
+                  </tr>
+                </thead>
+                <tbody id="workflowQueueBody">
+                  <tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">Loading application workflow...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Section A: Transfer Accepted Applicants -->
       <div class="card" id="section-transfer">
     <div class="card-header">
@@ -705,7 +1049,6 @@
 <script>
   // ── Sidebar Navigation ────────────────────────────────────────
   var VM_SECTIONS = [
-    'section-transfer',
     'section-roster',
     'section-noshow',
     'section-audit',
@@ -713,7 +1056,6 @@
   ];
 
   var VM_BADGE_MAP = {
-    'section-transfer': 'acceptedCount',
     'section-roster':   'rosterCount',
     'section-noshow':   'noShowCount',
     'section-audit':    'unmatchedCount',
@@ -799,11 +1141,446 @@
   })();
 
   // ── State ─────────────────────────────────────────────────────────────────
-  var accepted = [];          // {role, email, firstName, preferredName, lastName, alreadyOnList}
-  var selected = {};          // email -> true
+  var workflowData = { byRole: { mentor: [], frontline: [], filer: [] }, all: [], summary: {} };
+  var reviewRole = 'mentor';
+  var reviewApplications = [];
+  var selectedReviewVerdict = '';
+  var pendingReviewSelectionRow = null;
+  var workflowSelected = {}; // role:rowIndex -> true
+  var accepted = [];         // {role, email, firstName, preferredName, lastName, alreadyOnList}
+  var selected = {};         // email -> true
 
   // ── Boot ──────────────────────────────────────────────────────────────────
   loadRoster();
+
+  // ── Section 0: Application Review Workflow ───────────────────────────────
+  function loadApplicationWorkflow() {
+    setAppReviewStatus('Loading application workflow...', 'loading');
+    google.script.run
+      .withSuccessHandler(function(data) {
+        workflowData = data || { byRole: { mentor: [], frontline: [], filer: [] }, all: [], summary: {} };
+        setReviewRole(reviewRole, true);
+        renderWorkflowQueue();
+        updateReviewPendingBadge();
+        setAppReviewStatus('', '');
+      })
+      .withFailureHandler(function(err) {
+        setAppReviewStatus('Failed to load workflow: ' + (err.message || String(err)), 'error');
+      })
+      .getVolunteerApplicationWorkflowData();
+  }
+
+  function updateReviewPendingBadge() {
+    var pending = Number((workflowData.summary || {}).pendingReview || 0);
+    var badge = document.getElementById('reviewPendingBadge');
+    badge.textContent = pending;
+    badge.style.display = pending ? '' : 'none';
+  }
+
+  function setReviewRole(role, preserveSelection) {
+    reviewRole = role;
+    var tabs = {
+      mentor: document.getElementById('reviewTabMentor'),
+      frontline: document.getElementById('reviewTabFrontline'),
+      filer: document.getElementById('reviewTabFiler')
+    };
+
+    Object.keys(tabs).forEach(function(k) {
+      tabs[k].classList.toggle('active', k === role);
+    });
+
+    reviewApplications = (workflowData.byRole && workflowData.byRole[role]) ? workflowData.byRole[role] : [];
+    updateReviewStatsBar();
+    populateReviewApplicationSelect(preserveSelection === true);
+  }
+
+  function updateReviewStatsBar() {
+    var summary = workflowData.summary || {};
+    var txt =
+      '<strong>' + Number(summary.pendingReview || 0) + ' pending review</strong>' +
+      ' / ' + Number(summary.acceptedAwaitingEmail || 0) + ' accepted awaiting email' +
+      ' / ' + Number(summary.rejectedAwaitingEmail || 0) + ' rejected awaiting email' +
+      ' / ' + Number(summary.transferred || 0) + ' transferred';
+    document.getElementById('reviewStatsBar').innerHTML = txt;
+  }
+
+  function populateReviewApplicationSelect(preserveSelection) {
+    var sel = document.getElementById('reviewApplicationSelect');
+    var currentValue = preserveSelection ? sel.value : '';
+    sel.innerHTML = '';
+
+    if (!reviewApplications.length) {
+      sel.innerHTML = '<option value="">No applications for this role</option>';
+      document.getElementById('reviewDetailPanel').style.display = 'none';
+      return;
+    }
+
+    var ph = document.createElement('option');
+    ph.value = '';
+    ph.textContent = '\u2014 Select an application \u2014';
+    sel.appendChild(ph);
+
+    for (var i = 0; i < reviewApplications.length; i++) {
+      var app = reviewApplications[i];
+      var opt = document.createElement('option');
+      opt.value = String(app.rowIndex);
+      var decisionPrefix = app.status === 'Accept' ? '[A]' : (app.status === 'Reject' ? '[R]' : '[\u00B7]');
+      opt.textContent = decisionPrefix + ' ' + (app.displayName || ((app.firstName || '') + ' ' + (app.lastName || ''))) + ' \u2014 ' + (app.timestamp || '');
+      sel.appendChild(opt);
+    }
+
+    if (pendingReviewSelectionRow && String(pendingReviewSelectionRow) !== '') {
+      sel.value = String(pendingReviewSelectionRow);
+      pendingReviewSelectionRow = null;
+      onReviewApplicationSelected();
+      return;
+    }
+
+    if (currentValue && sel.querySelector('option[value="' + currentValue + '"]')) {
+      sel.value = currentValue;
+      onReviewApplicationSelected();
+      return;
+    }
+
+    document.getElementById('reviewDetailPanel').style.display = 'none';
+  }
+
+  function onReviewApplicationSelected() {
+    var sel = document.getElementById('reviewApplicationSelect');
+    var rowIndex = parseInt(sel.value, 10);
+    if (!rowIndex) {
+      document.getElementById('reviewDetailPanel').style.display = 'none';
+      return;
+    }
+
+    var app = getSelectedReviewApplication();
+    if (!app) {
+      document.getElementById('reviewDetailPanel').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('reviewDetailPanel').style.display = 'block';
+    renderReviewDetails(app);
+
+    selectedReviewVerdict = app.status || '';
+    document.getElementById('reviewBtnAccept').classList.toggle('selected', selectedReviewVerdict === 'Accept');
+    document.getElementById('reviewBtnReject').classList.toggle('selected', selectedReviewVerdict === 'Reject');
+    document.getElementById('reviewComments').value = app.comment || '';
+  }
+
+  function getSelectedReviewApplication() {
+    var rowIndex = parseInt(document.getElementById('reviewApplicationSelect').value, 10);
+    if (!rowIndex) return null;
+    for (var i = 0; i < reviewApplications.length; i++) {
+      if (reviewApplications[i].rowIndex === rowIndex) return reviewApplications[i];
+    }
+    return null;
+  }
+
+  function renderReviewDetails(app) {
+    var grid = document.getElementById('reviewDetailGrid');
+    var longBlocks = document.getElementById('reviewLongTextBlocks');
+    var caseBlocks = document.getElementById('reviewCaseStudyBlocks');
+
+    grid.innerHTML = '';
+    longBlocks.innerHTML = '';
+    caseBlocks.innerHTML = '';
+
+    var fields;
+    if (reviewRole === 'mentor') {
+      fields = [
+        ['Timestamp', app.timestamp],
+        ['Email', app.email],
+        ['First Name', app.firstName],
+        ['Preferred Name', app.preferredName],
+        ['Last Name', app.lastName],
+        ['Program', app.program],
+        ['Year / Term', app.term],
+        ['Decision', app.status || 'Pending']
+      ];
+      caseBlocks.innerHTML += reviewAnswerBlock('Tax Experience', app.taxExperience);
+      caseBlocks.innerHTML += reviewAnswerBlock('Case Study Q1', app.caseQ1);
+      caseBlocks.innerHTML += reviewAnswerBlock('Case Study Q2', app.caseQ2);
+      caseBlocks.innerHTML += reviewAnswerBlock('Case Study Q3', app.caseQ3);
+    } else {
+      fields = [
+        ['Timestamp', app.timestamp],
+        ['Email', app.email],
+        ['First Name', app.firstName],
+        ['Preferred Name', app.preferredName],
+        ['Last Name', app.lastName],
+        ['Program', app.program],
+        ['Term', app.term],
+        ['Decision', app.status || 'Pending']
+      ];
+      if (app.resumeUrl) {
+        longBlocks.innerHTML += reviewAnswerBlock(
+          'Resume',
+          '<a href="' + esc(app.resumeUrl) + '" target="_blank" rel="noopener" style="color:var(--accent-color);">View Resume</a>',
+          true
+        );
+      }
+      longBlocks.innerHTML += reviewAnswerBlock('Why Volunteer', app.whyVolunteer);
+      longBlocks.innerHTML += reviewAnswerBlock('Time Management', app.timeManagement);
+      longBlocks.innerHTML += reviewAnswerBlock('Willing to Commit', app.willingToCommit);
+    }
+
+    fields.forEach(function(pair) {
+      var item = document.createElement('div');
+      item.className = 'review-detail-item';
+      item.innerHTML =
+        '<div class="review-detail-label">' + esc(pair[0]) + '</div>' +
+        '<div class="review-detail-value">' + esc(pair[1] || '\u2014') + '</div>';
+      grid.appendChild(item);
+    });
+  }
+
+  function reviewAnswerBlock(label, content, isHtml) {
+    var body = isHtml ? content : esc(content || '\u2014');
+    return '<div class="review-answer-block">' +
+      '<div class="review-answer-label">' + esc(label) + '</div>' +
+      '<div class="review-answer-text">' + body + '</div>' +
+      '</div>';
+  }
+
+  function selectReviewVerdict(verdict) {
+    selectedReviewVerdict = verdict;
+    document.getElementById('reviewBtnAccept').classList.toggle('selected', verdict === 'Accept');
+    document.getElementById('reviewBtnReject').classList.toggle('selected', verdict === 'Reject');
+  }
+
+  function saveReviewDecision() {
+    var app = getSelectedReviewApplication();
+    if (!app) {
+      setAppReviewStatus('Select an application first.', 'error');
+      return;
+    }
+    if (!selectedReviewVerdict) {
+      setAppReviewStatus('Select Accept or Reject before saving.', 'error');
+      return;
+    }
+
+    var btn = document.getElementById('btnSaveReviewDecision');
+    btn.disabled = true;
+    setAppReviewStatus('Saving decision...', 'loading');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        if (!result || !result.success) {
+          setAppReviewStatus((result && result.message) || 'Failed to save decision.', 'error');
+          return;
+        }
+        pendingReviewSelectionRow = app.rowIndex;
+        setAppReviewStatus('Decision saved.', 'success');
+        loadApplicationWorkflow();
+        loadAccepted();
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        setAppReviewStatus('Failed to save decision: ' + (err.message || String(err)), 'error');
+      })
+      .saveApplicationDecision({
+        role: reviewRole,
+        rowIndex: app.rowIndex,
+        decision: selectedReviewVerdict,
+        comment: document.getElementById('reviewComments').value.trim()
+      });
+  }
+
+  function renderWorkflowQueue() {
+    var tbody = document.getElementById('workflowQueueBody');
+    var rows = getFilteredWorkflowRows();
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:20px;">No applications match the selected filters.</td></tr>';
+      syncWorkflowHeader();
+      updateWorkflowActionButtons();
+      return;
+    }
+
+    var html = '';
+    for (var i = 0; i < rows.length; i++) {
+      var app = rows[i];
+      var key = app.workflowKey;
+      var checked = workflowSelected[key] ? 'checked' : '';
+      var disabled = !app.status ? 'disabled' : '';
+      var roleClass = (app.roleLabel || '').toLowerCase();
+      var decision = app.status || 'Pending';
+      html += '<tr>' +
+        '<td><input type="checkbox" data-key="' + esc(key) + '" data-role="' + esc(app.role) + '" data-row="' + app.rowIndex + '" data-decision="' + esc(app.status || '') + '" ' + checked + ' ' + disabled + ' onchange="toggleWorkflowRow(this)"></td>' +
+        '<td><span class="role-pill ' + esc(roleClass) + '">' + esc(app.roleLabel || '') + '</span></td>' +
+        '<td>' + esc(app.displayName || '\u2014') + '</td>' +
+        '<td style="font-size:0.82rem;">' + esc(app.email || '\u2014') + '</td>' +
+        '<td>' + esc(decision) + '</td>' +
+        '<td><span class="stage-pill ' + esc(app.workflowStage) + '">' + esc(stageLabel(app.workflowStage)) + '</span></td>' +
+        '</tr>';
+    }
+    tbody.innerHTML = html;
+    syncWorkflowHeader();
+    updateWorkflowActionButtons();
+  }
+
+  function getFilteredWorkflowRows() {
+    var all = workflowData.all || [];
+    var decisionFilter = document.getElementById('workflowDecisionFilter').value;
+    var stageFilter = document.getElementById('workflowStageFilter').value;
+
+    return all.filter(function(app) {
+      if (decisionFilter === 'pending' && app.status) return false;
+      if (decisionFilter === 'accept' && app.status !== 'Accept') return false;
+      if (decisionFilter === 'reject' && app.status !== 'Reject') return false;
+
+      if (stageFilter === 'actionable') {
+        var actionable = app.workflowStage === 'pending-review' ||
+          app.workflowStage === 'accepted-awaiting-email' ||
+          app.workflowStage === 'rejected-awaiting-email' ||
+          app.workflowStage === 'accepted-emailed';
+        if (!actionable) return false;
+      }
+      if (stageFilter === 'emailed') {
+        if (app.workflowStage !== 'accepted-emailed' && app.workflowStage !== 'rejected-emailed') return false;
+      }
+      if (stageFilter === 'transferred' && app.workflowStage !== 'transferred') return false;
+      return true;
+    });
+  }
+
+  function stageLabel(stage) {
+    if (stage === 'pending-review') return 'Pending Review';
+    if (stage === 'accepted-awaiting-email') return 'Accepted Awaiting Email';
+    if (stage === 'rejected-awaiting-email') return 'Rejected Awaiting Email';
+    if (stage === 'accepted-emailed') return 'Acceptance Emailed';
+    if (stage === 'rejected-emailed') return 'Rejection Emailed';
+    if (stage === 'transferred') return 'Transferred';
+    return 'Pending Review';
+  }
+
+  function toggleWorkflowRow(cb) {
+    var key = cb.dataset.key;
+    if (!key) return;
+    if (cb.checked) workflowSelected[key] = true;
+    else delete workflowSelected[key];
+    syncWorkflowHeader();
+    updateWorkflowActionButtons();
+  }
+
+  function toggleAllVisibleWorkflow(checked) {
+    var rows = getFilteredWorkflowRows();
+    for (var i = 0; i < rows.length; i++) {
+      if (!rows[i].status) continue;
+      if (checked) workflowSelected[rows[i].workflowKey] = true;
+      else delete workflowSelected[rows[i].workflowKey];
+    }
+    renderWorkflowQueue();
+  }
+
+  function selectAllVisibleWorkflow() {
+    toggleAllVisibleWorkflow(true);
+  }
+
+  function clearWorkflowSelection() {
+    workflowSelected = {};
+    renderWorkflowQueue();
+  }
+
+  function syncWorkflowHeader() {
+    var rows = getFilteredWorkflowRows().filter(function(app) { return !!app.status; });
+    var selectedCount = 0;
+    for (var i = 0; i < rows.length; i++) {
+      if (workflowSelected[rows[i].workflowKey]) selectedCount++;
+    }
+    var hdr = document.getElementById('checkAllWorkflow');
+    hdr.checked = rows.length > 0 && selectedCount === rows.length;
+    hdr.indeterminate = selectedCount > 0 && selectedCount < rows.length;
+  }
+
+  function updateWorkflowActionButtons() {
+    var selectedKeys = Object.keys(workflowSelected);
+    var selectedRows = getSelectedWorkflowRows();
+    var acceptCount = selectedRows.filter(function(a) { return a.status === 'Accept'; }).length;
+    var rejectCount = selectedRows.filter(function(a) { return a.status === 'Reject'; }).length;
+
+    document.getElementById('workflowSelectionMeta').textContent = selectedKeys.length + ' selected';
+    document.getElementById('btnSendAcceptEmails').disabled = acceptCount === 0;
+    document.getElementById('btnSendRejectEmails').disabled = rejectCount === 0;
+    document.getElementById('btnTransferAcceptedBatch').disabled = acceptCount === 0;
+  }
+
+  function getSelectedWorkflowRows() {
+    var all = workflowData.all || [];
+    return all.filter(function(app) {
+      return !!workflowSelected[app.workflowKey] && !!app.status;
+    });
+  }
+
+  function getSelectedWorkflowItemsForDecision(decision) {
+    return getSelectedWorkflowRows()
+      .filter(function(app) { return app.status === decision; })
+      .map(function(app) { return { role: app.role, rowIndex: app.rowIndex }; });
+  }
+
+  function runDecisionEmailBatch(decision) {
+    var items = getSelectedWorkflowItemsForDecision(decision);
+    if (!items.length) {
+      setAppReviewStatus('Select ' + decision.toLowerCase() + ' applications first.', 'error');
+      return;
+    }
+
+    setAppReviewStatus('Sending ' + decision.toLowerCase() + ' emails...', 'loading');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        var msg = (result.sent || 0) + ' sent';
+        if (result.skippedAlreadySent) msg += ', ' + result.skippedAlreadySent + ' already sent';
+        if (result.skippedDecisionMismatch) msg += ', ' + result.skippedDecisionMismatch + ' decision mismatch';
+        if (result.skippedMissingData) msg += ', ' + result.skippedMissingData + ' missing data';
+        if (result.errors && result.errors.length) msg += '. Errors: ' + result.errors.slice(0, 2).join(' | ');
+        setAppReviewStatus(msg + '.', result.errors && result.errors.length ? 'error' : 'success');
+        clearWorkflowSelection();
+        loadApplicationWorkflow();
+        loadAccepted();
+      })
+      .withFailureHandler(function(err) {
+        setAppReviewStatus('Email batch failed: ' + (err.message || String(err)), 'error');
+      })
+      .sendVolunteerApplicationDecisionEmails({ decision: decision, items: items });
+  }
+
+  function runAcceptedHandoff() {
+    var items = getSelectedWorkflowItemsForDecision('Accept');
+    if (!items.length) {
+      setAppReviewStatus('Select accepted applications first.', 'error');
+      return;
+    }
+
+    setAppReviewStatus('Transferring accepted volunteers and sending instructions...', 'loading');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        var msg = (result.added || 0) + ' added to roster';
+        if (result.alreadyOnList) msg += ', ' + result.alreadyOnList + ' already on list';
+        if (result.instructionEmailsSent) msg += ', ' + result.instructionEmailsSent + ' instruction emails sent';
+        if (result.skippedAlreadyTransferred) msg += ', ' + result.skippedAlreadyTransferred + ' already transferred';
+        if (result.skippedDecisionMismatch) msg += ', ' + result.skippedDecisionMismatch + ' decision mismatch';
+        if (result.skippedMissingData) msg += ', ' + result.skippedMissingData + ' missing data';
+        if (result.errors && result.errors.length) msg += '. Errors: ' + result.errors.slice(0, 2).join(' | ');
+        setAppReviewStatus(msg + '.', result.errors && result.errors.length ? 'error' : 'success');
+        clearWorkflowSelection();
+        loadApplicationWorkflow();
+        loadAccepted();
+        loadRoster();
+      })
+      .withFailureHandler(function(err) {
+        setAppReviewStatus('Accepted handoff failed: ' + (err.message || String(err)), 'error');
+      })
+      .transferAcceptedApplicationsAndSendInstructions({ items: items });
+  }
+
+  function setAppReviewStatus(msg, type) {
+    var el = document.getElementById('appReviewStatus');
+    el.textContent = msg;
+    el.className = 'status' + (type ? ' ' + type : '');
+    el.style.display = msg ? 'block' : 'none';
+  }
 
   // ── Section A: Accepted Applicants ────────────────────────────────────────
   function loadAccepted() {

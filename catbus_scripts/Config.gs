@@ -461,6 +461,59 @@ const PRODUCT_CODE_CONFIG = {
 };
 
 /**
+ * Volunteer application workflow messaging configuration.
+ */
+const VOLUNTEER_APPLICATION_WORKFLOW_CONFIG = {
+  DECISION_EMAIL: {
+    ACCEPT_SUBJECT: 'AFSA Tax Clinic Volunteer Application - Accepted',
+    ACCEPT_BODY: [
+      'Hi {{firstName}},',
+      '',
+      'Thank you for applying to the AFSA Tax Clinic as a {{role}} volunteer.',
+      'We are happy to share that your application has been accepted.',
+      '',
+      'You will receive your onboarding instructions in a follow-up message once your profile is transferred to the active volunteer roster.',
+      '',
+      'If you have questions, please reply to this email.',
+      '',
+      'AFSA Tax Clinic Team'
+    ].join('\n'),
+    REJECT_SUBJECT: 'AFSA Tax Clinic Volunteer Application - Update',
+    REJECT_BODY: [
+      'Hi {{firstName}},',
+      '',
+      'Thank you for applying to the AFSA Tax Clinic as a {{role}} volunteer and for taking the time to complete the application.',
+      'After review, we are not able to offer a position for this cycle.',
+      '',
+      'We appreciate your interest and hope you will consider applying again in a future term.',
+      '',
+      'AFSA Tax Clinic Team'
+    ].join('\n')
+  },
+  HANDOFF_EMAIL: {
+    SUBJECT: 'AFSA Tax Clinic Next Steps - Complete Your Volunteer Onboarding',
+    BODY: [
+      'Hi {{firstName}},',
+      '',
+      'Welcome to the AFSA Tax Clinic volunteer team. You are now on the consolidated volunteer roster as a {{role}} volunteer.',
+      '',
+      'Please complete the following steps:',
+      '1) ASAP after acceptance (about 1 hour):',
+      '   a) Register for the CRA CVITP program',
+      '   b) Register for an EFILE number',
+      '   c) File your own tax return if you have not done so before',
+      '2) February 28: Attend the mandatory training session (8 hours)',
+      '2.5) Week after training: Complete the case-based test (1 hour)',
+      '3) March 21, 22, 28, 29: Volunteer at least 3 shifts across clinic dates',
+      '',
+      'If anything is unclear, contact us at {{clinicEmail}}.',
+      '',
+      'AFSA Tax Clinic Team'
+    ].join('\n')
+  }
+};
+
+/**
  * Returns schedule config data for frontend consumption
  * Eliminates need for hardcoded time slots and day labels in HTML files
  * @returns {Object} Schedule configuration for frontend

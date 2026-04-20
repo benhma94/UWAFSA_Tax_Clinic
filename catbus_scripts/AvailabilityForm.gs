@@ -134,6 +134,94 @@ function getVolunteersForAutocomplete() {
 }
 
 /**
+ * Maps roster roles to availability form roles.
+ * @param {string} role - Role from Consolidated Volunteer List
+ * @returns {string} Availability role
+ */
+function mapAvailabilityRole_(role) {
+  const key = (role || '').toString().trim().toLowerCase();
+  if (key === 'senior mentor' || key === 'mentor') return 'Mentor';
+  if (key === 'filer') return 'Filer';
+  if (key === 'frontline' || key === 'receptionist') return 'Frontline';
+  if (key === 'internal services') return 'Internal Services';
+  return '';
+}
+
+/**
+ * Splits a full name into first/last name.
+ * @param {string} fullName - Full volunteer name
+ * @returns {{firstName: string, lastName: string}}
+ */
+function splitVolunteerName_(fullName) {
+  const parts = (fullName || '').toString().trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: '', lastName: '' };
+  if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+  return {
+    firstName: parts.slice(0, -1).join(' '),
+    lastName: parts[parts.length - 1]
+  };
+}
+
+/**
+ * Returns availability profile data for a volunteer dashboard search result.
+ * @param {string} volunteerName - Volunteer full name
+ * @returns {{volunteerName: string, hasExistingSubmission: boolean, data: Object}}
+ */
+function getVolunteerAvailabilityForDashboard(volunteerName) {
+  return safeExecute(() => {
+    const targetName = (volunteerName || '').toString().trim();
+    if (!targetName) {
+      throw new Error('Volunteer name is required');
+    }
+
+    const volunteers = getConsolidatedVolunteerList_();
+    const rosterMatch = volunteers.find(v =>
+      (v.name || '').toString().trim().toLowerCase() === targetName.toLowerCase()
+    );
+
+    const splitName = splitVolunteerName_(rosterMatch ? rosterMatch.name : targetName);
+    const baseData = {
+      firstName: splitName.firstName,
+      lastName: splitName.lastName,
+      email: rosterMatch && rosterMatch.email ? rosterMatch.email.toString().trim() : '',
+      role: mapAvailabilityRole_(rosterMatch ? rosterMatch.role : ''),
+      numShifts: '',
+      consecutive: 'No',
+      availability: [],
+      notes: ''
+    };
+
+    let hasExistingSubmission = false;
+    if (baseData.email) {
+      const existing = checkExistingVolunteer(baseData.email);
+      if (existing && existing.exists && existing.data) {
+        hasExistingSubmission = true;
+        return {
+          volunteerName: targetName,
+          hasExistingSubmission: true,
+          data: {
+            firstName: existing.data.firstName || baseData.firstName,
+            lastName: existing.data.lastName || baseData.lastName,
+            email: existing.data.email || baseData.email,
+            role: existing.data.role || baseData.role,
+            numShifts: existing.data.numShifts || '',
+            consecutive: existing.data.consecutive || 'No',
+            availability: existing.data.availability || [],
+            notes: existing.data.notes || ''
+          }
+        };
+      }
+    }
+
+    return {
+      volunteerName: targetName,
+      hasExistingSubmission: hasExistingSubmission,
+      data: baseData
+    };
+  }, 'getVolunteerAvailabilityForDashboard');
+}
+
+/**
  * Submits availability form data to the schedule availability sheet
  * @param {Object} formData - Form data object containing availability information
  * @returns {Object} Success result

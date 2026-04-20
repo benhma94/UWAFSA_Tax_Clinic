@@ -424,6 +424,90 @@
     .btn-submit-creds:disabled { opacity: 0.5; cursor: not-allowed; }
     .creds-feedback { margin-top: 10px; font-size: 0.9em; }
 
+    /* ===== Availability ===== */
+    .availability-form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .availability-field label {
+      display: block;
+      font-size: 0.86em;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .availability-field input,
+    .availability-field select,
+    .availability-field textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid var(--border-light);
+      border-radius: 8px;
+      font-size: 0.92em;
+      box-sizing: border-box;
+    }
+    body.dark .availability-field input,
+    body.dark .availability-field select,
+    body.dark .availability-field textarea {
+      border-color: var(--border-dark);
+      background: #333;
+      color: var(--text-color-dark);
+    }
+    .availability-field textarea { min-height: 88px; resize: vertical; }
+    .availability-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0 10px;
+    }
+    .btn-avail-action {
+      width: auto;
+      padding: 8px 12px;
+      font-size: 0.86em;
+      border-radius: 6px;
+      border: 1px solid var(--border-light);
+      background: transparent;
+      color: var(--text-color-light);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    body.dark .btn-avail-action {
+      border-color: var(--border-dark);
+      color: #ddd;
+    }
+    .btn-avail-action:hover { opacity: 0.85; transform: none; box-shadow: none; }
+    .availability-count {
+      font-size: 0.9em;
+      font-weight: 600;
+      color: var(--accent-color);
+      margin: 4px 0 10px;
+    }
+    .availability-grid-wrap { display: grid; gap: 10px; }
+    .availability-day {
+      background: rgba(142, 0, 0, 0.05);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    body.dark .availability-day { background: rgba(142, 0, 0, 0.13); }
+    .availability-day h4 {
+      margin: 0 0 8px;
+      color: var(--accent-color);
+      font-size: 0.95em;
+    }
+    .availability-slot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 6px;
+    }
+    .availability-slot {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9em;
+    }
+    .availability-slot input[type="checkbox"] { width: auto; margin: 0; }
+
     /* ===== Mobile ===== */
     @media (max-width: 768px) {
       body { padding: 10px; }
@@ -439,6 +523,8 @@
       .stats-day-filter select { width: 100%; }
       .credential-row { flex-direction: column; align-items: flex-start; gap: 6px; }
       .credential-input-wrap { width: 100%; }
+      .availability-actions { flex-direction: column; }
+      .btn-avail-action { width: 100%; }
       .footer-copyright { font-size: 9px; }
     }
   </style>
@@ -471,13 +557,14 @@
 
   <!-- Tab Navigation -->
   <nav class="tab-nav" role="tablist">
-    <button type="button" id="tab-btn-schedule" class="tab-btn active" role="tab" data-tab="schedule" aria-selected="true" aria-controls="tab-schedule" onclick="switchTab('schedule')">📅 My Schedule</button>
-    <button type="button" id="tab-btn-stats" class="tab-btn" role="tab" data-tab="stats" aria-selected="false" aria-controls="tab-stats" onclick="switchTab('stats')">📊 My Stats</button>
-    <button type="button" id="tab-btn-credentials" class="tab-btn" role="tab" data-tab="credentials" aria-selected="false" aria-controls="tab-credentials" onclick="switchTab('credentials')">🔑 My Credentials</button>
+    <button type="button" class="tab-btn active" role="tab" data-tab="schedule" onclick="switchTab('schedule')">📅 My Schedule</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="stats" onclick="switchTab('stats')">📊 My Stats</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="availability" onclick="switchTab('availability')">🗓️ Availability</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="credentials" onclick="switchTab('credentials')">🔑 My Credentials</button>
   </nav>
 
   <!-- ===== My Schedule Tab ===== -->
-  <div id="tab-schedule" class="tab-panel active" role="tabpanel" aria-labelledby="tab-btn-schedule">
+  <div id="tab-schedule" class="tab-panel active" role="tabpanel">
     <p class="empty-state" id="scheduleEmptyState">Search for your name above to view your schedule.</p>
     <div id="scheduleContent" style="display:none;">
       <div class="stat-cards">
@@ -496,7 +583,7 @@
   </div>
 
   <!-- ===== My Stats Tab ===== -->
-  <div id="tab-stats" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-stats">
+  <div id="tab-stats" class="tab-panel" role="tabpanel">
     <p class="empty-state" id="statsEmptyState">Search for your name above to view your stats.</p>
     <div id="statsLoaded" style="display:none;">
       <div class="stats-day-filter">
@@ -532,8 +619,75 @@
     </div>
   </div>
 
+  <!-- ===== Availability Tab ===== -->
+  <div id="tab-availability" class="tab-panel" role="tabpanel">
+    <p class="empty-state" id="availabilityEmptyState">Search for your name above to manage your shift availability.</p>
+    <div class="section-box" id="availabilitySectionBox" style="display:none;">
+      <h3>Shift Availability</h3>
+      <p class="help-text" id="availabilityStatusHint" style="margin-top:-6px; margin-bottom:14px;">
+        Save the shifts you are available for upcoming clinic days.
+      </p>
+
+      <form id="dashboardAvailabilityForm" onsubmit="submitAvailabilityFromDashboard(event)">
+        <div class="availability-form-grid">
+          <div class="availability-field">
+            <label for="availFirstName">First Name</label>
+            <input type="text" id="availFirstName" required>
+          </div>
+          <div class="availability-field">
+            <label for="availLastName">Last Name</label>
+            <input type="text" id="availLastName" required>
+          </div>
+          <div class="availability-field">
+            <label for="availEmail">Email</label>
+            <input type="text" id="availEmail" placeholder="name@example.com" required>
+          </div>
+          <div class="availability-field">
+            <label for="availRole">Role</label>
+            <select id="availRole" onchange="validateDashboardShiftInputs()" required>
+              <option value="">Select role...</option>
+              <option value="Filer">Filer</option>
+              <option value="Mentor">Mentor</option>
+              <option value="Frontline">Frontline</option>
+              <option value="Internal Services">Internal Services</option>
+            </select>
+          </div>
+          <div class="availability-field">
+            <label for="availNumShifts">Number of shifts requested</label>
+            <input type="number" id="availNumShifts" min="1" max="12" onchange="validateDashboardShiftInputs()" oninput="checkDashboardAvailabilityCount()" required>
+          </div>
+          <div class="availability-field">
+            <label for="availConsecutive">Prefer consecutive shifts?</label>
+            <select id="availConsecutive" required>
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="availability-actions">
+          <button type="button" class="btn-avail-action" onclick="selectAllDashboardAvailability()">Select All</button>
+          <button type="button" class="btn-avail-action" onclick="deselectAllDashboardAvailability()">Deselect All</button>
+        </div>
+
+        <div id="availabilityCount" class="availability-count">Selected: 0 slots</div>
+        <div id="availabilityContainer" class="availability-grid-wrap"></div>
+
+        <div class="availability-field" style="margin-top: 12px;">
+          <label for="availNotes">Notes</label>
+          <textarea id="availNotes" placeholder="Optional notes for the scheduling team..."></textarea>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <button type="submit" class="btn-submit-creds" id="availabilitySubmitBtn">Save Availability</button>
+          <div id="availabilityFeedback" class="creds-feedback"></div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ===== My Credentials Tab ===== -->
-  <div id="tab-credentials" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-credentials">
+  <div id="tab-credentials" class="tab-panel" role="tabpanel">
     <p class="empty-state" id="credentialsEmptyState">Search for your name above to view your credentials.</p>
     <div class="section-box" id="credentialsSectionBox" style="display:none;">
       <h3>EFILE Credentials</h3>
@@ -548,14 +702,17 @@
 <?!= include('shared_scripts') ?>
 <script>
   const SHIFT_CONFIG = { TIME_SLOTS: {} };
+  let availabilityTimeSlots = [];
 
   let allVolunteerNames = [];
   let allVolunteerNamesLoading = true;
+  let volunteerRoster = [];
   let currentVolunteerName = '';
   let currentVolunteerRole = '';
 
   window.addEventListener('load', () => {
     loadVolunteerNames();
+    loadVolunteerRoster();
     loadScheduleConfig();
     setupAutocomplete();
   });
@@ -564,6 +721,10 @@
     google.script.run
       .withSuccessHandler(config => {
         SHIFT_CONFIG.TIME_SLOTS = config.timeSlots;
+        availabilityTimeSlots = Object.keys(config.timeSlots || {}).map(slotKey => ({
+          id: slotKey,
+          label: config.timeSlots[slotKey].display
+        }));
         const statsDay = document.getElementById('statsDay');
         config.dayLabels.forEach(label => {
           const opt = document.createElement('option');
@@ -574,6 +735,18 @@
       })
       .withFailureHandler(err => console.error('Error loading schedule config:', err))
       .getScheduleConfig();
+  }
+
+  function loadVolunteerRoster() {
+    google.script.run
+      .withSuccessHandler(roster => {
+        volunteerRoster = roster || [];
+      })
+      .withFailureHandler(err => {
+        console.error('Error loading volunteer roster:', err);
+        volunteerRoster = [];
+      })
+      .getVolunteersForAutocomplete();
   }
 
   function loadVolunteerNames() {
@@ -602,11 +775,7 @@
 
   // ===== Tab switching =====
   function switchTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach(b => {
-      const active = b.dataset.tab === tab;
-      b.classList.toggle('active', active);
-      b.setAttribute('aria-selected', active ? 'true' : 'false');
-    });
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
   }
 
@@ -628,6 +797,9 @@
     document.getElementById('scheduleEmptyState').style.display = '';
     document.getElementById('statsLoaded').style.display = 'none';
     document.getElementById('statsEmptyState').style.display = '';
+    document.getElementById('availabilitySectionBox').style.display = 'none';
+    document.getElementById('availabilityEmptyState').style.display = '';
+    document.getElementById('availabilityFeedback').innerHTML = '';
     document.getElementById('credentialsSectionBox').style.display = 'none';
     document.getElementById('credentialsEmptyState').style.display = '';
     currentVolunteerName = '';
@@ -715,6 +887,7 @@
 
     // Load stats and credentials in parallel
     refreshStats();
+    loadAvailabilityForVolunteer();
     loadCredentialStatus();
   }
 
@@ -820,6 +993,253 @@
     } else {
       detailBox.style.display = 'none';
     }
+  }
+
+  // ── Availability ──────────────────────────────────────────────────────────
+
+  function dashboardShiftId(dayIndex, slotKey) {
+    return `D${dayIndex + 1}${slotKey}`;
+  }
+
+  function convertDashboardSlotToShiftId(slot) {
+    if (/^D[1-4][ABC]$/.test(slot)) {
+      return slot;
+    }
+
+    const legacyMap = {
+      'Day 1 9:30-1:15': 'D1A', 'Day 1 1:00-4:30': 'D1B', 'Day 1 4:15-8:30': 'D1C',
+      'Day 2 9:30-1:15': 'D2A', 'Day 2 1:00-4:30': 'D2B', 'Day 2 4:15-8:30': 'D2C',
+      'Day 3 9:30-1:15': 'D3A', 'Day 3 1:00-4:30': 'D3B', 'Day 3 4:15-8:30': 'D3C',
+      'Day 4 9:30-1:15': 'D4A', 'Day 4 1:00-4:30': 'D4B', 'Day 4 4:15-8:30': 'D4C',
+      'Day 1 9:45-1:15': 'D1A', 'Day 1 4:15-8:00': 'D1C',
+      'Day 2 9:45-1:15': 'D2A', 'Day 2 4:15-8:00': 'D2C',
+      'Day 3 9:45-1:15': 'D3A', 'Day 3 4:15-8:00': 'D3C',
+      'Day 4 9:45-1:15': 'D4A', 'Day 4 4:15-8:00': 'D4C'
+    };
+
+    return legacyMap[slot] || slot;
+  }
+
+  function buildDashboardAvailabilityGrid() {
+    const container = document.getElementById('availabilityContainer');
+    container.innerHTML = '';
+
+    const dayLabels = Array.from(document.getElementById('statsDay').options)
+      .slice(1)
+      .map(opt => opt.textContent);
+    const labels = dayLabels.length === 4
+      ? dayLabels
+      : ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
+
+    for (let dayIndex = 0; dayIndex < labels.length; dayIndex++) {
+      const dayWrap = document.createElement('div');
+      dayWrap.className = 'availability-day';
+
+      const dayHeader = document.createElement('h4');
+      dayHeader.textContent = `Day ${dayIndex + 1} - ${labels[dayIndex]}`;
+      dayWrap.appendChild(dayHeader);
+
+      const slotGrid = document.createElement('div');
+      slotGrid.className = 'availability-slot-grid';
+
+      availabilityTimeSlots.forEach(slot => {
+        const shiftId = dashboardShiftId(dayIndex, slot.id);
+
+        const item = document.createElement('label');
+        item.className = 'availability-slot';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.name = 'dashboardAvailability';
+        cb.value = shiftId;
+        cb.onchange = checkDashboardAvailabilityCount;
+
+        const txt = document.createElement('span');
+        txt.textContent = slot.label;
+
+        item.appendChild(cb);
+        item.appendChild(txt);
+        slotGrid.appendChild(item);
+      });
+
+      dayWrap.appendChild(slotGrid);
+      container.appendChild(dayWrap);
+    }
+  }
+
+  function validateDashboardShiftInputs() {
+    const role = document.getElementById('availRole').value;
+    const numShiftsInput = document.getElementById('availNumShifts');
+    const numShifts = parseInt(numShiftsInput.value, 10);
+
+    numShiftsInput.setCustomValidity('');
+    if (role === 'Mentor' || role === 'Internal Services') {
+      numShiftsInput.min = '1';
+    } else {
+      numShiftsInput.min = '3';
+      if ((role === 'Filer' || role === 'Frontline') && numShifts > 0 && numShifts < 3) {
+        numShiftsInput.setCustomValidity('This role requires at least 3 shifts.');
+        numShiftsInput.reportValidity();
+        return false;
+      }
+    }
+
+    checkDashboardAvailabilityCount();
+    return true;
+  }
+
+  function checkDashboardAvailabilityCount() {
+    const numShifts = parseInt(document.getElementById('availNumShifts').value, 10) || 0;
+    const selected = document.querySelectorAll('input[name="dashboardAvailability"]:checked').length;
+    const countEl = document.getElementById('availabilityCount');
+
+    if (numShifts > 0) {
+      countEl.textContent = `Selected: ${selected} slots | Requested: ${numShifts} shifts`;
+      if (selected < numShifts) {
+        countEl.style.color = '#e74c3c';
+        countEl.textContent += ` - choose at least ${numShifts}`;
+      } else {
+        countEl.style.color = 'var(--accent-color)';
+      }
+    } else {
+      countEl.style.color = 'var(--accent-color)';
+      countEl.textContent = `Selected: ${selected} slots`;
+    }
+  }
+
+  function selectAllDashboardAvailability() {
+    document.querySelectorAll('input[name="dashboardAvailability"]').forEach(cb => { cb.checked = true; });
+    checkDashboardAvailabilityCount();
+  }
+
+  function deselectAllDashboardAvailability() {
+    document.querySelectorAll('input[name="dashboardAvailability"]').forEach(cb => { cb.checked = false; });
+    checkDashboardAvailabilityCount();
+  }
+
+  function loadAvailabilityForVolunteer() {
+    if (!currentVolunteerName) return;
+
+    document.getElementById('availabilityEmptyState').style.display = 'none';
+    document.getElementById('availabilitySectionBox').style.display = '';
+    document.getElementById('availabilityFeedback').innerHTML = '<span class="loading-inline"></span> Loading availability...';
+
+    google.script.run
+      .withSuccessHandler(result => {
+        renderAvailabilityForVolunteer(result);
+      })
+      .withFailureHandler(err => {
+        document.getElementById('availabilityFeedback').innerHTML =
+          `<span style="color:#e74c3c;">Error: ${escapeHtml(err.message || String(err))}</span>`;
+      })
+      .getVolunteerAvailabilityForDashboard(currentVolunteerName);
+  }
+
+  function renderAvailabilityForVolunteer(result) {
+    buildDashboardAvailabilityGrid();
+
+    const data = (result && result.data) || {};
+    document.getElementById('availFirstName').value = data.firstName || '';
+    document.getElementById('availLastName').value = data.lastName || '';
+
+    const rosterMatch = volunteerRoster.find(v =>
+      (v.name || '').toLowerCase() === (currentVolunteerName || '').toLowerCase()
+    );
+    const fallbackEmail = rosterMatch && rosterMatch.email ? rosterMatch.email : '';
+    document.getElementById('availEmail').value = data.email || fallbackEmail;
+
+    const fallbackRoleMap = {
+      'filer': 'Filer',
+      'mentor': 'Mentor',
+      'senior mentor': 'Mentor',
+      'frontline': 'Frontline',
+      'internal services': 'Internal Services',
+      'receptionist': 'Frontline'
+    };
+    const fallbackRole = rosterMatch && rosterMatch.role
+      ? (fallbackRoleMap[(rosterMatch.role || '').toLowerCase()] || '')
+      : '';
+
+    document.getElementById('availRole').value = data.role || fallbackRole;
+    document.getElementById('availNumShifts').value = data.numShifts || '';
+    document.getElementById('availConsecutive').value = data.consecutive || 'No';
+    document.getElementById('availNotes').value = data.notes || '';
+
+    document.querySelectorAll('input[name="dashboardAvailability"]').forEach(cb => { cb.checked = false; });
+    if (Array.isArray(data.availability)) {
+      data.availability.forEach(slot => {
+        const shiftId = convertDashboardSlotToShiftId(slot);
+        const cb = document.querySelector(`input[name="dashboardAvailability"][value="${shiftId}"]`);
+        if (cb) cb.checked = true;
+      });
+    }
+
+    const hint = document.getElementById('availabilityStatusHint');
+    if (result && result.hasExistingSubmission) {
+      hint.textContent = 'Existing submission found. Update and save to replace your previous availability.';
+    } else {
+      hint.textContent = 'No previous availability submission found. Fill out this form and save.';
+    }
+
+    validateDashboardShiftInputs();
+    checkDashboardAvailabilityCount();
+    document.getElementById('availabilityFeedback').innerHTML = '';
+  }
+
+  function submitAvailabilityFromDashboard(event) {
+    event.preventDefault();
+    if (!currentVolunteerName) {
+      showToast('Search for your name first.', 'error');
+      return;
+    }
+
+    if (!validateDashboardShiftInputs()) return;
+
+    const selected = Array.from(document.querySelectorAll('input[name="dashboardAvailability"]:checked')).map(cb => cb.value);
+    if (selected.length === 0) {
+      document.getElementById('availabilityFeedback').innerHTML = '<span style="color:#e74c3c;">Please select at least one time slot.</span>';
+      return;
+    }
+
+    const numShifts = parseInt(document.getElementById('availNumShifts').value, 10);
+    if (selected.length < numShifts) {
+      document.getElementById('availabilityFeedback').innerHTML =
+        `<span style="color:#e74c3c;">Selected ${selected.length} slot(s), but ${numShifts} are required.</span>`;
+      return;
+    }
+
+    const formData = {
+      firstName: document.getElementById('availFirstName').value.trim(),
+      lastName: document.getElementById('availLastName').value.trim(),
+      email: document.getElementById('availEmail').value.trim(),
+      role: document.getElementById('availRole').value,
+      numShifts: numShifts,
+      consecutive: document.getElementById('availConsecutive').value,
+      availability: selected,
+      notes: document.getElementById('availNotes').value.trim()
+    };
+
+    const submitBtn = document.getElementById('availabilitySubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+    document.getElementById('availabilityFeedback').innerHTML = '';
+
+    google.script.run
+      .withSuccessHandler(result => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Availability';
+        document.getElementById('availabilityFeedback').innerHTML =
+          `<span style="color:#27ae60;">${escapeHtml(result.message || 'Availability saved successfully.')}</span>`;
+        showToast('Availability saved.', 'success');
+        loadAvailabilityForVolunteer();
+      })
+      .withFailureHandler(err => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Availability';
+        document.getElementById('availabilityFeedback').innerHTML =
+          `<span style="color:#e74c3c;">Error: ${escapeHtml(err.message || String(err))}</span>`;
+      })
+      .submitAvailabilityForm(formData);
   }
 
   // ── Credentials ───────────────────────────────────────────────────────────

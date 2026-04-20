@@ -4,6 +4,102 @@
  */
 
 /**
+ * Role-specific application sheet metadata.
+ */
+const APPLICATION_SOURCE_CONFIGS = [
+  { role: 'filer', roleLabel: 'Filer', sheetName: 'Filer Applications', dataColCount: 13, emailCol: 4, firstCol: 1, prefCol: 2, lastCol: 3 },
+  { role: 'frontline', roleLabel: 'Frontline', sheetName: 'Frontline Applications', dataColCount: 13, emailCol: 4, firstCol: 1, prefCol: 2, lastCol: 3 },
+  { role: 'mentor', roleLabel: 'Mentor', sheetName: 'Mentor Applications', dataColCount: 14, emailCol: 1, firstCol: 2, prefCol: 3, lastCol: 4 }
+];
+
+const APPLICATION_LIFECYCLE_HEADERS = [
+  'Decision',
+  'Comment',
+  'Decision Timestamp',
+  'Decision Email Sent At',
+  'Transferred At'
+];
+
+/**
+ * Returns a copy of all application role source configs.
+ * @returns {Object[]}
+ */
+function getAllApplicationSourceConfigs_() {
+  return APPLICATION_SOURCE_CONFIGS.map(function(src) {
+    return {
+      role: src.role,
+      roleLabel: src.roleLabel,
+      sheetName: src.sheetName,
+      dataColCount: src.dataColCount,
+      emailCol: src.emailCol,
+      firstCol: src.firstCol,
+      prefCol: src.prefCol,
+      lastCol: src.lastCol
+    };
+  });
+}
+
+/**
+ * Returns application source config by role.
+ * @param {string} role
+ * @returns {Object}
+ */
+function getApplicationSourceConfig_(role) {
+  var key = (role || '').toString().trim().toLowerCase();
+  for (var i = 0; i < APPLICATION_SOURCE_CONFIGS.length; i++) {
+    if (APPLICATION_SOURCE_CONFIGS[i].role === key) return APPLICATION_SOURCE_CONFIGS[i];
+  }
+  return null;
+}
+
+/**
+ * Ensures lifecycle metadata columns exist for an application sheet.
+ * @param {Sheet} sheet
+ * @param {number} dataColCount
+ */
+function ensureApplicationLifecycleColumns_(sheet, dataColCount) {
+  for (var i = 0; i < APPLICATION_LIFECYCLE_HEADERS.length; i++) {
+    var col = dataColCount + 1 + i; // 1-based sheet index
+    if (!sheet.getRange(1, col).getValue()) {
+      sheet.getRange(1, col).setValue(APPLICATION_LIFECYCLE_HEADERS[i]).setFontWeight('bold');
+    }
+  }
+}
+
+/**
+ * Returns lifecycle-related column indexes.
+ * @param {number} dataColCount
+ * @returns {Object}
+ */
+function getApplicationLifecycleColumns_(dataColCount) {
+  return {
+    decisionCol: dataColCount + 1,
+    commentCol: dataColCount + 2,
+    decisionTimestampCol: dataColCount + 3,
+    decisionEmailSentAtCol: dataColCount + 4,
+    transferredAtCol: dataColCount + 5,
+    decisionIdx: dataColCount,
+    commentIdx: dataColCount + 1,
+    decisionTimestampIdx: dataColCount + 2,
+    decisionEmailSentAtIdx: dataColCount + 3,
+    transferredAtIdx: dataColCount + 4
+  };
+}
+
+/**
+ * Formats date-like values for UI output.
+ * @param {*} value
+ * @returns {string}
+ */
+function formatApplicationDateTime_(value) {
+  if (!value) return '';
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value)) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'M/d/yyyy h:mm a');
+  }
+  return value.toString().trim();
+}
+
+/**
  * Saves a volunteer application to the appropriate sheet based on role.
  * Called by doPost() in Router.gs when action=volunteerApplication.
  *
@@ -176,35 +272,29 @@ function getOrCreateVolunteerApplicationsSheet() {
  * @returns {Object[]}
  */
 function getVolunteerApplications(role) {
-  role = (role || '').trim().toLowerCase();
-
-  var sheetName, dataColCount;
-  if (role === 'filer') {
-    sheetName = 'Filer Applications';
-    dataColCount = 13;
-  } else if (role === 'frontline') {
-    sheetName = 'Frontline Applications';
-    dataColCount = 13;
-  } else if (role === 'mentor') {
-    sheetName = 'Mentor Applications';
-    dataColCount = 14;
-  } else {
-    throw new Error('Unknown role: ' + role);
-  }
+  var src = getApplicationSourceConfig_(role);
+  if (!src) throw new Error('Unknown role: ' + role);
 
   var ss = getSpreadsheet();
-  var sheet = ss.getSheetByName(sheetName);
+  var sheet = ss.getSheetByName(src.sheetName);
   if (!sheet) return [];
+
+  ensureApplicationLifecycleColumns_(sheet, src.dataColCount);
 
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
 
   var lastCol = sheet.getLastColumn();
-  var numCols = Math.max(lastCol, dataColCount);
+  var numCols = Math.max(lastCol, src.dataColCount + APPLICATION_LIFECYCLE_HEADERS.length);
   var data = sheet.getRange(2, 1, lastRow - 1, numCols).getValues();
 
-  var decisionColIdx = dataColCount;      // 0-based index into row array
-  var commentColIdx  = dataColCount + 1;
+  var lifecycle = getApplicationLifecycleColumns_(src.dataColCount);
+
+  var decisionColIdx = lifecycle.decisionIdx;
+  var commentColIdx = lifecycle.commentIdx;
+  var decisionTimestampColIdx = lifecycle.decisionTimestampIdx;
+  var decisionEmailSentAtColIdx = lifecycle.decisionEmailSentAtIdx;
+  var transferredAtColIdx = lifecycle.transferredAtIdx;
 
   var applications = [];
   for (var i = 0; i < data.length; i++) {
@@ -214,11 +304,20 @@ function getVolunteerApplications(role) {
     var status  = numCols > decisionColIdx ? (row[decisionColIdx] || '').toString().trim() : '';
     var comment = numCols > commentColIdx  ? (row[commentColIdx]  || '').toString().trim() : '';
 
-    var app = { rowIndex: i + 2, status: status, comment: comment };
+    var app = {
+      rowIndex: i + 2,
+      role: src.role,
+      roleLabel: src.roleLabel,
+      status: status,
+      comment: comment,
+      decisionTimestamp: numCols > decisionTimestampColIdx ? formatApplicationDateTime_(row[decisionTimestampColIdx]) : '',
+      decisionEmailSentAt: numCols > decisionEmailSentAtColIdx ? formatApplicationDateTime_(row[decisionEmailSentAtColIdx]) : '',
+      transferredAt: numCols > transferredAtColIdx ? formatApplicationDateTime_(row[transferredAtColIdx]) : ''
+    };
 
     var ts = row[0] ? Utilities.formatDate(new Date(row[0]), Session.getScriptTimeZone(), 'M/d/yyyy h:mm a') : '';
 
-    if (role === 'filer' || role === 'frontline') {
+    if (src.role === 'filer' || src.role === 'frontline') {
       app.timestamp         = ts;
       app.firstName         = (row[1]  || '').toString().trim();
       app.preferredName     = (row[2]  || '').toString().trim();
@@ -285,37 +384,38 @@ function saveApplicationDecision(params) {
       return { success: false, message: 'Decision must be Accept or Reject.' };
     }
 
-    var sheetName, dataColCount;
-    if (role === 'filer') {
-      sheetName = 'Filer Applications';
-      dataColCount = 13;
-    } else if (role === 'frontline') {
-      sheetName = 'Frontline Applications';
-      dataColCount = 13;
-    } else if (role === 'mentor') {
-      sheetName = 'Mentor Applications';
-      dataColCount = 14;
-    } else {
+    var src = getApplicationSourceConfig_(role);
+    if (!src) {
       return { success: false, message: 'Unknown role: ' + role };
     }
 
     var ss    = getSpreadsheet();
-    var sheet = ss.getSheetByName(sheetName);
-    if (!sheet) return { success: false, message: 'Sheet not found: ' + sheetName };
+    var sheet = ss.getSheetByName(src.sheetName);
+    if (!sheet) return { success: false, message: 'Sheet not found: ' + src.sheetName };
 
-    var decisionCol = dataColCount + 1; // 1-based
-    var commentCol  = dataColCount + 2;
+    ensureApplicationLifecycleColumns_(sheet, src.dataColCount);
 
-    // Write headers if missing (idempotent)
-    if (!sheet.getRange(1, decisionCol).getValue()) {
-      sheet.getRange(1, decisionCol).setValue('Decision').setFontWeight('bold');
-      sheet.getRange(1, commentCol).setValue('Comment').setFontWeight('bold');
-    }
+    var lifecycle = getApplicationLifecycleColumns_(src.dataColCount);
+    var decisionCol = lifecycle.decisionCol;
+    var commentCol = lifecycle.commentCol;
+    var decisionTimestampCol = lifecycle.decisionTimestampCol;
+    var decisionEmailSentAtCol = lifecycle.decisionEmailSentAtCol;
+    var transferredAtCol = lifecycle.transferredAtCol;
+
+    var previousDecision = (sheet.getRange(rowIndex, decisionCol).getValue() || '').toString().trim();
+    var decisionChanged = previousDecision && previousDecision !== decision;
 
     sheet.getRange(rowIndex, decisionCol).setValue(decision);
     sheet.getRange(rowIndex, commentCol).setValue(comment);
+    sheet.getRange(rowIndex, decisionTimestampCol).setValue(new Date());
 
-    Logger.log('Application decision saved: role=' + role + ', row=' + rowIndex + ', decision=' + decision);
+    // If decision changed, clear downstream markers so batch actions can rerun cleanly.
+    if (decisionChanged || decision === 'Reject') {
+      sheet.getRange(rowIndex, decisionEmailSentAtCol).setValue('');
+      sheet.getRange(rowIndex, transferredAtCol).setValue('');
+    }
+
+    Logger.log('Application decision saved: role=' + role + ', row=' + rowIndex + ', decision=' + decision + ', changed=' + decisionChanged);
     return { success: true, message: 'Decision saved.' };
 
   } catch (err) {
