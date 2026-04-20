@@ -176,6 +176,10 @@ function updateVolunteerProfile(name, firstName, lastName, newEmail) {
     throw new Error('Volunteer not found in Consolidated Volunteer List.');
   }
 
+  const rosterRowData = rosterData[rosterMatchRow - 2];
+  const previousEmail = normalizeEmail(rosterRowData[cols.EMAIL] || '');
+  const volunteerRole = (rosterRowData[cols.ROLE] || '').toString().trim();
+
   const newDisplayName = `${newFirstName} ${newLastName}`.trim().toLowerCase();
   for (let i = 0; i < rosterData.length; i++) {
     const row = rosterData[i];
@@ -216,13 +220,18 @@ function updateVolunteerProfile(name, firstName, lastName, newEmail) {
         const currentFirst = (row[1] || '').toString().trim().toLowerCase();
         const currentLast = (row[2] || '').toString().trim().toLowerCase();
         if (currentFirst === rosterFirstName.toLowerCase() && currentLast === rosterLastName.toLowerCase()) {
-          const currentRowEmail = normalizeEmail(row[3] || '');
           availabilitySheet.getRange(i + 2, 2).setValue(newFirstName);
           availabilitySheet.getRange(i + 2, 3).setValue(newLastName);
           availabilitySheet.getRange(i + 2, 4).setValue(normalizedEmail);
           updatedRows++;
         }
       }
+    }
+
+    try {
+      syncVolunteerOnboardingIdentity(previousEmail, normalizedEmail, `${newFirstName} ${newLastName}`.trim(), volunteerRole);
+    } catch (syncErr) {
+      Logger.log('syncVolunteerOnboardingIdentity error: ' + syncErr.message);
     }
 
     const message = `Profile updated for ${newFirstName} ${newLastName}. ${updatedRows} availability row${updatedRows === 1 ? '' : 's'} updated.`;

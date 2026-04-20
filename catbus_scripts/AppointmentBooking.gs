@@ -145,12 +145,15 @@ function sendAppointmentConfirmation(data) {
   try {
     const emailBody = buildConfirmationEmailBody(data);
     const subject = `Tax Clinic Appointment Confirmation - ${data.clientId}`;
+  const inviteAttachment = createAppointmentInviteBlob(data);
 
     sendEmail({
       to: data.email,
       subject: subject,
+      body: `Your appointment is confirmed for ${data.preferredDate} at ${data.preferredTime}. Please see the attached calendar invite.`,
       htmlBody: emailBody,
-      name: 'UW AFSA Tax Clinic'
+      name: 'UW AFSA Tax Clinic',
+      attachments: [inviteAttachment]
     }, 'sendAppointmentConfirmation');
 
     Logger.log(`Confirmation email sent to ${data.email} for ${data.clientId}`);
@@ -245,6 +248,102 @@ function buildConfirmationEmailBody(data) {
       </body>
     </html>
   `;
+}
+
+/**
+ * Constructs an .ics calendar invite blob for the appointment.
+ * @param {Object} data
+ * @returns {Blob}
+ */
+function createAppointmentInviteBlob(data) {
+  const startDate = parseAppointmentDateTime(data.preferredDate, data.preferredTime);
+  const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 hour default duration
+
+  const dtstamp = formatIcsDateTime(new Date());
+  const dtstart = formatIcsDateTime(startDate);
+  const dtend = formatIcsDateTime(endDate);
+  const uidDomain = (CONFIG.CLINIC_WEBSITE_URL || 'taxclinic.uwaterloo.ca')
+    .replace(/^https?:\/\//, '')
+    .replace(/[^a-zA-Z0-9.-]/g, '') || 'taxclinic.uwaterloo.ca';
+  const uid = `${data.clientId}-${Date.now()}@${uidDomain}`;
+  const location = getLocationForDate(data.preferredDate).room;
+
+  const description = `Appointment at UW AFSA Tax Clinic\nClient ID: ${data.clientId}\nDate: ${data.preferredDate}\nTime: ${data.preferredTime}\nLocation: ${location}\n\nPlease bring photo ID, SIN/ITN, tax slips, and supporting documents.`;
+
+  const icsLines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//UW AFSA Tax Clinic//Appointment Invite//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:REQUEST',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${dtstamp}`,
+    `DTSTART:${dtstart}`,
+    `DTEND:${dtend}`,
+    'SUMMARY:UW AFSA Tax Clinic Appointment',
+    `DESCRIPTION:${escapeIcsText(description)}`,
+    `LOCATION:${escapeIcsText(location)}`,
+    `ORGANIZER;CN=UW AFSA Tax Clinic:mailto:${CONFIG.CLINIC_EMAIL}`,
+    `ATTENDEE;CN=Client;RSVP=TRUE:mailto:${data.email}`,
+    'SEQUENCE:0',
+    'STATUS:CONFIRMED',
+    'TRANSP:OPAQUE',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ];
+
+  const icsContent = icsLines.join('\r\n');
+  return Utilities.newBlob(icsContent, 'text/calendar;charset=utf-8', `${data.clientId}-appointment.ics`);
+}
+
+/**
+ * Formats a Date object for ICS as UTC timestamp.
+ * @param {Date} date
+ * @returns {string}
+ */
+function formatIcsDateTime(date) {
+  return Utilities.formatDate(date, 'GMT', "yyyyMMdd'T'HHmmss'Z'");
+}
+
+/**
+ * Parses preferred date and time strings into a Date object.
+ * @param {string} dateStr
+ * @param {string} timeStr
+ * @returns {Date}
+ */
+function parseAppointmentDateTime(dateStr, timeStr) {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) {
+    return new Date();
+  }
+
+  let hours = 0;
+  let minutes = 0;
+  const timeMatch = (timeStr || '').match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+  if (timeMatch) {
+    hours = parseInt(timeMatch[1], 10);
+    minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+    const period = timeMatch[3] ? timeMatch[3].toUpperCase() : null;
+    if (period === 'PM' && hours < 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+  }
+
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+
+/**
+ * Escapes text for use in ICS fields.
+ * @param {string} value
+ * @returns {string}
+ */
+function escapeIcsText(value) {
+  return String(value || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\n/g, '\\n');
 }
 
 

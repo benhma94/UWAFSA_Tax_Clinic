@@ -615,6 +615,80 @@
     }
     .availability-slot input[type="checkbox"] { width: auto; margin: 0; }
 
+    /* ===== Onboarding To-Do ===== */
+    .todo-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 0.92em;
+      color: #555;
+    }
+    body.dark .todo-summary { color: #bbb; }
+    .todo-progress-chip {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.85em;
+      border: 1px solid var(--border-light);
+      background: rgba(142, 0, 0, 0.06);
+      color: var(--accent-color);
+    }
+    body.dark .todo-progress-chip {
+      border-color: var(--border-dark);
+      background: rgba(142, 0, 0, 0.18);
+    }
+    .todo-list {
+      display: grid;
+      gap: 10px;
+    }
+    .todo-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 10px;
+      align-items: flex-start;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(142, 0, 0, 0.04);
+    }
+    body.dark .todo-item {
+      border-color: var(--border-dark);
+      background: rgba(142, 0, 0, 0.12);
+    }
+    .todo-item input[type="checkbox"] {
+      width: auto;
+      margin-top: 3px;
+      transform: scale(1.1);
+      accent-color: var(--accent-color);
+    }
+    .todo-item-title {
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+    .todo-item-desc {
+      font-size: 0.9em;
+      color: #666;
+      margin: 0;
+    }
+    body.dark .todo-item-desc { color: #bbb; }
+    .todo-item-meta {
+      margin-top: 6px;
+      font-size: 0.84em;
+      color: #666;
+    }
+    body.dark .todo-item-meta { color: #aaa; }
+    .todo-item.completed .todo-item-title {
+      text-decoration: line-through;
+      opacity: 0.8;
+    }
+    .todo-item.completed .todo-item-desc {
+      opacity: 0.75;
+    }
+
     /* ===== Mobile ===== */
     @media (max-width: 768px) {
       body { padding: 10px; }
@@ -632,6 +706,7 @@
       .credential-input-wrap { width: 100%; }
       .availability-actions { flex-direction: column; }
       .btn-avail-action { width: 100%; }
+      .todo-summary { flex-direction: column; align-items: flex-start; }
       .footer-copyright { font-size: 9px; }
     }
   </style>
@@ -701,6 +776,7 @@
     <button type="button" class="tab-btn" role="tab" data-tab="availability" onclick="switchTab('availability')">🗓️ Availability</button>
     <button type="button" class="tab-btn active" role="tab" data-tab="schedule" onclick="switchTab('schedule')">📅 My Schedule</button>
     <button type="button" class="tab-btn" role="tab" data-tab="stats" onclick="switchTab('stats')">📊 My Stats</button>
+    <button type="button" class="tab-btn" role="tab" data-tab="todo" onclick="switchTab('todo')">✅ To-Do List</button>
     <button type="button" class="tab-btn" role="tab" data-tab="credentials" onclick="switchTab('credentials')">🔑 My Credentials</button>
   </nav>
 
@@ -832,6 +908,20 @@
     </div>
   </div>
 
+  <!-- ===== To-Do List Tab ===== -->
+  <div id="tab-todo" class="tab-panel" role="tabpanel">
+    <p class="empty-state" id="todoEmptyState">Search for your name above to view your onboarding tasks.</p>
+    <div class="section-box" id="todoSectionBox" style="display:none;">
+      <h3>Volunteer Onboarding To-Do List</h3>
+      <div class="todo-summary">
+        <div id="todoSummaryText">Complete the required onboarding steps below.</div>
+        <span class="todo-progress-chip" id="todoProgressChip">0 / 0 complete</span>
+      </div>
+      <div id="todoList" class="todo-list"></div>
+      <div id="todoFeedback" class="creds-feedback"></div>
+    </div>
+  </div>
+
   <!-- ===== My Credentials Tab ===== -->
   <div id="tab-credentials" class="tab-panel" role="tabpanel">
     <p class="empty-state" id="credentialsEmptyState">Search for your name above to view your credentials.</p>
@@ -858,6 +948,7 @@
   let currentVolunteerEmail = '';
   let currentVolunteerFirstName = '';
   let currentVolunteerLastName = '';
+  let currentVolunteerTodoTasks = [];
 
   window.addEventListener('load', () => {
     loadVolunteerNames();
@@ -950,6 +1041,11 @@
     document.getElementById('availabilitySectionBox').style.display = 'none';
     document.getElementById('availabilityEmptyState').style.display = '';
     document.getElementById('availabilityFeedback').innerHTML = '';
+    document.getElementById('todoSectionBox').style.display = 'none';
+    document.getElementById('todoEmptyState').style.display = '';
+    document.getElementById('todoList').innerHTML = '';
+    document.getElementById('todoFeedback').innerHTML = '';
+    document.getElementById('todoProgressChip').textContent = '0 / 0 complete';
     document.getElementById('credentialsSectionBox').style.display = 'none';
     document.getElementById('credentialsEmptyState').style.display = '';
     currentVolunteerName = '';
@@ -957,6 +1053,7 @@
     currentVolunteerEmail = '';
     currentVolunteerFirstName = '';
     currentVolunteerLastName = '';
+    currentVolunteerTodoTasks = [];
     renderVolunteerProfileSummary();
   }
 
@@ -1004,6 +1101,14 @@
     document.getElementById('credentialsContent').innerHTML =
       '<span class="loading-inline"></span> Loading credentials…';
 
+    // Show to-do loading
+    document.getElementById('todoEmptyState').style.display = 'none';
+    document.getElementById('todoSectionBox').style.display = 'block';
+    document.getElementById('todoProgressChip').textContent = '...';
+    document.getElementById('todoSummaryText').textContent = 'Loading onboarding checklist...';
+    document.getElementById('todoList').innerHTML = '<div class="empty-state"><span class="loading-inline"></span> Loading to-do list...</div>';
+    document.getElementById('todoFeedback').innerHTML = '';
+
     google.script.run
       .withSuccessHandler(result => displayScheduleResults(result, searchTerm))
       .withFailureHandler(err => {
@@ -1042,7 +1147,115 @@
     // Load stats and credentials in parallel
     refreshStats();
     loadAvailabilityForVolunteer();
+    loadVolunteerTodoChecklist();
     loadCredentialStatus();
+  }
+
+  // ── To-Do List ────────────────────────────────────────────────────────────
+
+  function loadVolunteerTodoChecklist() {
+    if (!currentVolunteerName) return;
+
+    document.getElementById('todoEmptyState').style.display = 'none';
+    document.getElementById('todoSectionBox').style.display = '';
+    document.getElementById('todoSummaryText').textContent = 'Loading onboarding checklist...';
+    document.getElementById('todoProgressChip').textContent = '...';
+    document.getElementById('todoList').innerHTML = '<div class="empty-state"><span class="loading-inline"></span> Loading to-do list...</div>';
+    document.getElementById('todoFeedback').innerHTML = '';
+
+    google.script.run
+      .withSuccessHandler(renderVolunteerTodoChecklist)
+      .withFailureHandler(err => {
+        document.getElementById('todoList').innerHTML = `<div class="empty-state">Could not load to-do list: ${escapeHtml(err.message || String(err))}</div>`;
+        document.getElementById('todoSummaryText').textContent = 'Unable to load tasks.';
+        document.getElementById('todoProgressChip').textContent = '0 / 0 complete';
+      })
+      .getVolunteerOnboardingChecklist(currentVolunteerName, currentVolunteerRole);
+  }
+
+  function renderVolunteerTodoChecklist(payload) {
+    const todoList = document.getElementById('todoList');
+    const summary = document.getElementById('todoSummaryText');
+    const chip = document.getElementById('todoProgressChip');
+    const feedback = document.getElementById('todoFeedback');
+
+    currentVolunteerTodoTasks = payload && Array.isArray(payload.tasks) ? payload.tasks : [];
+
+    const completedCount = payload && typeof payload.completedCount === 'number'
+      ? payload.completedCount
+      : currentVolunteerTodoTasks.filter(task => task.isComplete).length;
+    const totalCount = payload && typeof payload.totalCount === 'number'
+      ? payload.totalCount
+      : currentVolunteerTodoTasks.length;
+
+    chip.textContent = `${completedCount} / ${totalCount} complete`;
+    summary.textContent = totalCount
+      ? 'Mark items as complete as you finish each onboarding step.'
+      : 'No onboarding tasks are required for this role.';
+
+    todoList.innerHTML = '';
+    feedback.innerHTML = '';
+
+    if (!currentVolunteerTodoTasks.length) {
+      todoList.innerHTML = '<div class="empty-state">No onboarding tasks to display.</div>';
+      return;
+    }
+
+    currentVolunteerTodoTasks.forEach(task => {
+      const item = document.createElement('div');
+      item.className = 'todo-item' + (task.isComplete ? ' completed' : '');
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = !!task.isComplete;
+      checkbox.setAttribute('aria-label', task.label || 'Checklist item');
+      checkbox.addEventListener('change', () => {
+        toggleVolunteerTodoTask(task.taskKey, checkbox.checked, checkbox);
+      });
+
+      const content = document.createElement('div');
+      const title = document.createElement('p');
+      title.className = 'todo-item-title';
+      title.textContent = task.label || 'Untitled task';
+
+      const description = document.createElement('p');
+      description.className = 'todo-item-desc';
+      description.textContent = task.description || '';
+
+      content.appendChild(title);
+      content.appendChild(description);
+
+      if (task.completedAt) {
+        const meta = document.createElement('div');
+        meta.className = 'todo-item-meta';
+        meta.textContent = `Completed: ${task.completedAt}`;
+        content.appendChild(meta);
+      }
+
+      item.appendChild(checkbox);
+      item.appendChild(content);
+      todoList.appendChild(item);
+    });
+  }
+
+  function toggleVolunteerTodoTask(taskKey, isComplete, checkboxEl) {
+    if (!currentVolunteerName || !taskKey) return;
+    if (checkboxEl) checkboxEl.disabled = true;
+
+    google.script.run
+      .withSuccessHandler(() => {
+        if (checkboxEl) checkboxEl.disabled = false;
+        loadVolunteerTodoChecklist();
+        showToast('To-do item updated.', 'success');
+      })
+      .withFailureHandler(err => {
+        if (checkboxEl) {
+          checkboxEl.disabled = false;
+          checkboxEl.checked = !isComplete;
+        }
+        document.getElementById('todoFeedback').innerHTML = `<span style="color:#e74c3c;">Error: ${escapeHtml(err.message || String(err))}</span>`;
+      })
+      .setVolunteerOnboardingTaskComplete(currentVolunteerName, taskKey, !!isComplete, currentVolunteerRole);
   }
 
   function getScheduleDayLabels() {
@@ -1397,6 +1610,7 @@
         renderVolunteerProfileSummary();
         feedback.innerHTML = `<span style="color:#27ae60;">${escapeHtml(result.message || 'Profile updated successfully.')}</span>`;
         loadAvailabilityForVolunteer();
+        loadVolunteerTodoChecklist();
         showToast('Profile updated.', 'success');
       })
       .withFailureHandler(err => {

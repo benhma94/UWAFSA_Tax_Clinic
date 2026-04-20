@@ -33,6 +33,7 @@ const CONFIG = {
     VOLUNTEER_ALUMNI: 'Volunteer Alumni', // Permanent alumni roster (survives rollforward)
     ACTION_ITEMS: 'Action Items',          // Coordinator to-do list and task tracking
     COORDINATORS: 'Coordinators',          // Coordinator contact list for reminders
+    VOLUNTEER_ONBOARDING: 'Volunteer Onboarding Checklist', // Volunteer onboarding checklist progress
   },
 
   // Clinic contact info (used in emails and public pages)
@@ -139,6 +140,17 @@ const CONFIG = {
       GST: 8,
       NOTES: 9,
       FILE_URLS: 10
+    },
+    VOLUNTEER_ONBOARDING: {
+      EMAIL: 0,
+      VOLUNTEER_NAME: 1,
+      ROLE: 2,
+      TASK_KEY: 3,
+      TASK_LABEL: 4,
+      TASK_DESCRIPTION: 5,
+      IS_COMPLETE: 6,
+      COMPLETED_AT: 7,
+      UPDATED_AT: 8
     }
   },
   
@@ -570,6 +582,33 @@ const ACTION_ITEM_CONFIG = {
   REMINDER_THRESHOLDS: [14, 7, 1],   // days before due date (calendar days)
   SHEET_NAME: 'Action Items',
   COORDINATORS_SHEET_NAME: 'Coordinators'
+};
+
+/**
+ * Configuration for volunteer-facing onboarding checklist tasks.
+ */
+const VOLUNTEER_ONBOARDING_CONFIG = {
+  SHEET_NAME: 'Volunteer Onboarding Checklist',
+  TASKS: {
+    EVERYONE: [
+      {
+        key: 'join_discord',
+        label: 'Join the Tax Clinic Discord',
+        description: 'Join the clinic Discord server to receive announcements and team updates.'
+      },
+      {
+        key: 'sign_up_cvitp',
+        label: 'Sign up for CVITP',
+        description: 'Register for the CRA Community Volunteer Income Tax Program (CVITP).'
+      }
+    ],
+    EFILE_REQUIRED_ROLES: ['filer', 'mentor', 'senior mentor'],
+    EFILE_TASK: {
+      key: 'register_efile',
+      label: 'Register for an EFILE number',
+      description: 'Complete EFILE registration so you can submit tax returns during clinic shifts.'
+    }
+  }
 };
 
 
