@@ -773,12 +773,26 @@
 
   <!-- Tab Navigation -->
   <nav class="tab-nav" role="tablist">
+    <button type="button" class="tab-btn" role="tab" data-tab="todo" onclick="switchTab('todo')">✅ To-Do List</button>
     <button type="button" class="tab-btn" role="tab" data-tab="availability" onclick="switchTab('availability')">🗓️ Availability</button>
     <button type="button" class="tab-btn active" role="tab" data-tab="schedule" onclick="switchTab('schedule')">📅 My Schedule</button>
     <button type="button" class="tab-btn" role="tab" data-tab="stats" onclick="switchTab('stats')">📊 My Stats</button>
-    <button type="button" class="tab-btn" role="tab" data-tab="todo" onclick="switchTab('todo')">✅ To-Do List</button>
     <button type="button" class="tab-btn" role="tab" data-tab="credentials" onclick="switchTab('credentials')">🔑 My Credentials</button>
   </nav>
+
+  <!-- ===== To-Do List Tab ===== -->
+  <div id="tab-todo" class="tab-panel" role="tabpanel">
+    <p class="empty-state" id="todoEmptyState">Search for your name above to view your onboarding tasks.</p>
+    <div class="section-box" id="todoSectionBox" style="display:none;">
+      <h3>Volunteer Onboarding To-Do List</h3>
+      <div class="todo-summary">
+        <div id="todoSummaryText">Complete the required onboarding steps below.</div>
+        <span class="todo-progress-chip" id="todoProgressChip">0 / 0 complete</span>
+      </div>
+      <div id="todoList" class="todo-list"></div>
+      <div id="todoFeedback" class="creds-feedback"></div>
+    </div>
+  </div>
 
   <!-- ===== My Schedule Tab ===== -->
   <div id="tab-schedule" class="tab-panel active" role="tabpanel">
@@ -1208,10 +1222,13 @@
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.checked = !!task.isComplete;
+      checkbox.disabled = task.selfComplete === false;
       checkbox.setAttribute('aria-label', task.label || 'Checklist item');
-      checkbox.addEventListener('change', () => {
-        toggleVolunteerTodoTask(task.taskKey, checkbox.checked, checkbox);
-      });
+      if (task.selfComplete !== false) {
+        checkbox.addEventListener('change', () => {
+          toggleVolunteerTodoTask(task.taskKey, checkbox.checked, checkbox);
+        });
+      }
 
       const content = document.createElement('div');
       const title = document.createElement('p');
@@ -1224,6 +1241,15 @@
 
       content.appendChild(title);
       content.appendChild(description);
+
+      if (task.selfComplete === false) {
+        const note = document.createElement('div');
+        note.className = 'todo-item-meta';
+        note.textContent = task.isComplete
+          ? 'This task is complete because your training attendance has been recorded.'
+          : 'This task is completed automatically when training attendance is recorded at the Training station.';
+        content.appendChild(note);
+      }
 
       if (task.completedAt) {
         const meta = document.createElement('div');

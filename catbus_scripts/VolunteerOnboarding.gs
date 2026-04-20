@@ -63,7 +63,87 @@ function getOnboardingTasksForRole_(role) {
   if (efileRoles.indexOf(roleKey) !== -1) {
     everyone.push(VOLUNTEER_ONBOARDING_CONFIG.TASKS.EFILE_TASK);
   }
+  if (roleKey === 'filer') {
+    const filerTasks = VOLUNTEER_ONBOARDING_CONFIG.TASKS.FILER_ONLY || [];
+    for (let i = 0; i < filerTasks.length; i++) {
+      everyone.push(filerTasks[i]);
+    }
+  }
   return everyone;
+}
+
+function hasVolunteerTrainingAttendance_(identity) {
+  if (!identity || !identity.name) return false;
+
+  const normalizedName = identity.name.toString().trim().toLowerCase();
+  if (!normalizedName) return false;
+
+  // Check consolidated roster attendedTraining flag if available
+  try {
+    const volunteers = getConsolidatedVolunteerList_();
+    const volunteer = volunteers.find(v => normalizeEmail(v.email) === normalizeEmail(identity.email));
+    if (volunteer && parseOnboardingBool_(volunteer.attendedTraining)) {
+      return true;
+    }
+  } catch (e) {
+    Logger.log('hasVolunteerTrainingAttendance_ roster check failed: ' + e.message);
+  }
+
+  // Check live volunteer sign-ins for training station attendance
+  try {
+    const sheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
+    const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
+    const lastRow = sheet.getLastRow();
+    const rows = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 5).getValues() : [];
+    const signedOutSessions = new Set(
+      signOutSheet.getLastRow() > 1
+        ? signOutSheet.getRange(2, 1, signOutSheet.getLastRow() - 1, 3).getValues().map(r => (r[CONFIG.COLUMNS.SIGNOUT.SESSION_ID] || '').toString().trim())
+        : []
+    );
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const name = (row[CONFIG.COLUMNS.VOLUNTEER_LIST.NAME] || '').toString().trim();
+      const station = (row[CONFIG.COLUMNS.VOLUNTEER_LIST.STATION] || '').toString().trim().toLowerCase();
+      const sessionId = (row[CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID] || '').toString().trim();
+      if (!name || !sessionId) continue;
+      if (name.toLowerCase() !== normalizedName) continue;
+      if (station !== 'training') continue;
+      if (signedOutSessions.has(sessionId)) continue;
+      return true;
+    }
+  } catch (e) {
+    Logger.log('hasVolunteerTrainingAttendance_ sign-in check failed: ' + e.message);
+  }
+
+  return false;
+}
+
+function hasVolunteerPassedQuiz_(identity) {
+  if (!identity || !identity.name) return false;
+
+  const normalizedName = identity.name.toString().trim().toLowerCase();
+  if (!normalizedName) return false;
+
+  try {
+    const sheet = getSheet(CONFIG.SHEETS.QUIZ_SUBMISSIONS);
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return false;
+
+    const cols = CONFIG.COLUMNS.QUIZ_SUBMISSIONS;
+    const data = sheet.getRange(2, cols.VOLUNTEER + 1, lastRow - 1, cols.FILE_URLS + 1).getValues();
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const name = (row[cols.VOLUNTEER] || '').toString().trim().toLowerCase();
+      const status = (row[cols.STATUS] || '').toString().trim().toUpperCase();
+      if (name !== normalizedName) continue;
+      if (status === 'PASS') return true;
+    }
+  } catch (e) {
+    Logger.log('hasVolunteerPassedQuiz_ failed: ' + e.message);
+  }
+
+  return false;
 }
 
 function ensureVolunteerOnboardingRows_(identity, tasks) {
@@ -153,6 +233,39 @@ function getVolunteerOnboardingChecklist(volunteerName, volunteerRole) {
       };
     }
 
+    const trainingAttended = hasVolunteerTrainingAttendance_(identity);
+    const quizPassed = hasVolunteerPassedQuiz_(identity);
+
+    if (trainingAttended && rowByTaskKey['attend_training']) {
+      const entry = rowByTaskKey['attend_training'];
+      const row = entry.row;
+      const isComplete = parseOnboardingBool_(row[cols.IS_COMPLETE]);
+      if (!isComplete) {
+        const now = new Date();
+        const rowIndex = entry.rowIndex;
+        sheet.getRange(rowIndex, cols.IS_COMPLETE + 1).setValue(true);
+        sheet.getRange(rowIndex, cols.COMPLETED_AT + 1).setValue(now);
+        sheet.getRange(rowIndex, cols.UPDATED_AT + 1).setValue(now);
+        row[cols.IS_COMPLETE] = true;
+        row[cols.COMPLETED_AT] = now;
+      }
+    }
+
+    if (quizPassed && rowByTaskKey['pass_quiz']) {
+      const entry = rowByTaskKey['pass_quiz'];
+      const row = entry.row;
+      const isComplete = parseOnboardingBool_(row[cols.IS_COMPLETE]);
+      if (!isComplete) {
+        const now = new Date();
+        const rowIndex = entry.rowIndex;
+        sheet.getRange(rowIndex, cols.IS_COMPLETE + 1).setValue(true);
+        sheet.getRange(rowIndex, cols.COMPLETED_AT + 1).setValue(now);
+        sheet.getRange(rowIndex, cols.UPDATED_AT + 1).setValue(now);
+        row[cols.IS_COMPLETE] = true;
+        row[cols.COMPLETED_AT] = now;
+      }
+    }
+
     const resultTasks = tasks.map(task => {
       const entry = rowByTaskKey[task.key];
       const row = entry ? entry.row : null;
@@ -167,6 +280,7 @@ function getVolunteerOnboardingChecklist(volunteerName, volunteerRole) {
         description: task.description,
         isComplete: isComplete,
         completedAt: completedAt,
+        selfComplete: task.selfComplete !== false,
         rowIndex: entry ? entry.rowIndex : null
       };
     });
@@ -190,9 +304,12 @@ function setVolunteerOnboardingTaskComplete(volunteerName, taskKey, isComplete, 
 
     const identity = resolveVolunteerOnboardingIdentity_(volunteerName, volunteerRole);
     const tasks = getOnboardingTasksForRole_(identity.role);
-    const taskExists = tasks.some(task => task.key === normalizedTaskKey);
-    if (!taskExists) {
+    const task = tasks.find(task => task.key === normalizedTaskKey);
+    if (!task) {
       throw new Error('Task not available for this role.');
+    }
+    if (task.selfComplete === false) {
+      throw new Error('This task cannot be marked complete manually. Attendance must be recorded by the training team.');
     }
 
     ensureVolunteerOnboardingRows_(identity, tasks);

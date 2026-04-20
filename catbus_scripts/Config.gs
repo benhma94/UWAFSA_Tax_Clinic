@@ -594,21 +594,34 @@ const VOLUNTEER_ONBOARDING_CONFIG = {
       {
         key: 'join_discord',
         label: 'Join the Tax Clinic Discord',
-        description: 'Join the clinic Discord server to receive announcements and team updates.'
-      },
-      {
-        key: 'sign_up_cvitp',
-        label: 'Sign up for CVITP',
-        description: 'Register for the CRA Community Volunteer Income Tax Program (CVITP).'
-      }
-    ],
-    EFILE_REQUIRED_ROLES: ['filer', 'mentor', 'senior mentor'],
-    EFILE_TASK: {
-      key: 'register_efile',
-      label: 'Register for an EFILE number',
-      description: 'Complete EFILE registration so you can submit tax returns during clinic shifts.'
-    }
-  }
-};
-
-
+         description: 'Join the clinic Discord server to receive announcements and team updates.',
+         selfComplete: true
+       },
+       {
+         key: 'sign_up_cvitp',
+         label: 'Sign up for CVITP',
+         description: 'Register for the CRA Community Volunteer Income Tax Program (CVITP).',
+         selfComplete: true
+       }
+     ],
+     EFILE_REQUIRED_ROLES: ['filer', 'mentor', 'senior mentor'],
+     EFILE_TASK: {
+       key: 'register_efile',
+       label: 'Register for an EFILE number',
+       description: 'Complete EFILE registration so you can submit tax returns during clinic shifts.',
+       selfComplete: true
+     },
+     FILER_ONLY: [
+       {
+         key: 'attend_training',
+         label: 'Attend mandatory training',
+         description: 'Attend the required training session by signing in at the Training station.',
+         selfComplete: false
+       },
+       {
+         key: 'pass_quiz',
+         label: 'Pass the post-training quiz',
+         description: 'This task is automatically completed when you pass the quiz.',
+         selfComplete: false
+       }
+     ]
