@@ -870,6 +870,7 @@
     google.script.run
       .withSuccessHandler(config => {
         SHIFT_CONFIG.TIME_SLOTS = config.timeSlots;
+        SHIFT_CONFIG.DAY_LABELS = config.dayLabels;
         availabilityTimeSlots = Object.keys(config.timeSlots || {}).map(slotKey => ({
           id: slotKey,
           label: config.timeSlots[slotKey].display
@@ -1179,16 +1180,44 @@
   }
 
   function parseDateFromLabel(label) {
-    const regex = /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})\b/i;
-    const match = (label || '').match(regex);
+    if (!label || typeof label !== 'string') return null;
+    const trimmed = label.trim();
+
+    const fullRegex = /^(?:[A-Za-z]{3,9},?\s*)?([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})$/i;
+    const partialRegex = /^(?:[A-Za-z]{3,9},?\s*)?([A-Za-z]+)\s+(\d{1,2})$/i;
+
+    let match = trimmed.match(fullRegex);
     if (match) {
       const month = match[1];
       const day = parseInt(match[2], 10);
       const year = parseInt(match[3], 10);
-      return new Date(`${month} ${day}, ${year}`);
+      const result = new Date(`${month} ${day}, ${year}`);
+      return isNaN(result.getTime()) ? null : result;
     }
-    const fallback = new Date(label);
+
+    match = trimmed.match(partialRegex);
+    if (match) {
+      const month = match[1];
+      const day = parseInt(match[2], 10);
+      const year = getScheduleYearFromLabels(month, day) || new Date().getFullYear();
+      const result = new Date(`${month} ${day}, ${year}`);
+      return isNaN(result.getTime()) ? null : result;
+    }
+
+    const fallback = new Date(trimmed);
     return isNaN(fallback.getTime()) ? null : fallback;
+  }
+
+  function getScheduleYearFromLabels(month, day) {
+    if (!SHIFT_CONFIG.DAY_LABELS || !SHIFT_CONFIG.DAY_LABELS.length) return null;
+    const pattern = new RegExp(`\\b${month}\\s+${day},?\\s*(\\d{4})?\\b`, 'i');
+    for (const label of SHIFT_CONFIG.DAY_LABELS) {
+      const match = (label || '').match(pattern);
+      if (match && match[1]) {
+        return parseInt(match[1], 10);
+      }
+    }
+    return null;
   }
 
   function applyTimeToDate(date, timeString) {

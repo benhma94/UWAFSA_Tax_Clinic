@@ -480,9 +480,10 @@ function simplifyDateFormat(dateString) {
     return dateString; // Can't parse, return original
   }
 
-  const dayOfWeek = parts[0]; // "Saturday"
-  const month = parts[1];      // "March"
+  const dayOfWeek = parts[0].replace(/,+$/, ''); // "Saturday"
+  const month = parts[1].replace(/,+$/, '');      // "March"
   const day = parts[2].replace(/,+$/, ''); // "21" (strip trailing comma if present)
+  const year = parts[3] ? parts[3].replace(/,+$/, '') : '';
 
   // Abbreviate day of week (first 3 characters)
   const dayAbbr = dayOfWeek.substring(0, 3);
@@ -490,7 +491,9 @@ function simplifyDateFormat(dateString) {
   // Abbreviate month (first 3 characters)
   const monthAbbr = month.substring(0, 3);
 
-  return `${dayAbbr}, ${monthAbbr} ${day}`;
+  return year
+    ? `${dayAbbr}, ${monthAbbr} ${day} ${year}`
+    : `${dayAbbr}, ${monthAbbr} ${day}`;
 }
 
 /**
