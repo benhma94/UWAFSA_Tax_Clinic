@@ -157,6 +157,76 @@
     }
     body.dark .data-table td { border-color: var(--border-dark); }
 
+    /* ===== Schedule calendar ===== */
+    .schedule-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .schedule-calendar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .schedule-day-column {
+      background: var(--input-bg-light);
+      border: 1px solid var(--border-light);
+      border-radius: 14px;
+      padding: 16px;
+      min-height: 160px;
+      box-shadow: var(--shadow-light);
+    }
+    body.dark .schedule-day-column {
+      background: var(--input-bg-dark);
+      border-color: var(--border-dark);
+    }
+    .schedule-day-header {
+      font-size: 0.95em;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--accent-color);
+    }
+    .shift-card {
+      background: rgba(142, 0, 0, 0.05);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: grid;
+      gap: 8px;
+      border: 1px solid transparent;
+    }
+    body.dark .shift-card {
+      background: rgba(142, 0, 0, 0.12);
+    }
+    .shift-card .shift-label {
+      font-size: 0.96em;
+      font-weight: 700;
+      color: #333;
+    }
+    body.dark .shift-card .shift-label { color: #fff; }
+    .shift-card .shift-time {
+      font-size: 0.92em;
+      color: #555;
+    }
+    body.dark .shift-card .shift-time { color: #ccc; }
+    .shift-card .download-ics-btn {
+      width: fit-content;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent-color);
+      color: white;
+      cursor: pointer;
+      font-size: 0.9em;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .shift-card .download-ics-btn:hover { background: #6e0000; }
+    .schedule-empty-state { padding: 16px 0; }
+
     /* ===== Section Header ===== */
     .section-header {
       display: flex;
@@ -644,7 +714,12 @@
           <div class="stat-card-value" id="shiftCountVal">–</div>
         </div>
       </div>
-      <div class="data-table-wrap">
+      <div id="scheduleToolbar" class="schedule-toolbar" style="display:none;">
+        <div style="font-weight:600; color: #555;">Your assigned shifts are shown below.</div>
+        <button type="button" class="btn-secondary" id="downloadScheduleBtn" onclick="downloadScheduleIcs()">Download schedule as calendar</button>
+      </div>
+      <div id="scheduleCalendar" class="schedule-calendar" style="display:none;"></div>
+      <div id="scheduleTableWrapper" class="data-table-wrap" style="display:none;">
         <table class="data-table">
           <thead><tr><th>Day</th><th>Time Slot</th></tr></thead>
           <tbody id="scheduleTableBody"></tbody>
@@ -906,8 +981,10 @@
     document.getElementById('scheduleEmptyState').style.display = 'none';
     document.getElementById('scheduleContent').style.display = 'block';
     document.getElementById('shiftCountVal').textContent = '–';
-    document.getElementById('scheduleTableBody').innerHTML =
-      '<tr><td colspan="2" style="padding:16px;"><span class="loading-inline"></span></td></tr>';
+    document.getElementById('scheduleToolbar').style.display = 'none';
+    document.getElementById('scheduleCalendar').style.display = '';
+    document.getElementById('scheduleCalendar').innerHTML = '<div style="padding:16px;"><span class="loading-inline"></span> Loading shifts...</div>';
+    document.getElementById('scheduleTableWrapper').style.display = 'none';
 
     // Show stats loading
     document.getElementById('statsEmptyState').style.display = 'none';
@@ -936,9 +1013,12 @@
       .getVolunteerScheduleByName(searchTerm);
   }
 
+  let currentVolunteerShifts = [];
+
   function displayScheduleResults(result, searchTerm) {
     currentVolunteerName = (result && result.volunteerName) || searchTerm;
     currentVolunteerRole = (result && result.volunteerRole) || '';
+    currentVolunteerShifts = (result && Array.isArray(result.shifts)) ? result.shifts : [];
     const parts = splitProfileName(currentVolunteerName);
     currentVolunteerFirstName = parts.firstName;
     currentVolunteerLastName = parts.lastName;
@@ -955,23 +1035,211 @@
       ? `<span class="volunteer-tag">${escapeHtml(result.volunteerTag)}</span>`
       : '';
 
-    if (!result || !result.shifts || result.shifts.length === 0) {
-      document.getElementById('scheduleTableBody').innerHTML =
-        `<tr><td colspan="2" class="empty-state">No scheduled shifts found for "${escapeHtml(searchTerm)}".</td></tr>`;
-      document.getElementById('shiftCountVal').textContent = '0';
-      document.getElementById('sc-filed').textContent = '—';
-      document.getElementById('sc-totalTime').textContent = '—';
-    } else {
-      document.getElementById('shiftCountVal').textContent = result.shifts.length;
-      document.getElementById('scheduleTableBody').innerHTML = result.shifts.map(shift =>
-        `<tr><td>${escapeHtml(shift.day)}</td><td>${escapeHtml(shift.time)}</td></tr>`
-      ).join('');
-    }
+    document.getElementById('shiftCountVal').textContent = currentVolunteerShifts.length;
+    renderScheduleCalendar(currentVolunteerShifts, searchTerm);
 
     // Load stats and credentials in parallel
     refreshStats();
     loadAvailabilityForVolunteer();
     loadCredentialStatus();
+  }
+
+  function getScheduleDayLabels() {
+    const select = document.getElementById('statsDay');
+    if (!select) return ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
+    const labels = Array.from(select.options).slice(1).map(opt => opt.textContent.trim()).filter(Boolean);
+    return labels.length >= 4 ? labels : ['Day 1', 'Day 2', 'Day 3', 'Day 4'];
+  }
+
+  function renderScheduleCalendar(shifts, searchTerm) {
+    const calendar = document.getElementById('scheduleCalendar');
+    const toolbar = document.getElementById('scheduleToolbar');
+    const tableWrapper = document.getElementById('scheduleTableWrapper');
+    calendar.innerHTML = '';
+    tableWrapper.style.display = 'none';
+
+    if (!shifts || shifts.length === 0) {
+      toolbar.style.display = 'none';
+      calendar.style.display = '';
+      calendar.innerHTML = `<div class="empty-state">No scheduled shifts found for "${escapeHtml(searchTerm)}".</div>`;
+      return;
+    }
+
+    const labels = getScheduleDayLabels();
+    const dayEntries = labels.map(label => ({ label, shifts: [] }));
+    shifts.forEach(shift => {
+      const dayLabel = shift.day || '';
+      const entry = dayEntries.find(d => d.label === dayLabel) || null;
+      if (entry) {
+        entry.shifts.push(shift);
+      } else {
+        dayEntries.push({ label: dayLabel, shifts: [shift] });
+      }
+    });
+
+    dayEntries.forEach(entry => {
+      const column = document.createElement('div');
+      column.className = 'schedule-day-column';
+
+      const header = document.createElement('div');
+      header.className = 'schedule-day-header';
+      header.textContent = entry.label;
+      column.appendChild(header);
+
+      if (entry.shifts.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = 'No assigned shifts.';
+        column.appendChild(empty);
+      } else {
+        entry.shifts.sort((a, b) => (a.shiftId || '').localeCompare(b.shiftId || ''));
+        entry.shifts.forEach(shift => {
+          const card = document.createElement('div');
+          card.className = 'shift-card';
+
+          const label = document.createElement('div');
+          label.className = 'shift-label';
+          label.textContent = `Assigned shift`;
+
+          const time = document.createElement('div');
+          time.className = 'shift-time';
+          time.textContent = shift.time || '';
+
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'download-ics-btn';
+          button.textContent = 'Download event';
+          button.onclick = () => downloadShiftIcs(shift);
+
+          card.appendChild(label);
+          card.appendChild(time);
+          card.appendChild(button);
+          column.appendChild(card);
+        });
+      }
+
+      calendar.appendChild(column);
+    });
+
+    toolbar.style.display = '';
+    calendar.style.display = '';
+  }
+
+  function downloadScheduleIcs() {
+    if (!currentVolunteerShifts || !currentVolunteerShifts.length) {
+      showToast('No scheduled shifts to download.', 'error');
+      return;
+    }
+    const events = currentVolunteerShifts.map(buildIcsEvent).filter(Boolean);
+    if (!events.length) {
+      showToast('Unable to build calendar events.', 'error');
+      return;
+    }
+    const fileName = `Volunteer Schedule ${sanitizeFileName(currentVolunteerName)}.ics`;
+    downloadIcsFile(buildIcsContent(events), fileName);
+  }
+
+  function downloadShiftIcs(shift) {
+    const event = buildIcsEvent(shift);
+    if (!event) {
+      showToast('Unable to build this calendar event.', 'error');
+      return;
+    }
+    const fileName = `Shift ${sanitizeFileName(shift.shiftId || shift.day)}.ics`;
+    downloadIcsFile(buildIcsContent([event]), fileName);
+  }
+
+  function buildIcsEvent(shift) {
+    const dateTimes = parseShiftDateTime(shift.day, shift.time);
+    if (!dateTimes) return null;
+    const summary = `AFSA Tax Clinic shift`;
+    const description = `Assigned shift on ${shift.day} at ${shift.time}`;
+    const dtStamp = formatIcsDate(new Date());
+    return {
+      uid: `${shift.shiftId || sanitizeFileName(shift.day)}-${Date.now()}@uwafsa.taxclinic`,
+      dtStamp,
+      dtStart: formatIcsDate(dateTimes.start),
+      dtEnd: formatIcsDate(dateTimes.end),
+      summary,
+      description
+    };
+  }
+
+  function parseShiftDateTime(dayLabel, timeDisplay) {
+    const timeMatches = (timeDisplay || '').match(/(\d{1,2}:\d{2})\s*(AM|PM)/gi);
+    if (!timeMatches || timeMatches.length < 2) return null;
+    const startTime = timeMatches[0];
+    const endTime = timeMatches[1];
+    const baseDate = parseDateFromLabel(dayLabel);
+    if (!baseDate) return null;
+    const start = applyTimeToDate(baseDate, startTime);
+    const end = applyTimeToDate(baseDate, endTime);
+    if (!start || !end) return null;
+    return { start, end };
+  }
+
+  function parseDateFromLabel(label) {
+    const regex = /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})\b/i;
+    const match = (label || '').match(regex);
+    if (match) {
+      const month = match[1];
+      const day = parseInt(match[2], 10);
+      const year = parseInt(match[3], 10);
+      return new Date(`${month} ${day}, ${year}`);
+    }
+    const fallback = new Date(label);
+    return isNaN(fallback.getTime()) ? null : fallback;
+  }
+
+  function applyTimeToDate(date, timeString) {
+    const match = (timeString || '').match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!match) return null;
+    let hour = parseInt(match[1], 10);
+    const minute = parseInt(match[2], 10);
+    const ampm = match[3].toUpperCase();
+    if (ampm === 'PM' && hour < 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    const result = new Date(date.getTime());
+    result.setHours(hour, minute, 0, 0);
+    return result;
+  }
+
+  function formatIcsDate(date) {
+    const pad = value => value.toString().padStart(2, '0');
+    return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+  }
+
+  function buildIcsContent(events) {
+    const escape = text => (text || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+    let content = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//UW AFSA Tax Clinic//Volunteer Schedule//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n';
+    events.forEach(event => {
+      content += 'BEGIN:VEVENT\r\n';
+      content += `UID:${escape(event.uid)}\r\n`;
+      content += `DTSTAMP:${event.dtStamp}\r\n`;
+      content += `DTSTART:${event.dtStart}\r\n`;
+      content += `DTEND:${event.dtEnd}\r\n`;
+      content += `SUMMARY:${escape(event.summary)}\r\n`;
+      content += `DESCRIPTION:${escape(event.description)}\r\n`;
+      content += 'END:VEVENT\r\n';
+    });
+    content += 'END:VCALENDAR\r\n';
+    return content;
+  }
+
+  function downloadIcsFile(content, fileName) {
+    const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  }
+
+  function sanitizeFileName(value) {
+    return (value || '').replace(/[^a-zA-Z0-9-_\. ]/g, '').trim();
   }
 
   function renderVolunteerProfileSummary() {
