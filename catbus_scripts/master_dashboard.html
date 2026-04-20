@@ -520,17 +520,15 @@
     .toast.success { background: #27ae60; }
     .toast.error { background: var(--accent-color); }
 
-    /* ===== Loading spinner ===== */
+    /* ===== Loading indicator ===== */
     .loading-inline {
       display: inline-block;
-      width: 16px; height: 16px;
-      border: 2px solid #ccc;
-      border-top-color: var(--accent-color);
+      width: 10px; height: 10px;
+      background: var(--accent-color);
       border-radius: 50%;
-      animation: spin 0.7s linear infinite;
       vertical-align: middle;
+      margin-right: 8px;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
     .empty-state { color: #aaa; font-style: italic; font-size: 0.9em; padding: 16px 0; }
   </style>
 </head>
