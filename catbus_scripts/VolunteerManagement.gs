@@ -122,18 +122,23 @@ function updateVolunteerRole(email, newRole) {
 }
 
 /**
- * Updates a volunteer's email in the Consolidated Volunteer List and all matching
+ * Updates a volunteer's profile in the Consolidated Volunteer List and all matching
  * Schedule Availability rows for the same volunteer name.
  *
- * @param {string} name     - Volunteer display name (case-insensitive)
- * @param {string} newEmail - New email address
+ * @param {string} name      - Existing volunteer display name (case-insensitive)
+ * @param {string} firstName - New first name
+ * @param {string} lastName  - New last name
+ * @param {string} newEmail  - New email address
  * @returns {{ success: true, email: string, updatedAvailabilityRows: number, message: string }}
  */
-function updateVolunteerEmail(name, newEmail) {
+function updateVolunteerProfile(name, firstName, lastName, newEmail) {
   const displayName = (name || '').toString().trim();
+  const newFirstName = (firstName || '').toString().trim();
+  const newLastName = (lastName || '').toString().trim();
   const normalizedEmail = normalizeEmail(newEmail);
 
   if (!displayName) throw new Error('Volunteer name is required.');
+  if (!newFirstName || !newLastName) throw new Error('Both first and last name are required.');
   if (!normalizedEmail) throw new Error('A valid email is required.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
     throw new Error('Please enter a valid email address.');
@@ -157,11 +162,11 @@ function updateVolunteerEmail(name, newEmail) {
     const legal = (row[cols.FIRST_NAME_LEGAL] || '').toString().trim();
     const preferred = (row[cols.PREFERRED_NAME] || '').toString().trim();
     const last = (row[cols.LAST_NAME] || '').toString().trim();
-    const firstName = preferred || legal;
-    const display = `${firstName} ${last}`.trim();
-    if (display.toLowerCase() === targetLower) {
+    const existingFirstName = preferred || legal;
+    const existingDisplay = `${existingFirstName} ${last}`.trim();
+    if (existingDisplay.toLowerCase() === targetLower) {
       rosterMatchRow = i + 2;
-      rosterFirstName = firstName;
+      rosterFirstName = existingFirstName;
       rosterLastName = last;
       break;
     }
@@ -169,6 +174,19 @@ function updateVolunteerEmail(name, newEmail) {
 
   if (!rosterMatchRow) {
     throw new Error('Volunteer not found in Consolidated Volunteer List.');
+  }
+
+  const newDisplayName = `${newFirstName} ${newLastName}`.trim().toLowerCase();
+  for (let i = 0; i < rosterData.length; i++) {
+    const row = rosterData[i];
+    const legal = (row[cols.FIRST_NAME_LEGAL] || '').toString().trim();
+    const preferred = (row[cols.PREFERRED_NAME] || '').toString().trim();
+    const last = (row[cols.LAST_NAME] || '').toString().trim();
+    const existingFirstName = preferred || legal;
+    const existingDisplay = `${existingFirstName} ${last}`.trim().toLowerCase();
+    if (existingDisplay === newDisplayName && i + 2 !== rosterMatchRow) {
+      throw new Error('That name is already in use by another volunteer.');
+    }
   }
 
   // Prevent email duplication across roster rows.
@@ -183,6 +201,8 @@ function updateVolunteerEmail(name, newEmail) {
   lock.waitLock(10000);
 
   try {
+    rosterSheet.getRange(rosterMatchRow, cols.PREFERRED_NAME + 1).setValue(newFirstName);
+    rosterSheet.getRange(rosterMatchRow, cols.LAST_NAME + 1).setValue(newLastName);
     rosterSheet.getRange(rosterMatchRow, cols.EMAIL + 1).setValue(normalizedEmail);
 
     const availabilitySheet = getOrCreateAvailabilitySheet();
@@ -193,19 +213,19 @@ function updateVolunteerEmail(name, newEmail) {
       const availabilityData = availabilitySheet.getRange(2, 1, lastRow - 1, 10).getValues();
       for (let i = 0; i < availabilityData.length; i++) {
         const row = availabilityData[i];
-        const first = (row[1] || '').toString().trim().toLowerCase();
-        const last = (row[2] || '').toString().trim().toLowerCase();
-        if (first === rosterFirstName.toLowerCase() && last === rosterLastName.toLowerCase()) {
+        const currentFirst = (row[1] || '').toString().trim().toLowerCase();
+        const currentLast = (row[2] || '').toString().trim().toLowerCase();
+        if (currentFirst === rosterFirstName.toLowerCase() && currentLast === rosterLastName.toLowerCase()) {
           const currentRowEmail = normalizeEmail(row[3] || '');
-          if (currentRowEmail !== normalizedEmail) {
-            availabilitySheet.getRange(i + 2, 4).setValue(normalizedEmail);
-            updatedRows++;
-          }
+          availabilitySheet.getRange(i + 2, 2).setValue(newFirstName);
+          availabilitySheet.getRange(i + 2, 3).setValue(newLastName);
+          availabilitySheet.getRange(i + 2, 4).setValue(normalizedEmail);
+          updatedRows++;
         }
       }
     }
 
-    const message = `Email updated for ${displayName}. ${updatedRows} availability row${updatedRows === 1 ? '' : 's'} updated.`;
+    const message = `Profile updated for ${newFirstName} ${newLastName}. ${updatedRows} availability row${updatedRows === 1 ? '' : 's'} updated.`;
     return { success: true, email: normalizedEmail, updatedAvailabilityRows: updatedRows, message };
   } finally {
     lock.releaseLock();

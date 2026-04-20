@@ -598,23 +598,31 @@
         <h3>Volunteer Profile</h3>
       </div>
       <div class="profile-actions">
-        <button type="button" class="btn-secondary" id="profileEditBtn" onclick="toggleEmailEditor(true)">Edit Email</button>
+        <button type="button" class="btn-secondary" id="profileEditBtn" onclick="toggleProfileEditor(true)">Edit Profile</button>
       </div>
     </div>
     <div class="profile-summary">
       <div class="profile-summary-line"><span class="profile-summary-label">Name</span><span id="profileNameText" class="profile-summary-value">&nbsp;</span></div>
       <div class="profile-summary-line"><span class="profile-summary-label">Email</span><span id="profileEmailText" class="profile-summary-value">&nbsp;</span></div>
     </div>
-    <div id="profileEmailEditor" style="display:none; margin-top: 14px;">
+    <div id="profileEditor" style="display:none; margin-top: 14px;">
+      <div class="credential-row">
+        <label for="profileFirstNameInput">First Name</label>
+        <div class="credential-input-wrap"><input type="text" id="profileFirstNameInput" placeholder="First name" autocomplete="given-name"></div>
+      </div>
+      <div class="credential-row">
+        <label for="profileLastNameInput">Last Name</label>
+        <div class="credential-input-wrap"><input type="text" id="profileLastNameInput" placeholder="Last name" autocomplete="family-name"></div>
+      </div>
       <div class="credential-row">
         <label for="profileEmailInput">Email</label>
         <div class="credential-input-wrap"><input type="email" id="profileEmailInput" placeholder="name@example.com" autocomplete="email"></div>
       </div>
       <div class="profile-actions" style="padding-top: 8px;">
-        <button type="button" class="btn-submit-creds" id="profileEmailSaveBtn" onclick="saveVolunteerEmail()">Save Email</button>
-        <button type="button" class="btn-secondary" onclick="toggleEmailEditor(false)">Cancel</button>
+        <button type="button" class="btn-submit-creds" id="profileSaveBtn" onclick="saveVolunteerProfile()">Save Profile</button>
+        <button type="button" class="btn-secondary" onclick="toggleProfileEditor(false)">Cancel</button>
       </div>
-      <div id="profileEmailFeedback" class="creds-feedback"></div>
+      <div id="profileFeedback" class="creds-feedback"></div>
     </div>
   </div>
 
@@ -773,6 +781,8 @@
   let currentVolunteerName = '';
   let currentVolunteerRole = '';
   let currentVolunteerEmail = '';
+  let currentVolunteerFirstName = '';
+  let currentVolunteerLastName = '';
 
   window.addEventListener('load', () => {
     loadVolunteerNames();
@@ -869,6 +879,8 @@
     currentVolunteerName = '';
     currentVolunteerRole = '';
     currentVolunteerEmail = '';
+    currentVolunteerFirstName = '';
+    currentVolunteerLastName = '';
     renderVolunteerProfileSummary();
   }
 
@@ -881,6 +893,8 @@
 
     document.getElementById('profileSummary').style.display = 'none';
     currentVolunteerEmail = '';
+    currentVolunteerFirstName = '';
+    currentVolunteerLastName = '';
 
     // Show volunteer header as loading
     document.getElementById('volHeader').style.display = '';
@@ -925,6 +939,9 @@
   function displayScheduleResults(result, searchTerm) {
     currentVolunteerName = (result && result.volunteerName) || searchTerm;
     currentVolunteerRole = (result && result.volunteerRole) || '';
+    const parts = splitProfileName(currentVolunteerName);
+    currentVolunteerFirstName = parts.firstName;
+    currentVolunteerLastName = parts.lastName;
     currentVolunteerEmail = null;
     renderVolunteerProfileSummary();
 
@@ -961,6 +978,8 @@
     const summary = document.getElementById('profileSummary');
     const nameText = document.getElementById('profileNameText');
     const emailText = document.getElementById('profileEmailText');
+    const firstNameInput = document.getElementById('profileFirstNameInput');
+    const lastNameInput = document.getElementById('profileLastNameInput');
     const emailInput = document.getElementById('profileEmailInput');
 
     if (!currentVolunteerName) {
@@ -975,18 +994,20 @@
     } else {
       emailText.textContent = currentVolunteerEmail || 'Not on file';
     }
+    if (firstNameInput) firstNameInput.value = currentVolunteerFirstName || '';
+    if (lastNameInput) lastNameInput.value = currentVolunteerLastName || '';
     if (emailInput) emailInput.value = currentVolunteerEmail || '';
-    toggleEmailEditor(false);
+    toggleProfileEditor(false);
   }
 
-  function toggleEmailEditor(show) {
-    const editor = document.getElementById('profileEmailEditor');
+  function toggleProfileEditor(show) {
+    const editor = document.getElementById('profileEditor');
     const button = document.getElementById('profileEditBtn');
     if (!editor || !button) return;
     editor.style.display = show ? '' : 'none';
     button.style.display = show ? 'none' : '';
     if (!show) {
-      document.getElementById('profileEmailFeedback').innerHTML = '';
+      document.getElementById('profileFeedback').innerHTML = '';
     }
   }
 
@@ -994,14 +1015,33 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   }
 
-  function saveVolunteerEmail() {
+  function splitProfileName(name) {
+    const parts = (name || '').toString().trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return { firstName: '', lastName: '' };
+    if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+    return {
+      firstName: parts.slice(0, -1).join(' '),
+      lastName: parts[parts.length - 1]
+    };
+  }
+
+  function saveVolunteerProfile() {
+    const firstNameInput = document.getElementById('profileFirstNameInput');
+    const lastNameInput = document.getElementById('profileLastNameInput');
     const emailInput = document.getElementById('profileEmailInput');
-    const feedback = document.getElementById('profileEmailFeedback');
-    const button = document.getElementById('profileEmailSaveBtn');
+    const feedback = document.getElementById('profileFeedback');
+    const button = document.getElementById('profileSaveBtn');
 
-    if (!emailInput || !feedback || !button) return;
+    if (!firstNameInput || !lastNameInput || !emailInput || !feedback || !button) return;
 
+    const firstName = firstNameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
     const email = emailInput.value.trim();
+
+    if (!firstName || !lastName) {
+      feedback.innerHTML = '<span style="color:#e74c3c;">Please enter both first and last name.</span>';
+      return;
+    }
     if (!email) {
       feedback.innerHTML = '<span style="color:#e74c3c;">Please enter an email address.</span>';
       return;
@@ -1022,19 +1062,22 @@
     google.script.run
       .withSuccessHandler(result => {
         button.disabled = false;
-        button.textContent = 'Save Email';
+        button.textContent = 'Save Profile';
+        currentVolunteerFirstName = firstName;
+        currentVolunteerLastName = lastName;
+        currentVolunteerName = `${firstName} ${lastName}`;
         currentVolunteerEmail = result.email || email;
         renderVolunteerProfileSummary();
-        feedback.innerHTML = `<span style="color:#27ae60;">${escapeHtml(result.message || 'Email updated successfully.')}</span>`;
+        feedback.innerHTML = `<span style="color:#27ae60;">${escapeHtml(result.message || 'Profile updated successfully.')}</span>`;
         loadAvailabilityForVolunteer();
-        showToast('Email updated.', 'success');
+        showToast('Profile updated.', 'success');
       })
       .withFailureHandler(err => {
         button.disabled = false;
-        button.textContent = 'Save Email';
+        button.textContent = 'Save Profile';
         feedback.innerHTML = `<span style="color:#e74c3c;">Error: ${escapeHtml(err.message || String(err))}</span>`;
       })
-      .updateVolunteerEmail(currentVolunteerName, email);
+      .updateVolunteerProfile(currentVolunteerName, firstName, lastName, email);
   }
 
   // ── Stats ─────────────────────────────────────────────────────────────────
@@ -1325,7 +1368,10 @@
     document.getElementById('availConsecutive').value = data.consecutive || 'No';
     document.getElementById('availNotes').value = data.notes || '';
 
-    currentVolunteerEmail = data.email || fallbackEmail || '';
+    currentVolunteerFirstName = data.firstName || currentVolunteerFirstName;
+    currentVolunteerLastName = data.lastName || currentVolunteerLastName;
+    currentVolunteerEmail = data.email || fallbackEmail || currentVolunteerEmail || '';
+    currentVolunteerName = `${currentVolunteerFirstName} ${currentVolunteerLastName}`.trim() || currentVolunteerName;
     renderVolunteerProfileSummary();
 
     document.querySelectorAll('input[name="dashboardAvailability"]').forEach(cb => { cb.checked = false; });
