@@ -1070,7 +1070,7 @@
     const dayEntries = labels.map(label => ({ label, shifts: [] }));
     shifts.forEach(shift => {
       const dayLabel = shift.day || '';
-      const entry = dayEntries.find(d => d.label === dayLabel) || null;
+      const entry = findMatchingDayEntry(dayEntries, dayLabel);
       if (entry) {
         entry.shifts.push(shift);
       } else {
@@ -1124,6 +1124,36 @@
 
     toolbar.style.display = '';
     calendar.style.display = '';
+  }
+
+  function findMatchingDayEntry(dayEntries, dayLabel) {
+    if (!dayLabel) return null;
+    const exactMatch = dayEntries.find(d => d.label === dayLabel);
+    if (exactMatch) return exactMatch;
+
+    const normalizedKey = normalizeScheduleDateKey(dayLabel);
+    if (!normalizedKey) return null;
+
+    return dayEntries.find(d => normalizeScheduleDateKey(d.label) === normalizedKey);
+  }
+
+  function normalizeScheduleDateKey(label) {
+    if (!label || typeof label !== 'string') return '';
+    const dayOfWeekMap = { sun: 'Sunday', mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday' };
+    const monthMap = {
+      jan: 'January', feb: 'February', mar: 'March', apr: 'April', may: 'May', jun: 'June',
+      jul: 'July', aug: 'August', sep: 'September', oct: 'October', nov: 'November', dec: 'December'
+    };
+
+    let normalizedLabel = label.trim()
+      .replace(/\b(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\b/gi, matched => dayOfWeekMap[matched.toLowerCase()] || matched)
+      .replace(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/gi, matched => monthMap[matched.toLowerCase()] || matched);
+
+    const parsed = parseDateFromLabel(normalizedLabel);
+    if (parsed && !isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(0, 10);
+    }
+    return normalizedLabel.toLowerCase().replace(/\s+/g, ' ');
   }
 
   function downloadScheduleIcs() {
