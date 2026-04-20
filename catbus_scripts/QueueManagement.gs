@@ -57,12 +57,28 @@ function getClientQueue() {
 }
 
 /**
+ * Builds a consistent response payload for queue assignment operations.
+ * @param {boolean} success - Whether the operation succeeded
+ * @param {string} message - User-facing result message
+ * @param {string} [conflictType] - Optional conflict type identifier
+ * @returns {{success: boolean, message: string, conflict: boolean, conflictType: string}}
+ */
+function buildAssignmentResponse_(success, message, conflictType) {
+  return {
+    success: !!success,
+    message: message || '',
+    conflict: !success,
+    conflictType: conflictType || ''
+  };
+}
+
+/**
  * Assigns a client to a volunteer
  * Optimized to check only recent assignments instead of entire sheet
  * Enforces rule: Each volunteer can only have ONE active client at a time
  * @param {string} clientId - Client ID
  * @param {string} volunteerName - Volunteer name
- * @returns {boolean} True if successful
+ * @returns {{success: boolean, message: string, conflict: boolean, conflictType: string}}
  */
 function assignClientToVolunteer(clientId, volunteerName) {
   return safeExecute(() => {
@@ -71,11 +87,11 @@ function assignClientToVolunteer(clientId, volunteerName) {
     volunteerName = sanitizeInput(volunteerName, 100);
     
     if (!clientId || !volunteerName) {
-      throw new Error('Client ID and volunteer name are required');
+      return buildAssignmentResponse_(false, 'Client ID and volunteer name are required', 'validation_error');
     }
     
     if (!validateClientID(clientId)) {
-      throw new Error(`Invalid client ID format: ${clientId}`);
+      return buildAssignmentResponse_(false, `Invalid client ID format: ${clientId}`, 'validation_error');
     }
 
     // Lock to prevent race condition on concurrent assignment attempts
@@ -102,7 +118,7 @@ function assignClientToVolunteer(clientId, volunteerName) {
       }
 
       if (!found) {
-        throw new Error(`Client ID ${clientId} not found in intake`);
+        return buildAssignmentResponse_(false, `Client ID ${clientId} not found in intake`, 'client_not_found');
       }
 
       // Check all assignments for conflicts (single read, scan from most recent)
@@ -121,12 +137,16 @@ function assignClientToVolunteer(clientId, volunteerName) {
 
           // Check if client is already assigned to someone else
           if (assignedClient === clientId) {
-            throw new Error(`Client ${clientId} is already assigned to ${assignedVolunteer}`);
+            return buildAssignmentResponse_(false, `Client ${clientId} is already assigned to ${assignedVolunteer}`, 'client_already_assigned');
           }
 
           // Check if volunteer already has an active client (one client at a time rule)
           if (assignedVolunteer === volunteerName) {
-            throw new Error(`${volunteerName} is already assigned to client ${assignedClient}. Please complete that assignment first.`);
+            return buildAssignmentResponse_(
+              false,
+              `${volunteerName} is already assigned to client ${assignedClient}. Please complete that assignment first.`,
+              'volunteer_busy'
+            );
           }
         }
       }
@@ -148,7 +168,7 @@ function assignClientToVolunteer(clientId, volunteerName) {
       CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
     ]);
 
-    return true;
+    return buildAssignmentResponse_(true, `Client ${clientId} has been assigned to ${volunteerName}.`);
   }, 'assignClientToVolunteer');
 }
 
@@ -482,7 +502,7 @@ function getActiveAssignments() {
  * Updates the existing assignment row in-place (volunteer name + timestamp).
  * @param {string} clientId - Client ID to reassign
  * @param {string} newVolunteerName - New volunteer name (display text)
- * @returns {Object} {success, message}
+ * @returns {{success: boolean, message: string, conflict: boolean, conflictType: string}}
  */
 function reassignClientToVolunteer(clientId, newVolunteerName) {
   return safeExecute(() => {
@@ -490,11 +510,11 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
     newVolunteerName = sanitizeInput(newVolunteerName, 100);
 
     if (!clientId || !newVolunteerName) {
-      return { success: false, message: 'Client ID and volunteer name are required' };
+      return buildAssignmentResponse_(false, 'Client ID and volunteer name are required', 'validation_error');
     }
 
     if (!validateClientID(clientId)) {
-      return { success: false, message: `Invalid client ID format: ${clientId}` };
+      return buildAssignmentResponse_(false, `Invalid client ID format: ${clientId}`, 'validation_error');
     }
 
     const lock = LockService.getScriptLock();
@@ -505,7 +525,7 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
       const assignmentLastRow = assignmentSheet.getLastRow();
 
       if (assignmentLastRow <= 1) {
-        return { success: false, message: `Client ${clientId} is not currently assigned` };
+        return buildAssignmentResponse_(false, `Client ${clientId} is not currently assigned`, 'assignment_not_found');
       }
 
       const assignmentData = getSheetData(CONFIG.SHEETS.CLIENT_ASSIGNMENT, 4, 2, 1);
@@ -522,7 +542,7 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
       }
 
       if (activeRowIndex === -1) {
-        return { success: false, message: `Client ${clientId} is not currently assigned` };
+        return buildAssignmentResponse_(false, `Client ${clientId} is not currently assigned`, 'assignment_not_found');
       }
 
       // Check that the new volunteer isn't already busy with another client
@@ -531,7 +551,7 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
         const completed = assignmentData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
         if (assignedVolunteer === newVolunteerName && !completed) {
           const busyClient = assignmentData[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
-          return { success: false, message: `${newVolunteerName} is already assigned to client ${busyClient}` };
+          return buildAssignmentResponse_(false, `${newVolunteerName} is already assigned to client ${busyClient}`, 'volunteer_busy');
         }
       }
 
@@ -550,7 +570,7 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
       CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
     ]);
 
-    return { success: true, message: `Client ${clientId} has been reassigned to ${newVolunteerName}` };
+    return buildAssignmentResponse_(true, `Client ${clientId} has been reassigned to ${newVolunteerName}`);
   }, 'reassignClientToVolunteer');
 }
 
@@ -558,18 +578,18 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
  * Unassigns a client from their current volunteer and returns them to the queue.
  * Preserves assignment history by marking the row unassigned.
  * @param {string} clientId - Client ID to unassign
- * @returns {Object} {success, message}
+ * @returns {{success: boolean, message: string, conflict: boolean, conflictType: string}}
  */
 function unassignClient(clientId) {
   return safeExecute(() => {
     clientId = sanitizeInput(clientId, 10);
 
     if (!clientId) {
-      return { success: false, message: 'Client ID is required' };
+      return buildAssignmentResponse_(false, 'Client ID is required', 'validation_error');
     }
 
     if (!validateClientID(clientId)) {
-      return { success: false, message: `Invalid client ID format: ${clientId}` };
+      return buildAssignmentResponse_(false, `Invalid client ID format: ${clientId}`, 'validation_error');
     }
 
     const lock = LockService.getScriptLock();
@@ -580,7 +600,7 @@ function unassignClient(clientId) {
       const assignmentLastRow = assignmentSheet.getLastRow();
 
       if (assignmentLastRow <= 1) {
-        return { success: false, message: `Client ${clientId} is not currently assigned` };
+        return buildAssignmentResponse_(false, `Client ${clientId} is not currently assigned`, 'assignment_not_found');
       }
 
       const assignmentData = getSheetData(CONFIG.SHEETS.CLIENT_ASSIGNMENT, 4, 2, 1);
@@ -597,7 +617,7 @@ function unassignClient(clientId) {
       }
 
       if (activeRowIndex === -1) {
-        return { success: false, message: `Client ${clientId} is not currently assigned` };
+        return buildAssignmentResponse_(false, `Client ${clientId} is not currently assigned`, 'assignment_not_found');
       }
 
       const rowNumber = activeRowIndex + 2;
@@ -612,7 +632,7 @@ function unassignClient(clientId) {
       CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
     ]);
 
-    return { success: true, message: `Client ${clientId} has been returned to the queue` };
+    return buildAssignmentResponse_(true, `Client ${clientId} has been returned to the queue`);
   }, 'unassignClient');
 }
 

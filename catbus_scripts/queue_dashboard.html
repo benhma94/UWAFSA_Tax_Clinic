@@ -416,6 +416,8 @@
   let clientToReassign = null;
   let queueAutoPoller = null;
   let lastUpdateTime = null;
+  let assignActionInFlight = false;
+  let reassignActionInFlight = false;
 
 
   function updateLastUpdatedTime() {
@@ -454,6 +456,55 @@
 
   function manualRefresh() {
     loadQueue();
+  }
+
+  function setAssignControlsPending(isPending) {
+    const assignBtn = document.getElementById('assignBtn');
+    const clientSelect = document.getElementById('clientSelect');
+    const volunteerSelect = document.getElementById('volunteerSelect');
+
+    if (assignBtn) {
+      assignBtn.disabled = isPending;
+      assignBtn.textContent = isPending ? 'Assigning...' : 'Assign';
+    }
+    if (clientSelect) clientSelect.disabled = isPending;
+    if (volunteerSelect) volunteerSelect.disabled = isPending;
+  }
+
+  function setReassignModalPending(action) {
+    reassignActionInFlight = true;
+
+    const reassignBtn = document.getElementById('confirmReassignBtn');
+    const unassignBtn = document.getElementById('returnToQueueBtn');
+    const cancelBtn = document.getElementById('cancelReassignBtn');
+
+    if (reassignBtn) {
+      reassignBtn.disabled = true;
+      reassignBtn.textContent = action === 'reassign' ? 'Reassigning...' : 'Confirm Reassign';
+    }
+    if (unassignBtn) {
+      unassignBtn.disabled = true;
+      unassignBtn.textContent = action === 'unassign' ? 'Returning...' : 'Return to Queue';
+    }
+    if (cancelBtn) cancelBtn.disabled = true;
+  }
+
+  function resetReassignModalActionState() {
+    reassignActionInFlight = false;
+
+    const reassignBtn = document.getElementById('confirmReassignBtn');
+    const unassignBtn = document.getElementById('returnToQueueBtn');
+    const cancelBtn = document.getElementById('cancelReassignBtn');
+
+    if (reassignBtn) {
+      reassignBtn.disabled = false;
+      reassignBtn.textContent = 'Confirm Reassign';
+    }
+    if (unassignBtn) {
+      unassignBtn.disabled = false;
+      unassignBtn.textContent = 'Return to Queue';
+    }
+    if (cancelBtn) cancelBtn.disabled = false;
   }
 
   function startAutoRefresh() {
@@ -601,17 +652,51 @@
   }
 
   function assignClient() {
+    if (assignActionInFlight) return;
+
+    const clientSelect = document.getElementById('clientSelect');
+    const volunteerSelect = document.getElementById('volunteerSelect');
     const client = document.getElementById('clientSelect').value;
     const volunteer = document.getElementById('volunteerSelect').value;
     if (!client || !volunteer) return alert('Please select both a client and a volunteer.');
 
-    google.script.run.withSuccessHandler(() => {
-      const msg = `Client ${client} has been assigned to ${volunteer}.`;
-      document.getElementById('modalMessage').textContent = msg;
-      const modal = document.getElementById('confirmationModal');
-      modal.style.display = 'flex';
-      modal.querySelector('button').focus();
-    }).assignClientToVolunteer(client, volunteer);
+    assignActionInFlight = true;
+    setAssignControlsPending(true);
+
+    google.script.run
+      .withSuccessHandler(result => {
+        assignActionInFlight = false;
+        setAssignControlsPending(false);
+
+        const isSuccess = result === true || (result && result.success !== false);
+        if (!isSuccess) {
+          const message = (result && result.message) ? result.message : 'Assignment failed. Please refresh and try again.';
+          showToast(message, 'error');
+          loadQueue();
+          return;
+        }
+
+        const msg = (result && result.message)
+          ? result.message
+          : `Client ${client} has been assigned to ${volunteer}.`;
+        document.getElementById('modalMessage').textContent = msg;
+        const modal = document.getElementById('confirmationModal');
+        modal.style.display = 'flex';
+        modal.querySelector('button').focus();
+
+        // Immediately sync queue state so stale client/volunteer pairs disappear.
+        if (clientSelect) clientSelect.value = '';
+        if (volunteerSelect) volunteerSelect.value = '';
+        loadQueue();
+      })
+      .withFailureHandler(error => {
+        assignActionInFlight = false;
+        setAssignControlsPending(false);
+        const message = (error && error.message) ? error.message : error;
+        showToast('Error assigning client: ' + message, 'error');
+        loadQueue();
+      })
+      .assignClientToVolunteer(client, volunteer);
   }
 
   function refreshAfterModal() {
@@ -954,6 +1039,7 @@
 
   function openReassignModal(clientId) {
     clientToReassign = clientId;
+    resetReassignModalActionState();
     const assignment = activeAssignments.find(a => a.clientId === clientId);
     const info = assignment
       ? `Reassigning client <strong>${escapeHtml(clientId)}</strong> currently with <strong>${escapeHtml(assignment.volunteerName)}</strong>.`
@@ -977,54 +1063,92 @@
   }
 
   function closeReassignModal() {
+    if (reassignActionInFlight) return;
     document.getElementById('reassignModal').style.display = 'none';
     clientToReassign = null;
+    resetReassignModalActionState();
   }
 
   function confirmReassign() {
+    if (reassignActionInFlight) return;
+
     const newVolunteer = document.getElementById('reassignVolunteerSelect').value;
-    if (!newVolunteer) return alert('Please select a volunteer to reassign to.');
+    if (!newVolunteer) {
+      showToast('Please select a volunteer to reassign to.', 'error');
+      return;
+    }
+
     const clientId = clientToReassign;
-    closeReassignModal();
+    if (!clientId) {
+      showToast('No client selected for reassignment.', 'error');
+      return;
+    }
+
+    setReassignModalPending('reassign');
 
     google.script.run
       .withSuccessHandler(result => {
-        if (result && result.success) {
-          document.getElementById('modalMessage').textContent = result.message;
+        resetReassignModalActionState();
+
+        const isSuccess = result === true || (result && result.success !== false);
+        if (isSuccess) {
+          closeReassignModal();
+          document.getElementById('modalMessage').textContent = (result && result.message)
+            ? result.message
+            : ('Client ' + clientId + ' has been reassigned.');
           const modal = document.getElementById('confirmationModal');
           modal.style.display = 'flex';
           modal.querySelector('button').focus();
+          loadQueue();
         } else {
-          alert('Reassignment failed: ' + (result ? result.message : 'Unknown error'));
+          showToast((result && result.message) ? result.message : 'Reassignment failed.', 'error');
           loadQueue();
         }
       })
       .withFailureHandler(err => {
-        alert('Error: ' + err.message);
+        resetReassignModalActionState();
+        const message = (err && err.message) ? err.message : err;
+        showToast('Error: ' + message, 'error');
         loadQueue();
       })
       .reassignClientToVolunteer(clientId, newVolunteer);
   }
 
   function confirmUnassign() {
+    if (reassignActionInFlight) return;
+
     const clientId = clientToReassign;
+    if (!clientId) {
+      showToast('No client selected to return to queue.', 'error');
+      return;
+    }
+
     if (!confirm('Return client ' + clientId + ' to the queue? This will free up the current volunteer.')) return;
-    closeReassignModal();
+    setReassignModalPending('unassign');
 
     google.script.run
       .withSuccessHandler(result => {
-        if (result && result.success) {
-          document.getElementById('modalMessage').textContent = result.message;
+        resetReassignModalActionState();
+
+        const isSuccess = result === true || (result && result.success !== false);
+        if (isSuccess) {
+          closeReassignModal();
+          document.getElementById('modalMessage').textContent = (result && result.message)
+            ? result.message
+            : ('Client ' + clientId + ' has been returned to the queue.');
           const modal = document.getElementById('confirmationModal');
           modal.style.display = 'flex';
           modal.querySelector('button').focus();
+          loadQueue();
         } else {
-          alert('Unassign failed: ' + (result ? result.message : 'Unknown error'));
+          showToast((result && result.message) ? result.message : 'Unassign failed.', 'error');
           loadQueue();
         }
       })
       .withFailureHandler(err => {
-        alert('Error: ' + err.message);
+        resetReassignModalActionState();
+        const message = (err && err.message) ? err.message : err;
+        showToast('Error: ' + message, 'error');
         loadQueue();
       })
       .unassignClient(clientId);
@@ -1072,7 +1196,7 @@
     <div class="assign-form">
       <select id="clientSelect"></select>
       <select id="volunteerSelect"></select>
-      <button onclick="assignClient()">Assign</button>
+      <button id="assignBtn" onclick="assignClient()">Assign</button>
     </div>
 
     <h4 style="margin-top: 30px;">Active Assignments</h4>
@@ -1143,9 +1267,9 @@
     <label for="reassignVolunteerSelect" style="display:block; font-weight:600; margin-bottom:6px;">Select new volunteer:</label>
     <select id="reassignVolunteerSelect" style="width:100%; margin-bottom:5px;"></select>
     <div class="modal-btn-group">
-      <button class="modal-btn modal-btn-accent" onclick="confirmReassign()">Confirm Reassign</button>
-      <button class="modal-btn modal-btn-danger" onclick="confirmUnassign()">Return to Queue</button>
-      <button class="modal-btn modal-btn-cancel" onclick="closeReassignModal()">Cancel</button>
+      <button id="confirmReassignBtn" class="modal-btn modal-btn-accent" onclick="confirmReassign()">Confirm Reassign</button>
+      <button id="returnToQueueBtn" class="modal-btn modal-btn-danger" onclick="confirmUnassign()">Return to Queue</button>
+      <button id="cancelReassignBtn" class="modal-btn modal-btn-cancel" onclick="closeReassignModal()">Cancel</button>
     </div>
   </div>
 </div>

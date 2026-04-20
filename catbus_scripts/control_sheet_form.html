@@ -2369,11 +2369,33 @@
     }
 
     // Review functions
+    function validateChecklistBeforeApproval() {
+      const allItems = document.querySelectorAll('#documentChecklist .checklist-item input[type="checkbox"]');
+      if (allItems.length === 0) return true;
+
+      const checkedItems = document.querySelectorAll('#documentChecklist .checklist-item input[type="checkbox"]:checked');
+      if (checkedItems.length > 0) return true;
+
+      showError('Are you sure client has all information? Checklist should not be blank.');
+
+      const panel = document.getElementById('documentChecklist');
+      if (panel && !document.body.classList.contains('panel-open')) {
+        document.body.classList.add('panel-open');
+        panel.setAttribute('aria-hidden', 'false');
+      }
+
+      return false;
+    }
+
     function callForReview(rowId) {
       const volunteer = document.getElementById('volunteer').value.trim();
 
       if (!volunteer) {
         showError('Please select a volunteer first.');
+        return;
+      }
+
+      if (!validateChecklistBeforeApproval()) {
         return;
       }
 
@@ -2578,18 +2600,6 @@
         if (!volunteer || !client) {
           showError('Please select both a volunteer and a client.');
           return;
-        }
-
-        const allStatusRadios = document.querySelectorAll('#taxYearTable input[type="radio"]:checked');
-        const allIncomplete = allStatusRadios.length > 0 && Array.from(allStatusRadios).every(r => r.value === 'incomplete');
-
-        if (!allIncomplete) {
-          const allItems = document.querySelectorAll('#documentChecklist .checklist-item input[type="checkbox"]');
-          const checkedItems = document.querySelectorAll('#documentChecklist .checklist-item input[type="checkbox"]:checked');
-          if (allItems.length > 0 && checkedItems.length === 0) {
-            showError('Are you sure client has all information? Checklist should not be blank.');
-            return;
-          }
         }
 
         const modal = document.getElementById('confirmModal');
