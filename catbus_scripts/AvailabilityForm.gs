@@ -232,6 +232,83 @@ function submitAvailabilityForm(formData) {
 }
 
 /**
+ * Retrieves a volunteer's submitted availability by their full name.
+ * Used by the volunteer dashboard to display the "My Availability" tab.
+ * @param {string} name - Full name to search for (case-insensitive, partial match)
+ * @returns {Object} Availability data or {found: false}
+ */
+function getVolunteerAvailabilityByName(name) {
+  return safeExecute(() => {
+    if (!name || !name.trim()) {
+      return { found: false };
+    }
+
+    const sheet = getOrCreateAvailabilitySheet();
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return { found: false };
+    }
+
+    const data = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
+    const searchLower = name.trim().toLowerCase();
+
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      if (!row[1] && !row[2]) continue;
+
+      const firstName = (row[1] || '').toString().trim();
+      const lastName = (row[2] || '').toString().trim();
+      const fullName = (firstName + ' ' + lastName).trim();
+      const fullNameLower = fullName.toLowerCase();
+
+      let score = 0;
+      if (fullNameLower === searchLower) {
+        score = 3;
+      } else if (fullNameLower.includes(searchLower) || searchLower.includes(fullNameLower)) {
+        score = 2;
+      } else if (firstName.toLowerCase().includes(searchLower) || lastName.toLowerCase().includes(searchLower)) {
+        score = 1;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = { row, fullName };
+      }
+    }
+
+    if (!bestMatch) {
+      return { found: false };
+    }
+
+    const row = bestMatch.row;
+    const availabilityString = (row[7] || '').toString().trim();
+    const shiftIds = availabilityString ? availabilityString.split(/,\s*/).filter(s => s) : [];
+
+    // Resolve shift IDs to human-readable labels using SCHEDULE_CONFIG
+    const shifts = shiftIds.map(shiftId => {
+      const label = SCHEDULE_CONFIG.getShiftLabel(shiftId);
+      return label ? { shiftId, day: label.day, time: label.time } : null;
+    }).filter(s => s !== null);
+
+    const lastModified = row[9] instanceof Date ? row[9].toISOString() : (row[9] ? row[9].toString() : null);
+
+    return {
+      found: true,
+      volunteerName: bestMatch.fullName,
+      role: (row[4] || '').toString().trim(),
+      numShifts: parseInt(row[5]) || 0,
+      consecutive: (row[6] || '').toString().trim(),
+      shifts: shifts,
+      notes: (row[8] || '').toString().trim(),
+      lastModified: lastModified
+    };
+  }, 'getVolunteerAvailabilityByName');
+}
+
+/**
  * Gets or creates the schedule availability sheet with proper headers
  * @returns {Sheet} The schedule availability sheet
  */

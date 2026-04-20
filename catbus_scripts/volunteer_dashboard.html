@@ -472,6 +472,7 @@
   <!-- Tab Navigation -->
   <nav class="tab-nav" role="tablist">
     <button type="button" id="tab-btn-schedule" class="tab-btn active" role="tab" data-tab="schedule" aria-selected="true" aria-controls="tab-schedule" onclick="switchTab('schedule')">📅 My Schedule</button>
+    <button type="button" id="tab-btn-availability" class="tab-btn" role="tab" data-tab="availability" aria-selected="false" aria-controls="tab-availability" onclick="switchTab('availability')">🗓️ My Availability</button>
     <button type="button" id="tab-btn-stats" class="tab-btn" role="tab" data-tab="stats" aria-selected="false" aria-controls="tab-stats" onclick="switchTab('stats')">📊 My Stats</button>
     <button type="button" id="tab-btn-credentials" class="tab-btn" role="tab" data-tab="credentials" aria-selected="false" aria-controls="tab-credentials" onclick="switchTab('credentials')">🔑 My Credentials</button>
   </nav>
@@ -491,6 +492,37 @@
           <thead><tr><th>Day</th><th>Time Slot</th></tr></thead>
           <tbody id="scheduleTableBody"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== My Availability Tab ===== -->
+  <div id="tab-availability" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-availability">
+    <p class="empty-state" id="availabilityEmptyState">Search for your name above to view your submitted availability.</p>
+    <div id="availabilityContent" style="display:none;">
+      <div class="stat-cards" id="availabilityStatCards">
+        <div class="stat-card">
+          <div class="stat-card-label">Shifts Requested</div>
+          <div class="stat-card-value" id="availShiftRequested">–</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Slots Available</div>
+          <div class="stat-card-value" id="availSlotCount">–</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Consecutive Pref.</div>
+          <div class="stat-card-value" id="availConsecutive">–</div>
+        </div>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Day</th><th>Time Slot</th></tr></thead>
+          <tbody id="availabilityTableBody"></tbody>
+        </table>
+      </div>
+      <div id="availabilityNotes" class="section-box" style="display:none; margin-top:16px;">
+        <h3>Notes</h3>
+        <p id="availabilityNotesText" style="margin:0;"></p>
       </div>
     </div>
   </div>
@@ -626,6 +658,8 @@
     document.getElementById('volHeader').style.display = 'none';
     document.getElementById('scheduleContent').style.display = 'none';
     document.getElementById('scheduleEmptyState').style.display = '';
+    document.getElementById('availabilityContent').style.display = 'none';
+    document.getElementById('availabilityEmptyState').style.display = '';
     document.getElementById('statsLoaded').style.display = 'none';
     document.getElementById('statsEmptyState').style.display = '';
     document.getElementById('credentialsSectionBox').style.display = 'none';
@@ -671,6 +705,16 @@
     document.getElementById('credentialsContent').innerHTML =
       '<span class="loading-inline"></span> Loading credentials…';
 
+    // Show availability loading
+    document.getElementById('availabilityEmptyState').style.display = 'none';
+    document.getElementById('availabilityContent').style.display = 'block';
+    document.getElementById('availShiftRequested').textContent = '–';
+    document.getElementById('availSlotCount').textContent = '–';
+    document.getElementById('availConsecutive').textContent = '–';
+    document.getElementById('availabilityTableBody').innerHTML =
+      '<tr><td colspan="2" style="padding:16px;"><span class="loading-inline"></span></td></tr>';
+    document.getElementById('availabilityNotes').style.display = 'none';
+
     google.script.run
       .withSuccessHandler(result => displayScheduleResults(result, searchTerm))
       .withFailureHandler(err => {
@@ -691,6 +735,9 @@
       document.getElementById('sc-totalTime').textContent = '—';
       document.getElementById('credentialsContent').innerHTML =
         '<div class="empty-state">Name not found — check spelling.</div>';
+      // Still attempt to load availability in case the volunteer submitted but isn't scheduled yet
+      currentVolunteerName = searchTerm;
+      loadAvailability();
       return;
     }
 
@@ -716,6 +763,7 @@
     // Load stats and credentials in parallel
     refreshStats();
     loadCredentialStatus();
+    loadAvailability();
   }
 
   // ── Stats ─────────────────────────────────────────────────────────────────
@@ -941,6 +989,46 @@
         }
       })
       .submitVolunteerCredentials(currentVolunteerName, efileVal, passwordVal);
+  }
+
+  // ── Availability ──────────────────────────────────────────────────────────
+
+  function loadAvailability() {
+    if (!currentVolunteerName) return;
+    google.script.run
+      .withSuccessHandler(renderAvailability)
+      .withFailureHandler(err => {
+        document.getElementById('availabilityTableBody').innerHTML =
+          `<tr><td colspan="2" class="empty-state">Could not load availability: ${escapeHtml(err.message || String(err))}</td></tr>`;
+      })
+      .getVolunteerAvailabilityByName(currentVolunteerName);
+  }
+
+  function renderAvailability(data) {
+    if (!data || !data.found) {
+      document.getElementById('availabilityContent').style.display = 'none';
+      document.getElementById('availabilityEmptyState').style.display = '';
+      document.getElementById('availabilityEmptyState').textContent = 'No availability submission found for this volunteer.';
+      return;
+    }
+
+    document.getElementById('availShiftRequested').textContent = data.numShifts || '–';
+    document.getElementById('availSlotCount').textContent = data.shifts ? data.shifts.length : 0;
+    document.getElementById('availConsecutive').textContent = data.consecutive || '–';
+
+    const rows = data.shifts && data.shifts.length > 0
+      ? data.shifts.map(s => `<tr><td>${escapeHtml(s.day)}</td><td>${escapeHtml(s.time)}</td></tr>`).join('')
+      : '<tr><td colspan="2" class="empty-state">No available slots submitted.</td></tr>';
+    document.getElementById('availabilityTableBody').innerHTML = rows;
+
+    const notesEl = document.getElementById('availabilityNotes');
+    const notesText = (data.notes || '').trim();
+    if (notesText) {
+      document.getElementById('availabilityNotesText').textContent = notesText;
+      notesEl.style.display = '';
+    } else {
+      notesEl.style.display = 'none';
+    }
   }
 </script>
 <div class="footer-copyright"><span class="footer-right">Designed by Ben Ma, CPA, CFA, CFP for the UW AFSA Tax Clinic.<br>&copy; 2027 All rights reserved.</span></div>
