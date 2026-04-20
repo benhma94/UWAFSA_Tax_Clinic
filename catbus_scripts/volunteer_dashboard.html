@@ -1245,9 +1245,19 @@
       if (task.selfComplete === false) {
         const note = document.createElement('div');
         note.className = 'todo-item-meta';
-        note.textContent = task.isComplete
-          ? 'This task is complete because your training attendance has been recorded.'
-          : 'This task is completed automatically when training attendance is recorded at the Training station.';
+        if (task.taskKey === 'pass_quiz') {
+          note.textContent = task.isComplete
+            ? 'This task is complete because you have passed the post-training quiz.'
+            : 'This task is completed automatically when you pass the post-training quiz.';
+        } else if (task.taskKey === 'attend_training') {
+          note.textContent = task.isComplete
+            ? 'This task is complete because your training attendance has been recorded.'
+            : 'This task is completed automatically when training attendance is recorded at the Training station.';
+        } else {
+          note.textContent = task.isComplete
+            ? 'This task is complete.'
+            : 'This task is completed automatically when the required step is recorded.';
+        }
         content.appendChild(note);
       }
 
