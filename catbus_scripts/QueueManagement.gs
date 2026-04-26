@@ -167,6 +167,7 @@ function assignClientToVolunteer(clientId, volunteerName) {
       CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
       CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
     ]);
+    bumpAssignmentRevision_();
 
     return buildAssignmentResponse_(true, `Client ${clientId} has been assigned to ${volunteerName}.`);
   }, 'assignClientToVolunteer');
@@ -569,6 +570,7 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
       CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
       CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
     ]);
+    bumpAssignmentRevision_();
 
     return buildAssignmentResponse_(true, `Client ${clientId} has been reassigned to ${newVolunteerName}`);
   }, 'reassignClientToVolunteer');
@@ -631,6 +633,7 @@ function unassignClient(clientId) {
       CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
       CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
     ]);
+    bumpAssignmentRevision_();
 
     return buildAssignmentResponse_(true, `Client ${clientId} has been returned to the queue`);
   }, 'unassignClient');
@@ -721,8 +724,10 @@ function removeClientFromQueue(clientId, reason) {
     // Invalidate cache
     invalidateMultiple([
       CACHE_CONFIG.KEYS.QUEUE,
-      CACHE_CONFIG.KEYS.VOLUNTEER_LIST
+      CACHE_CONFIG.KEYS.VOLUNTEER_LIST,
+      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS
     ]);
+    bumpAssignmentRevision_();
 
     return {success: true, message: 'Client removed from queue'};
   }, 'removeClientFromQueue');

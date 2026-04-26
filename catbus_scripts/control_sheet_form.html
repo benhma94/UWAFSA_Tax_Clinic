@@ -1627,6 +1627,7 @@
     let currentMentorListJson = null;
     let currentFilerNamesJson = null;
     let currentClientMapJson = null;
+    let currentAssignmentRevision = '0';
     let cachedMentors = null; // parsed mentor data from polling, reused to skip getMentorList round-trip
 
     // Draft persistence (sessionStorage — survives same-tab refresh in private browsing)
@@ -1635,6 +1636,7 @@
     let pendingDraftRows = null;  // rows waiting to be applied after preloadTaxYearRows
     let saveDraftTimer = null;    // debounce handle
     let isRestoring = false;      // suppress auto-save during restore
+    let ignoreDirtyState = false; // set true after successful submit/cancel until user edits again
 
     function collectDraftState() {
       const volunteer = document.getElementById('volunteer').value.trim();
@@ -1711,6 +1713,7 @@
     }
 
     function hasDirtyWork() {
+      if (ignoreDirtyState) return false;
       var clientEl = document.getElementById('client');
       if (clientEl && clientEl.value) return true;
       try {
@@ -1862,6 +1865,9 @@
       google.script.run.withSuccessHandler(data => {
         volunteerMap = data.clientMap || {};
         allVolunteerNames = (data.allFilerNames || Object.keys(volunteerMap)).sort();
+        currentClientMapJson = JSON.stringify(volunteerMap);
+        currentFilerNamesJson = JSON.stringify(allVolunteerNames);
+        currentAssignmentRevision = data.assignmentRevision || currentAssignmentRevision;
         allVolunteerNamesLoading = false;
         breakStatusMap = data.breakStatus || {};
         trainingVolunteerSet = new Set(data.trainingVolunteers || []);
@@ -1877,9 +1883,11 @@
       startPolling();
       // Wire up auto-save on any meaningful form change
       document.addEventListener('change', function(e) {
+        ignoreDirtyState = false;
         if (!isRestoring) scheduleSaveDraft();
       });
       document.addEventListener('input', function(e) {
+        ignoreDirtyState = false;
         const n = e.target.name;
         if (!isRestoring && (e.target.id === 'volunteer' || n === 'reviewer' || n === 'secondaryReviewer')) {
           scheduleSaveDraft();
@@ -2052,7 +2060,7 @@
             }
           })
           .withFailureHandler(() => { clientsRefreshPending = false; })
-          .getVolunteersAndClients();
+            .getVolunteersAndClients(true);
       }
 
       // Auto-select if volunteer has exactly one assigned client
@@ -2125,7 +2133,11 @@
               document.getElementById('notesDisplay').textContent = '';
               document.getElementById('notesContainer').style.display = 'none';
             }
-            renderDocumentChecklist();
+            if (window.requestIdleCallback) {
+              requestIdleCallback(() => renderDocumentChecklist());
+            } else {
+              setTimeout(renderDocumentChecklist, 0);
+            }
             if (!document.body.classList.contains('panel-open')) {
               document.body.classList.add('panel-open');
               document.getElementById('documentChecklist').setAttribute('aria-hidden', 'false');
@@ -2242,6 +2254,9 @@
 
       google.script.run.withSuccessHandler(data => {
         if (!data) return;
+        if (data.assignmentRevision) {
+          currentAssignmentRevision = data.assignmentRevision;
+        }
         // Handle help status
         handleHelpStatusUpdate(data.helpStatus);
         // Handle review approval
@@ -2272,7 +2287,7 @@
             updateVolunteerAutocomplete(data.allFilerNames);
           }
         }
-      }).getVolunteerPollingStatus(volunteer);
+      }).getVolunteerPollingStatus(volunteer, currentAssignmentRevision);
     }
 
     function updateVolunteerAutocomplete(newNames) {
@@ -2748,6 +2763,8 @@
           document.getElementById('spinner').style.display = 'none';
           console.log('Server response:', success);
           if (success === true) {
+            clearDraft();
+            ignoreDirtyState = true;
             showMessage('Client closed. Ready for next return.', true);
             loadDropdowns();
             setTimeout(clearForm, 5000);
@@ -2893,6 +2910,8 @@
           document.getElementById('spinner').style.display = 'none';
           console.log('Cancel response:', success);
           if (success === true) {
+            clearDraft();
+            ignoreDirtyState = true;
             showMessage('Client cancelled successfully. Returns marked as incomplete.', true);
             loadDropdowns();
             setTimeout(clearForm, 3000);
@@ -2936,6 +2955,7 @@
       currentClientData = null; // Clear stored client data
       currentTrackerStatus = [];
       clearDraft(); // Discard any saved draft after successful submission/cancel
+      ignoreDirtyState = false;
 
       // Clear notes section
       document.getElementById('notesContainer').style.display = 'none';

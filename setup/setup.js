@@ -197,6 +197,9 @@ const SECRETS = {
   // Google Drive folder ID for filer resume uploads
   RESUME_FOLDER_ID: '${s.RESUME_FOLDER_ID}',
 
+  // Google Drive folder ID for quiz file uploads
+  QUIZ_FOLDER_ID: '${s.QUIZ_FOLDER_ID}',
+
   // Clinic contact info
   CLINIC_EMAIL: '${s.CLINIC_EMAIL}',
   CLINIC_WEBSITE_URL: '${s.CLINIC_WEBSITE_URL}',
@@ -231,8 +234,8 @@ window.CATBUS_CONFIG = {
 
 function checkNodeVersion() {
   const [major] = process.versions.node.split('.').map(Number);
-  if (major < 14) {
-    err(`Node.js >= 14 is required. You have ${process.version}.`);
+  if (major < 16) {
+    err(`Node.js >= 16 is required. You have ${process.version}.`);
     hint('Download from: https://nodejs.org/');
     process.exit(1);
   }
@@ -337,6 +340,12 @@ async function collectSecrets() {
   hint('Leave blank to skip — resumes will not upload until this is set.');
   const RESUME_FOLDER_ID = await ask('Resume Folder ID', '');
 
+  label('QUIZ_FOLDER_ID — Google Drive folder for quiz file uploads');
+  hint('Create a folder in Google Drive for volunteers to upload quiz screenshots.');
+  hint('Copy its ID from the URL: drive.google.com/drive/folders/  >THIS PART<');
+  hint('Leave blank to skip — quiz file uploads will not work until this is set.');
+  const QUIZ_FOLDER_ID = await ask('Quiz Folder ID', '');
+
   label('CLINIC_EMAIL — Outgoing email address for the clinic');
   hint('Must be a Gmail or Google Workspace account that owns this Apps Script project.');
   const CLINIC_EMAIL = await ask('Clinic Email');
@@ -361,6 +370,7 @@ async function collectSecrets() {
     SPREADSHEET_ID,
     CONSOLIDATED_VOLUNTEERS_SHEET_ID,
     RESUME_FOLDER_ID,
+    QUIZ_FOLDER_ID,
     CLINIC_EMAIL,
     CLINIC_WEBSITE_URL,
     BOOKING_FORM_URL,
@@ -507,11 +517,21 @@ async function main() {
   console.log('');
   console.log(`  ${C.yellow}${C.bold}Save the values above — you will need them for future deployments.${C.reset}\n`);
   console.log(`  ${C.bold}Next steps:${C.reset}`);
-  console.log(`  1. Update ${C.dim}Config.gs${C.reset} with your clinic dates, times, and income limits.`);
-  console.log(`  2. If you changed income limits, also update ${C.dim}webpage/appointment_screening.html${C.reset}.`);
-  console.log(`  3. Upload ${C.dim}webpage/config.js${C.reset} to your web server alongside the static HTML files.`);
-  console.log(`  4. Test the web app: ${C.cyan}${webAppUrl}?app=intake${C.reset}`);
-  console.log(`  5. For future updates:`);
+  console.log(`  1. Update ${C.dim}Config.gs${C.reset} with your clinic dates, shift times, and income limits.`);
+  console.log(`     ${C.dim}(SCHEDULE_CONFIG, INCOME_LIMITS, APPOINTMENT_CONFIG, SIGN_IN_OUT)${C.reset}`);
+  console.log(`  2. If you changed income limits, sync them to both HTML files:`);
+  console.log(`     ${C.dim}catbus_scripts/appointment_screening.html${C.reset}`);
+  console.log(`     ${C.dim}webpage/appointment_screening.html${C.reset}`);
+  console.log(`  3. Upload ${C.dim}webpage/config.js${C.reset} (and all files in ${C.dim}webpage/${C.reset}) to your public web server.`);
+  console.log(`     ${C.dim}Re-upload config.js every time you redeploy — it contains the live URL.${C.reset}`);
+  console.log(`  4. Add UFILE product codes to the ${C.dim}"UFILE Keys"${C.reset} sheet (Year, Key, 0 columns).`);
+  if (!secrets.QUIZ_FOLDER_ID) {
+    console.log(`  5. ${C.yellow}Create a Google Drive folder for quiz uploads and add its ID to${C.reset} ${C.dim}_Secrets.gs${C.reset} ${C.yellow}as QUIZ_FOLDER_ID.${C.reset}`);
+  }
+  console.log(`  6. Test: ${C.cyan}${webAppUrl}?app=intake${C.reset}  (client intake)`);
+  console.log(`          ${C.cyan}${webAppUrl}?app=queue${C.reset}   (queue dashboard — needs admin password)`);
+  console.log(`          ${C.cyan}${webAppUrl}?app=admin${C.reset}   (admin dashboard — needs admin password)`);
+  console.log(`  7. For future pushes and deploys, use the ${C.dim}/push${C.reset} and ${C.dim}/deploy${C.reset} skills.`);
   hint(`clasp push && clasp deploy --deploymentId ${deploymentId} --description "..."`);
   console.log('');
   console.log(`  ${C.dim}See catbus_scripts/README-CLASP.md for the development workflow.${C.reset}\n`);

@@ -113,6 +113,27 @@ function clearAllCache() {
 }
 
 /**
+ * Returns the latest assignment revision token used by polling clients.
+ * This token changes whenever client assignments are created/updated/completed.
+ * @returns {string}
+ */
+function getAssignmentRevision_() {
+  const props = PropertiesService.getScriptProperties();
+  return props.getProperty('assignment_revision') || '0';
+}
+
+/**
+ * Bumps assignment revision to notify open control sheets of assignment changes.
+ * @returns {string} New revision token
+ */
+function bumpAssignmentRevision_() {
+  const revision = String(Date.now());
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('assignment_revision', revision);
+  return revision;
+}
+
+/**
  * Batch read optimization - reads multiple sheets in one call
  * @param {Array<Object>} requests - Array of {sheetName, startRow, numRows, numCols}
  * @returns {Object} Object with sheetName as key and data array as value

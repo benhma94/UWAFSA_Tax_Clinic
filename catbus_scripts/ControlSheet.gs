@@ -32,99 +32,140 @@ function getRequestPollSnapshot_(fullVolunteerLabel, volunteerNameOnly) {
   };
 }
 
+function normalizeVolunteerLabel_(label) {
+  const raw = (label || '').toString().trim();
+  if (!raw) return '';
+  return raw.includes('–') ? raw.split('–')[1].trim() : raw;
+}
+
 /**
  * Returns volunteer/client data for the control sheet.
  * Includes all signed-in filer names (not just those with active clients),
  * the client map, and current break status.
  * @returns {{ clientMap: Object, allFilerNames: string[], breakStatus: Object }}
  */
-function getVolunteersAndClients() {
+function getVolunteersAndClients(forceFresh) {
   return safeExecute(() => {
-    return getCachedOrFetch(
-      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
-      () => {
-        const today = new Date().toDateString();
+    const shouldForceFresh = forceFresh === true;
+    const fetchVolunteersAndClients = () => {
+      const today = new Date().toDateString();
 
-        // --- Build client map from CLIENT_ASSIGNMENT sheet ---
-        const assignSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
-        const lastRow = assignSheet.getLastRow();
-        const volunteerToClient = {};
+      // --- Build client map from CLIENT_ASSIGNMENT sheet ---
+      const assignSheet = getSheet(CONFIG.SHEETS.CLIENT_ASSIGNMENT);
+      const lastRow = assignSheet.getLastRow();
+      const volunteerToClient = {};
+      const isActiveAssignment = completed => completed !== 'complete' && completed !== 'reassigned' && completed !== 'unassigned';
 
-        if (lastRow > 1) {
+      const applyAssignmentRows = rows => {
+        for (let i = 0; i < rows.length; i++) {
+          const client = rows[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
+          const volunteer = normalizeVolunteerLabel_(rows[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]);
+          const completed = rows[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
+          if (volunteer && client && isActiveAssignment(completed)) {
+            volunteerToClient[volunteer] = client;
+          }
+        }
+      };
+
+      if (lastRow > 1) {
+        if (shouldForceFresh) {
+          // Force-fresh path for assignment revision changes: full scan for correctness.
+          const data = readSheetData(assignSheet, 4, 2, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, lastRow - 1);
+          applyAssignmentRows(data);
+        } else {
+          // Fast path: recent rows only keeps poll-time rebuilds cheap.
           const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, lastRow - 1);
           const startRow = Math.max(2, lastRow - checkRows + 1);
-          const data = readSheetData(assignSheet, 4, startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, checkRows);
-          for (let i = 0; i < data.length; i++) {
-            const client    = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.CLIENT_ID]?.toString().trim();
-            const label     = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.VOLUNTEER]?.toString().trim() || '';
-            const volunteer = label.includes('–') ? label.split('–')[1].trim() : label;
-            const completed = data[i][CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED]?.toString().trim().toLowerCase();
-            if (volunteer && client && completed !== 'complete' && completed !== 'reassigned' && completed !== 'unassigned') {
-              volunteerToClient[volunteer] = client;
-            }
-          }
+          const recentData = readSheetData(assignSheet, 4, startRow, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.TIMESTAMP + 1, checkRows);
+          applyAssignmentRows(recentData);
         }
+      }
 
-        const clientMap = {};
-        for (const [volunteer, client] of Object.entries(volunteerToClient)) {
-          clientMap[volunteer] = [client];
+      const clientMap = {};
+      for (const [volunteer, client] of Object.entries(volunteerToClient)) {
+        clientMap[volunteer] = [client];
+      }
+
+      // --- Build list of all signed-in filer volunteers + break status ---
+      const volunteerSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
+      const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
+      const volLastRow = volunteerSheet.getLastRow();
+      const signOutLastRow = signOutSheet.getLastRow();
+
+      const volData = volLastRow > 1
+        ? readSheetData(volunteerSheet, 5, 2, 1, volLastRow - 1)
+        : [];
+
+      const signOutData = signOutLastRow > 1
+        ? readSheetData(signOutSheet, 3, 2, 1, signOutLastRow - 1)
+        : [];
+
+      const signedOutSessions = new Set(signOutData.map(r => r[CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim()));
+      const nonFilerStations = CONFIG.SIGN_IN_OUT.NON_FILER_STATIONS;
+
+      const allFilerNames = [];
+      const breakStatus = {};
+      const trainingVolunteers = [];
+      const quizVolunteers = [];
+
+      for (const row of volData) {
+        const name      = row[CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
+        const station   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.STATION]?.toString().trim().toLowerCase();
+        const sessionId = row[CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
+        const onBreak   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.ON_BREAK]?.toString().trim().toLowerCase();
+
+        if (!name || !station || !sessionId) continue;
+
+        const signInDate = new Date(row[CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP]).toDateString();
+        if (signInDate !== today) continue;
+
+        if (signedOutSessions.has(sessionId)) continue;
+
+        const isTrainingStation = station === 'training';
+        const isQuizStation     = station === 'quiz';
+
+        // Exclude non-filer stations except training and quiz (they get their own modes)
+        if (nonFilerStations.some(r => station === r) && !isTrainingStation && !isQuizStation) continue;
+
+        if (!allFilerNames.includes(name)) allFilerNames.push(name);
+        // Last row for this volunteer wins for break status
+        breakStatus[name] = (onBreak === 'yes');
+
+        if (isTrainingStation && !trainingVolunteers.includes(name)) {
+          trainingVolunteers.push(name);
         }
-
-        // --- Build list of all signed-in filer volunteers + break status ---
-        const volunteerSheet = getSheet(CONFIG.SHEETS.VOLUNTEER_LIST);
-        const signOutSheet = getSheet(CONFIG.SHEETS.SIGNOUT);
-        const volLastRow = volunteerSheet.getLastRow();
-        const signOutLastRow = signOutSheet.getLastRow();
-
-        const volData = volLastRow > 1
-          ? readSheetData(volunteerSheet, 5, 2, 1, volLastRow - 1)
-          : [];
-
-        const signOutData = signOutLastRow > 1
-          ? readSheetData(signOutSheet, 3, 2, 1, signOutLastRow - 1)
-          : [];
-
-        const signedOutSessions = new Set(signOutData.map(r => r[CONFIG.COLUMNS.SIGNOUT.SESSION_ID]?.toString().trim()));
-        const nonFilerStations = CONFIG.SIGN_IN_OUT.NON_FILER_STATIONS;
-
-        const allFilerNames = [];
-        const breakStatus = {};
-        const trainingVolunteers = [];
-        const quizVolunteers = [];
-
-        for (const row of volData) {
-          const name      = row[CONFIG.COLUMNS.VOLUNTEER_LIST.NAME]?.toString().trim();
-          const station   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.STATION]?.toString().trim().toLowerCase();
-          const sessionId = row[CONFIG.COLUMNS.VOLUNTEER_LIST.SESSION_ID]?.toString().trim();
-          const onBreak   = row[CONFIG.COLUMNS.VOLUNTEER_LIST.ON_BREAK]?.toString().trim().toLowerCase();
-
-          if (!name || !station || !sessionId) continue;
-
-          const signInDate = new Date(row[CONFIG.COLUMNS.VOLUNTEER_LIST.TIMESTAMP]).toDateString();
-          if (signInDate !== today) continue;
-
-          if (signedOutSessions.has(sessionId)) continue;
-
-          const isTrainingStation = station === 'training';
-          const isQuizStation     = station === 'quiz';
-
-          // Exclude non-filer stations except training and quiz (they get their own modes)
-          if (nonFilerStations.some(r => station === r) && !isTrainingStation && !isQuizStation) continue;
-
-          if (!allFilerNames.includes(name)) allFilerNames.push(name);
-          // Last row for this volunteer wins for break status
-          breakStatus[name] = (onBreak === 'yes');
-
-          if (isTrainingStation && !trainingVolunteers.includes(name)) {
-            trainingVolunteers.push(name);
-          }
-          if (isQuizStation && !quizVolunteers.includes(name)) {
-            quizVolunteers.push(name);
-          }
+        if (isQuizStation && !quizVolunteers.includes(name)) {
+          quizVolunteers.push(name);
         }
+      }
 
-        return { clientMap, allFilerNames, breakStatus, trainingVolunteers, quizVolunteers };
-      },
+      return {
+        clientMap,
+        allFilerNames,
+        breakStatus,
+        trainingVolunteers,
+        quizVolunteers,
+        assignmentRevision: getAssignmentRevision_()
+      };
+    };
+
+    if (shouldForceFresh) {
+      const fresh = fetchVolunteersAndClients();
+      try {
+        CacheService.getScriptCache().put(
+          CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
+          JSON.stringify(fresh),
+          CACHE_CONFIG.TTL.VOLUNTEERS_AND_CLIENTS
+        );
+      } catch (e) {
+        Logger.log(`Cache write error for ${CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS}: ${e.message}`);
+      }
+      return fresh;
+    }
+
+    return getCachedOrFetch(
+      CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS,
+      fetchVolunteersAndClients,
       CACHE_CONFIG.TTL.VOLUNTEERS_AND_CLIENTS
     );
   }, 'getVolunteersAndClients');
@@ -139,25 +180,38 @@ function getVolunteersAndClients() {
  * @param {string} volunteer - Full volunteer string (may include station prefix)
  * @returns {{ helpStatus: string, reviewResult: Object|null, mentors: Object, allFilerNames: string[], clientMap: Object }}
  */
-function getVolunteerPollingStatus(volunteer) {
+function getVolunteerPollingStatus(volunteer, lastKnownAssignmentRevision, includeFullData) {
   return safeExecute(() => {
     const volunteerNameOnly = volunteer.includes('–')
       ? volunteer.split('–')[1].trim()
       : volunteer.trim();
+    const currentAssignmentRevision = getAssignmentRevision_();
+    const assignmentChanged = !!lastKnownAssignmentRevision && String(lastKnownAssignmentRevision) !== currentAssignmentRevision;
+    const shouldIncludeFullData = includeFullData === true || assignmentChanged;
 
-    const volunteersData = getVolunteersAndClients();
+    const volunteersData = shouldIncludeFullData ? getVolunteersAndClients(assignmentChanged) : null;
     const allFilerNames = (volunteersData && volunteersData.allFilerNames) ? volunteersData.allFilerNames : null;
-    const clientMap = (volunteersData && volunteersData.clientMap) ? volunteersData.clientMap : {};
+    const clientMap = (volunteersData && volunteersData.clientMap) ? volunteersData.clientMap : null;
     const pollSnapshot = getRequestPollSnapshot_(volunteer, volunteerNameOnly);
 
     return {
       helpStatus: pollSnapshot.helpStatus,
       reviewResult: pollSnapshot.reviewResult,
-      mentors: getMentorList(),
+      mentors: shouldIncludeFullData ? getMentorList() : null,
       allFilerNames: allFilerNames,
-      clientMap: clientMap
+      clientMap: clientMap,
+      assignmentRevision: (volunteersData && volunteersData.assignmentRevision) || currentAssignmentRevision
     };
   }, 'getVolunteerPollingStatus');
+}
+
+function notifyAssignmentChangeForClient_(clientID) {
+  const cacheKeys = [CACHE_CONFIG.KEYS.VOLUNTEERS_AND_CLIENTS];
+  if (clientID) {
+    cacheKeys.push(`client_data_${clientID}`);
+  }
+  invalidateMultiple(cacheKeys);
+  bumpAssignmentRevision_();
 }
 
 /**
@@ -417,6 +471,7 @@ function finalizeReturnsAndStore(volunteer, client, rows, meta) {
       if (assignRowNum > 0) {
         assignSheet.getRange(assignRowNum, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1).setValue('Complete');
         Logger.log(`Marked quiz assignment complete at row ${assignRowNum}`);
+        notifyAssignmentChangeForClient_(clientID);
       }
 
       const volunteerNameOnly = volunteer.includes('–') ? volunteer.split('–')[1].trim() : volunteer.trim();
@@ -443,6 +498,7 @@ function finalizeReturnsAndStore(volunteer, client, rows, meta) {
       assignSheet.getRange(assignRowNum, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1)
         .setValue('Complete');
       Logger.log(`Marked assignment complete at row ${assignRowNum}`);
+      notifyAssignmentChangeForClient_(clientID);
     } else {
       throw new Error(`Assignment not found for volunteer ${volunteer} and client ${clientID}`);
     }
@@ -563,6 +619,7 @@ function cancelClientAndStore(volunteer, client, rows) {
       assignSheet.getRange(assignRowNum, CONFIG.COLUMNS.CLIENT_ASSIGNMENT.COMPLETED + 1)
         .setValue('Complete');
       Logger.log(`Marked assignment complete at row ${assignRowNum} for cancellation`);
+      notifyAssignmentChangeForClient_(clientID);
     } else {
       Logger.log(`Assignment not found for ${volunteer}/${clientID}, proceeding with cancellation recording`);
     }
@@ -643,11 +700,14 @@ function getClientTrackerStatusInner(clientID) {
   const clientColIdx = CONFIG.COLUMNS.TAX_RETURN_TRACKER.CLIENT_ID;
   const yearColIdx   = CONFIG.COLUMNS.TAX_RETURN_TRACKER.TAX_YEAR;
   const statusColIdx = CONFIG.COLUMNS.TAX_RETURN_TRACKER.STATUS;
-  const allData = trackerSheet.getRange(2, 1, lastRow - 1, statusColIdx + 1).getValues();
   const trimmedID = clientID.trim();
 
+  const checkRows = Math.min(CONFIG.PERFORMANCE.RECENT_ROWS_TO_CHECK, lastRow - 1);
+  const startRow = Math.max(2, lastRow - checkRows + 1);
+  const recentData = readSheetData(trackerSheet, statusColIdx + 1, startRow, 1, checkRows);
+
   const result = [];
-  for (const row of allData) {
+  for (const row of recentData) {
     if (row[clientColIdx]?.toString().trim() === trimmedID) {
       result.push({
         taxYear: row[yearColIdx]?.toString().trim() || '',
@@ -655,6 +715,20 @@ function getClientTrackerStatusInner(clientID) {
       });
     }
   }
+
+  if (result.length === 0 && startRow > 2) {
+    const olderRows = startRow - 2;
+    const olderData = readSheetData(trackerSheet, statusColIdx + 1, 2, 1, olderRows);
+    for (const row of olderData) {
+      if (row[clientColIdx]?.toString().trim() === trimmedID) {
+        result.push({
+          taxYear: row[yearColIdx]?.toString().trim() || '',
+          status:  row[statusColIdx]?.toString().trim() || ''
+        });
+      }
+    }
+  }
+
   return result;
 }
 
@@ -666,9 +740,18 @@ function getClientTrackerStatusInner(clientID) {
  */
 function getClientData(clientID) {
   return safeExecute(() => {
-    return {
-      intakeInfo:    getClientIntakeInfoInner(clientID),
-      trackerStatus: getClientTrackerStatusInner(clientID)
-    };
+    const normalizedClientID = (clientID || '').toString().trim();
+    if (!normalizedClientID) {
+      return { intakeInfo: null, trackerStatus: [] };
+    }
+
+    return getCachedOrFetch(
+      `client_data_${normalizedClientID}`,
+      () => ({
+        intakeInfo:    getClientIntakeInfoInner(normalizedClientID),
+        trackerStatus: getClientTrackerStatusInner(normalizedClientID)
+      }),
+      30
+    );
   }, 'getClientData');
 }
