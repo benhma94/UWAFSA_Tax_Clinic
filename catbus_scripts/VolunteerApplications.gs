@@ -7,9 +7,9 @@
  * Role-specific application sheet metadata.
  */
 const APPLICATION_SOURCE_CONFIGS = [
-  { role: 'filer', roleLabel: 'Filer', sheetName: 'Filer Applications', dataColCount: 13, emailCol: 4, firstCol: 1, prefCol: 2, lastCol: 3 },
-  { role: 'frontline', roleLabel: 'Frontline', sheetName: 'Frontline Applications', dataColCount: 13, emailCol: 4, firstCol: 1, prefCol: 2, lastCol: 3 },
-  { role: 'mentor', roleLabel: 'Mentor', sheetName: 'Mentor Applications', dataColCount: 14, emailCol: 1, firstCol: 2, prefCol: 3, lastCol: 4 }
+  { role: 'filer', roleLabel: 'Filer', sheetName: 'Filer Applications', dataColCount: 13, emailCol: 4, firstCol: 1, prefCol: 2, lastCol: 3, programCol: 5, termCol: 6 },
+  { role: 'frontline', roleLabel: 'Frontline', sheetName: 'Frontline Applications', dataColCount: 13, emailCol: 4, firstCol: 1, prefCol: 2, lastCol: 3, programCol: 5, termCol: 6 },
+  { role: 'mentor', roleLabel: 'Mentor', sheetName: 'Mentor Applications', dataColCount: 14, emailCol: 1, firstCol: 2, prefCol: 3, lastCol: 4, programCol: 5, termCol: 6 }
 ];
 
 const APPLICATION_LIFECYCLE_HEADERS = [
@@ -34,7 +34,9 @@ function getAllApplicationSourceConfigs_() {
       emailCol: src.emailCol,
       firstCol: src.firstCol,
       prefCol: src.prefCol,
-      lastCol: src.lastCol
+      lastCol: src.lastCol,
+      programCol: src.programCol,
+      termCol: src.termCol
     };
   });
 }

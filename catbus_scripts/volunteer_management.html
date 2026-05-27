@@ -940,6 +940,11 @@
         <tbody id="rosterBody"></tbody>
       </table>
     </div>
+
+    <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <button class="btn-primary" onclick="exportVolunteerDistribution()">Export Volunteer Distribution</button>
+      <span id="distributionStatus" class="status" style="margin:0;display:none;"></span>
+    </div>
   </div>
 
   <!-- Section C: No-Show Volunteers -->
@@ -1919,6 +1924,33 @@
     el.textContent = msg;
     el.className = 'status' + (type ? ' ' + type : '');
     el.style.display = msg ? 'block' : 'none';
+  }
+
+  function setDistributionStatus(msg, type) {
+    var el = document.getElementById('distributionStatus');
+    if (!el) return;
+    el.innerHTML = msg || '';
+    el.className = 'status' + (type ? ' ' + type : '');
+    el.style.display = msg ? 'inline-block' : 'none';
+  }
+
+  function exportVolunteerDistribution() {
+    setDistributionStatus('Building distribution...', 'loading');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success) {
+          var link = res.tabUrl
+            ? '<a href="' + res.tabUrl + '" target="_blank" rel="noopener">' + esc(res.tabName) + '</a>'
+            : esc(res.tabName);
+          setDistributionStatus('Exported to "' + link + '" tab — ' + res.totalVolunteers + ' volunteer(s) counted.', 'success');
+        } else {
+          setDistributionStatus('Export failed.', 'error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        setDistributionStatus('Export failed: ' + (err.message || String(err)), 'error');
+      })
+      .exportVolunteerDistribution();
   }
 
   function esc(str) {

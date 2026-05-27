@@ -609,15 +609,19 @@ function transferAcceptedApplicationsAndSendInstructions(request) {
     var firstName = (row[src.firstCol] || '').toString().trim();
     var preferredName = (row[src.prefCol] || '').toString().trim();
     var lastName = (row[src.lastCol] || '').toString().trim();
+    var program = (row[src.programCol] || '').toString().trim();
+    var year = (row[src.termCol] || '').toString().trim();
     var emailKey = email.toLowerCase();
 
     if (!existingEmails[emailKey]) {
-      var newRow = ['', '', '', '', '', '', '', ''];
+      var newRow = ['', '', '', '', '', '', '', '', '', ''];
       newRow[cols.ROLE] = src.roleLabel;
       newRow[cols.EMAIL] = email;
       newRow[cols.FIRST_NAME_LEGAL] = firstName;
       newRow[cols.PREFERRED_NAME] = preferredName;
       newRow[cols.LAST_NAME] = lastName;
+      newRow[cols.PROGRAM] = program;
+      newRow[cols.YEAR] = year;
       rosterSheet.appendRow(newRow);
       existingEmails[emailKey] = true;
       added++;
@@ -739,13 +743,15 @@ function transferToConsolidatedList(volunteers) {
       continue;
     }
 
-    // Build row matching column order (8 cols: ROLE, EMAIL, FIRST_NAME_LEGAL, PREFERRED_NAME, LAST_NAME, EFILE_NUM, PASSWORD, ATTENDED_TRAINING)
-    var newRow = ['', '', '', '', '', '', '', ''];
+    // Build row matching column order (10 cols: ROLE, EMAIL, FIRST_NAME_LEGAL, PREFERRED_NAME, LAST_NAME, EFILE_NUM, PASSWORD, ATTENDED_TRAINING, PROGRAM, YEAR)
+    var newRow = ['', '', '', '', '', '', '', '', '', ''];
     newRow[cols.ROLE]            = vol.role || '';
     newRow[cols.EMAIL]           = vol.email || '';
     newRow[cols.FIRST_NAME_LEGAL]= vol.firstName || '';
     newRow[cols.PREFERRED_NAME]  = vol.preferredName || '';
     newRow[cols.LAST_NAME]       = vol.lastName || '';
+    newRow[cols.PROGRAM]         = vol.program || '';
+    newRow[cols.YEAR]            = vol.year || '';
 
     sheet.appendRow(newRow);
     existingEmails[emailKey] = true;
@@ -754,6 +760,114 @@ function transferToConsolidatedList(volunteers) {
 
   Logger.log('transferToConsolidatedList: added=' + added + ', skipped=' + skipped);
   return { success: true, added: added, skipped: skipped };
+}
+
+/**
+ * Builds a Program × Year pivot of the Consolidated Volunteer List and writes it
+ * to a "Volunteer Distribution" tab in the same spreadsheet (overwrites on each run).
+ *
+ * Programs come from VOLUNTEER_PROGRAM_OPTIONS; years come from VOLUNTEER_YEAR_OPTIONS.
+ * Blank/unknown values land in an "Unknown" row/column. Rows with role === "Drop" are skipped.
+ *
+ * @returns {{ success: boolean, tabName: string, tabUrl: string, totalVolunteers: number }}
+ */
+function exportVolunteerDistribution() {
+  var ss = getSpreadsheet();
+  var rosterSheet = ss.getSheetByName(CONFIG.SHEETS.CONSOLIDATED_VOLUNTEER_LIST);
+  if (!rosterSheet) throw new Error('Consolidated Volunteer List sheet not found.');
+
+  var cols = CONFIG.COLUMNS.CONSOLIDATED_VOLUNTEER_LIST;
+  var lastRow = rosterSheet.getLastRow();
+  var rows = [];
+  if (lastRow >= 2) {
+    var width = Math.max(rosterSheet.getLastColumn(), cols.YEAR + 1);
+    rows = rosterSheet.getRange(2, 1, lastRow - 1, width).getValues();
+  }
+
+  var UNKNOWN = 'Unknown';
+  var programRows = VOLUNTEER_PROGRAM_OPTIONS.slice();
+  var yearCols = VOLUNTEER_YEAR_OPTIONS.slice();
+  yearCols.push(UNKNOWN);
+
+  var counts = {};
+  programRows.concat(UNKNOWN).forEach(function(p) {
+    counts[p] = {};
+    yearCols.forEach(function(y) { counts[p][y] = 0; });
+  });
+
+  var totalVolunteers = 0;
+  var seenUnknownProgram = false;
+  for (var i = 0; i < rows.length; i++) {
+    var role = (rows[i][cols.ROLE] || '').toString().trim();
+    if (!role && !rows[i][cols.EMAIL]) continue; // empty row
+    if (role.toLowerCase() === 'drop') continue;
+
+    var program = (rows[i][cols.PROGRAM] || '').toString().trim();
+    var year = (rows[i][cols.YEAR] || '').toString().trim();
+
+    if (!program || programRows.indexOf(program) === -1) {
+      program = UNKNOWN;
+      seenUnknownProgram = true;
+    }
+    if (!year || yearCols.indexOf(year) === -1) year = UNKNOWN;
+
+    counts[program][year]++;
+    totalVolunteers++;
+  }
+
+  var outProgramRows = programRows.slice();
+  if (seenUnknownProgram) outProgramRows.push(UNKNOWN);
+
+  var tabName = 'Volunteer Distribution';
+  var outSheet = ss.getSheetByName(tabName);
+  if (!outSheet) {
+    outSheet = ss.insertSheet(tabName);
+  } else {
+    outSheet.clear();
+  }
+
+  var header = ['Program'].concat(yearCols).concat(['Total']);
+  var data = [header];
+
+  var colTotals = {};
+  yearCols.forEach(function(y) { colTotals[y] = 0; });
+
+  for (var r = 0; r < outProgramRows.length; r++) {
+    var prog = outProgramRows[r];
+    var rowOut = [prog];
+    var rowTotal = 0;
+    for (var c = 0; c < yearCols.length; c++) {
+      var n = counts[prog][yearCols[c]] || 0;
+      rowOut.push(n);
+      rowTotal += n;
+      colTotals[yearCols[c]] += n;
+    }
+    rowOut.push(rowTotal);
+    data.push(rowOut);
+  }
+
+  var totalsRow = ['Total'];
+  var grandTotal = 0;
+  yearCols.forEach(function(y) { totalsRow.push(colTotals[y]); grandTotal += colTotals[y]; });
+  totalsRow.push(grandTotal);
+  data.push(totalsRow);
+
+  outSheet.getRange(1, 1, data.length, header.length).setValues(data);
+  outSheet.getRange(1, 1, 1, header.length).setFontWeight('bold').setBackground('#f2f2f2');
+  outSheet.getRange(data.length, 1, 1, header.length).setFontWeight('bold').setBackground('#f2f2f2');
+  outSheet.getRange(1, 1, data.length, 1).setFontWeight('bold');
+  outSheet.setFrozenRows(1);
+  outSheet.setFrozenColumns(1);
+  outSheet.autoResizeColumns(1, header.length);
+
+  var tabUrl = ss.getUrl() + '#gid=' + outSheet.getSheetId();
+
+  return {
+    success: true,
+    tabName: tabName,
+    tabUrl: tabUrl,
+    totalVolunteers: totalVolunteers
+  };
 }
 
 /**

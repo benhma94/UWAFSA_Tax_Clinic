@@ -50,7 +50,9 @@ const CONFIG = {
       LAST_NAME: 4,
       EFILE_NUM: 5,
       PASSWORD: 6,
-      ATTENDED_TRAINING: 7
+      ATTENDED_TRAINING: 7,
+      PROGRAM: 8,
+      YEAR: 9
     },
     VOLUNTEER_ALUMNI: {
       EMAIL: 0,
@@ -556,6 +558,18 @@ const VOLUNTEER_TAGS = {
   // Example: 'John Smith': 'The Tax Wizard',
   'Ben Ma': "Unpaid Tax Slave"
 };
+
+/**
+ * Canonical year buckets used by the Volunteer Distribution pivot.
+ * Matches the dropdown options on the application form.
+ */
+const VOLUNTEER_YEAR_OPTIONS = ['First Year', 'Second Year', 'Third Year', 'Fourth Year', 'MAcc', 'Alumni'];
+
+/**
+ * Canonical program options used by the Volunteer Distribution pivot.
+ * Matches the dropdown options on the application form.
+ */
+const VOLUNTEER_PROGRAM_OPTIONS = ['AFM', 'Math/CPA', 'Biotech/CPA', 'CFM', 'SFM', 'Other'];
 
 /**
  * Configuration for the Expense Tracker feature.
