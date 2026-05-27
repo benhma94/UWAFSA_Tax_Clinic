@@ -294,7 +294,7 @@ function getVolunteerOnboardingChecklist(volunteerName, volunteerRole) {
       completedCount: completedCount,
       totalCount: resultTasks.length
     };
-  }, 'getVolunteerOnboardingChecklist');
+  }, 'getVolunteerOnboardingChecklist', { retry: false });
 }
 
 function setVolunteerOnboardingTaskComplete(volunteerName, taskKey, isComplete, volunteerRole) {
@@ -359,7 +359,7 @@ function setVolunteerOnboardingTaskComplete(volunteerName, taskKey, isComplete, 
       completedCount: checklist.completedCount,
       totalCount: checklist.totalCount
     };
-  }, 'setVolunteerOnboardingTaskComplete');
+  }, 'setVolunteerOnboardingTaskComplete', { retry: false });
 }
 
 function syncVolunteerOnboardingIdentity(oldEmail, newEmail, volunteerName, role) {

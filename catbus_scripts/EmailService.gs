@@ -3,7 +3,7 @@
  */
 
 /**
- * Sends an email via MailApp with standard logging and retry/error handling.
+ * Sends an email via MailApp with standard logging and error handling.
  * @param {Object} options MailApp.sendEmail options
  * @param {string} [context] Operation context for logging
  * @returns {void}
@@ -17,7 +17,7 @@ function sendEmail(options, context = 'sendEmail') {
   const operationContext = `Email (${context})`;
   return safeExecute(function() {
     MailApp.sendEmail(options);
-  }, operationContext);
+  }, operationContext, { retry: false });
 }
 
 /**

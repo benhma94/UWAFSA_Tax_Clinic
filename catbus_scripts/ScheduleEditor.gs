@@ -139,7 +139,7 @@ function saveVolunteerScheduleEdits(volunteerName, shiftUpdates, sendEmail) {
     }
 
     return result;
-  }, 'saveVolunteerScheduleEdits');
+  }, 'saveVolunteerScheduleEdits', { retry: false });
 }
 
 /**

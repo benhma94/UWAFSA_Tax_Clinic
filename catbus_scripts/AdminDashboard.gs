@@ -1117,7 +1117,7 @@ function setTaxYearEscalation(clientId, taxYear, isSenior) {
     sheet.getRange(sheetRow, sheetCol).setValue(seniorYears.join(','));
 
     return { ok: true, seniorYears };
-  }, 'setTaxYearEscalation');
+  }, 'setTaxYearEscalation', { retry: false });
 }
 
 /**

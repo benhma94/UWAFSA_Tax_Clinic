@@ -63,6 +63,7 @@ function createCatbusSheets() {
     'Needs Senior Review', // 6
     'Is High Priority',    // 7
     'Documents',           // 8
+    'Senior Years',        // 9
   ]);
 
   // ── 2. Client Assignment ─────────────────────────────────────────────────────

@@ -556,7 +556,7 @@ function finalizeReturnsAndStore(volunteer, client, rows, meta) {
     }
 
     return true;
-  }, 'finalizeReturnsAndStore');
+  }, 'finalizeReturnsAndStore', { retry: false });
 }
 
 /**
@@ -653,7 +653,8 @@ function cancelClientAndStore(volunteer, client, rows) {
       r.married ? 'Yes' : 'No',
       '', // EFILE = empty
       '', // PAPER = empty
-      'Yes' // INCOMPLETE = Yes
+      'Yes', // INCOMPLETE = Yes
+      CONFIG.TRACKER_STATUS.INCOMPLETE
     ]);
     
     Logger.log(`Cancelling ${toAppend.length} returns for volunteer ${volunteer}, client ${clientID}`);
@@ -664,7 +665,7 @@ function cancelClientAndStore(volunteer, client, rows) {
       const lastRow = trackerSheet.getLastRow();
       const startRow = lastRow + 1;
       const numRows = toAppend.length;
-      const numCols = toAppend[0].length; // Should be 10 columns
+      const numCols = toAppend[0].length; // Includes STATUS column
       
       Logger.log(`Writing to Tax Return Tracker: row ${startRow}, ${numRows} rows, ${numCols} cols`);
       
@@ -681,7 +682,7 @@ function cancelClientAndStore(volunteer, client, rows) {
     }
     
     return true;
-  }, 'cancelClientAndStore');
+  }, 'cancelClientAndStore', { retry: false });
 }
 
 /**

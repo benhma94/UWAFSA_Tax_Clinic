@@ -170,7 +170,7 @@ function assignClientToVolunteer(clientId, volunteerName) {
     bumpAssignmentRevision_();
 
     return buildAssignmentResponse_(true, `Client ${clientId} has been assigned to ${volunteerName}.`);
-  }, 'assignClientToVolunteer');
+  }, 'assignClientToVolunteer', { retry: false });
 }
 
 /**
@@ -416,7 +416,7 @@ function setVolunteerBreakStatus(volunteerName, isOnBreak) {
 
     Logger.log(`Break status for ${volunteerName}: ${isOnBreak ? 'ON BREAK' : 'AVAILABLE'}`);
     return { success: true, isOnBreak: isOnBreak };
-  }, 'setVolunteerBreakStatus');
+  }, 'setVolunteerBreakStatus', { retry: false });
 }
 
 /**
@@ -573,7 +573,7 @@ function reassignClientToVolunteer(clientId, newVolunteerName) {
     bumpAssignmentRevision_();
 
     return buildAssignmentResponse_(true, `Client ${clientId} has been reassigned to ${newVolunteerName}`);
-  }, 'reassignClientToVolunteer');
+  }, 'reassignClientToVolunteer', { retry: false });
 }
 
 /**
@@ -636,7 +636,7 @@ function unassignClient(clientId) {
     bumpAssignmentRevision_();
 
     return buildAssignmentResponse_(true, `Client ${clientId} has been returned to the queue`);
-  }, 'unassignClient');
+  }, 'unassignClient', { retry: false });
 }
 
 /**
@@ -730,5 +730,5 @@ function removeClientFromQueue(clientId, reason) {
     bumpAssignmentRevision_();
 
     return {success: true, message: 'Client removed from queue'};
-  }, 'removeClientFromQueue');
+  }, 'removeClientFromQueue', { retry: false });
 }

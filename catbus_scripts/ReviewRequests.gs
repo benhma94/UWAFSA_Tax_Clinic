@@ -176,7 +176,7 @@ function autoApproveSimulatedReview(volunteer, clientId, taxYear, reviewerLabel)
 
     invalidateCache(CACHE_CONFIG.KEYS.REVIEW_REQUESTS);
     return true;
-  }, 'autoApproveSimulatedReview');
+  }, 'autoApproveSimulatedReview', { retry: false });
 }
 
 /**

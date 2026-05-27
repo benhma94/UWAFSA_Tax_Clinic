@@ -316,7 +316,7 @@ function submitAvailabilityForm(formData) {
     } finally {
       lock.releaseLock();
     }
-  }, 'submitAvailabilityForm');
+  }, 'submitAvailabilityForm', { retry: false });
 }
 
 /**

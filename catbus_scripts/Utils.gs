@@ -37,10 +37,24 @@ function loadPage(htmlFile, title, options) {
  * Wraps a function in error handling with retry logic for rate limits
  * @param {Function} operation - The function to execute
  * @param {string} context - Context description for logging
- * @param {number} maxRetries - Maximum number of retries (default: 3)
+ * @param {number|Object} [optionsOrMaxRetries] - Max retries, or options:
+ *   { maxRetries: number, retry: boolean }
  * @returns {*} The result of the operation
  */
-function safeExecute(operation, context = 'Operation', maxRetries = 3) {
+function safeExecute(operation, context = 'Operation', optionsOrMaxRetries = 3) {
+  let maxRetries = 3;
+  let retry = true;
+  if (typeof optionsOrMaxRetries === 'number') {
+    maxRetries = optionsOrMaxRetries;
+  } else if (optionsOrMaxRetries && typeof optionsOrMaxRetries === 'object') {
+    maxRetries = typeof optionsOrMaxRetries.maxRetries === 'number'
+      ? optionsOrMaxRetries.maxRetries
+      : 3;
+    retry = optionsOrMaxRetries.retry !== false;
+  }
+  maxRetries = Math.max(1, Math.floor(maxRetries));
+  if (!retry) maxRetries = 1;
+
   let lastError;
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -57,7 +71,7 @@ function safeExecute(operation, context = 'Operation', maxRetries = 3) {
                          errorMsg.toLowerCase().includes('service invoked') ||
                          errorMsg.toLowerCase().includes('timed out');
 
-      if (isRateLimit && attempt < maxRetries - 1) {
+      if (retry && isRateLimit && attempt < maxRetries - 1) {
         // Exponential backoff: 500ms, 1000ms, 2000ms
         const delay = 500 * Math.pow(2, attempt);
         Logger.log(`${context} Rate limit hit, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);

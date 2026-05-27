@@ -529,6 +529,22 @@
     messageBox.style.display = 'none';
   }
 
+  function appendSessionItem(list, sessionName, station, time) {
+    const div = document.createElement('div');
+    div.className = 'session-item';
+
+    const nameEl = document.createElement('strong');
+    nameEl.textContent = sessionName;
+
+    const metaEl = document.createElement('span');
+    metaEl.style.opacity = '0.7';
+    metaEl.textContent = ' \u2022 Station: ' + station + ' \u2022 Signed in at ' + time;
+
+    div.appendChild(nameEl);
+    div.appendChild(metaEl);
+    list.appendChild(div);
+  }
+
   function loadAvailableStations() {
     google.script.run
       .withSuccessHandler(stations => {
@@ -683,13 +699,7 @@
             const sessionName = session.name || 'Unknown volunteer';
             const station = session.station || 'N/A';
             const time = session.time || toDisplayTimeFromTimestamp(session.timestamp);
-            const div = document.createElement('div');
-            div.className = 'session-item';
-            div.innerHTML = `
-              <strong>${sessionName}</strong> 
-              <span style="opacity: 0.7;">• Station: ${station} • Signed in at ${time}</span>
-            `;
-            list.appendChild(div);
+            appendSessionItem(list, sessionName, station, time);
           });
         } else {
           container.style.display = 'none';
@@ -745,10 +755,7 @@
         const container = document.getElementById('activeSessionsContainer');
         const list = document.getElementById('activeSessionsList');
         container.style.display = 'block';
-        const div = document.createElement('div');
-        div.className = 'session-item';
-        div.innerHTML = `<strong>${volunteerName}</strong> <span style="opacity: 0.7;">• Station: ${stationName} • Signed in at ${signInTime}</span>`;
-        list.appendChild(div);
+        appendSessionItem(list, volunteerName, stationName, signInTime);
         const activeEl = document.getElementById('activeVolunteers');
         activeEl.textContent = (parseInt(activeEl.textContent, 10) || 0) + 1;
 

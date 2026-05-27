@@ -107,7 +107,7 @@ function sendRequest(volunteer, requestType, extraData) {
     invalidateCache(cacheKey);
 
     return true;
-  }, `send${requestType}Request`);
+  }, `send${requestType}Request`, { retry: false });
 }
 
 /**
@@ -155,7 +155,7 @@ function updateRequestStatus(volunteer, requestType, fromStatus, toStatus) {
     }
 
     return false; // No matching row found
-  }, `update${requestType}RequestStatus`);
+  }, `update${requestType}RequestStatus`, { retry: false });
 }
 
 /**

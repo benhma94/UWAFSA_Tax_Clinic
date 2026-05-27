@@ -189,8 +189,14 @@ function signInVolunteer(volunteerName, station) {
       throw new Error('Station is required');
     }
 
-    const normalizedName = volunteerName.trim();
-    const normalizedStation = station.trim();
+    const normalizedName = sanitizeInput(volunteerName, 100);
+    const normalizedStation = sanitizeInput(station, 50);
+    if (!normalizedName) {
+      throw new Error('Volunteer name is required');
+    }
+    if (!normalizedStation) {
+      throw new Error('Station is required');
+    }
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
 
@@ -238,7 +244,7 @@ function signInVolunteer(volunteerName, station) {
     } finally {
       lock.releaseLock();
     }
-  }, 'signInVolunteer');
+  }, 'signInVolunteer', { retry: false });
 }
 
 /**
@@ -277,7 +283,7 @@ function signOutVolunteer(sessionId) {
       timestamp: toClientIsoTimestamp_(timestamp),
       volunteerName: session.name
     };
-  }, 'signOutVolunteer');
+  }, 'signOutVolunteer', { retry: false });
 }
 
 /**
@@ -393,7 +399,7 @@ function clearStaleSessions(hoursThreshold) {
     }
 
     return { cleared: rows.length };
-  }, 'clearStaleSessions');
+  }, 'clearStaleSessions', { retry: false });
 }
 
 /**

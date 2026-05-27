@@ -107,7 +107,7 @@ function storeMainFormData(formData) {
       // Always release the lock
       lock.releaseLock();
     }
-  }, 'storeMainFormData');
+  }, 'storeMainFormData', { retry: false });
 }
 
 /**
@@ -206,6 +206,5 @@ function updateClientIntake(clientId, formData) {
     } finally {
       lock.releaseLock();
     }
-  }, 'updateClientIntake');
+  }, 'updateClientIntake', { retry: false });
 }
-

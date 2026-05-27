@@ -824,7 +824,7 @@ function outputScheduleToSheet(spreadsheetId, scheduleResult, outputSheetName, d
       Logger.log('ERROR in outputScheduleToSheet: ' + error.message);
       throw new Error('outputScheduleToSheet failed: ' + error.message);
     }
-  }, 'outputScheduleToSheet');
+  }, 'outputScheduleToSheet', { retry: false });
 }
 
 /**
