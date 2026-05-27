@@ -9,7 +9,7 @@
 const APPLICATION_SOURCE_CONFIGS = [
   { role: 'filer', roleLabel: 'Filer', sheetName: 'Filer Applications', dataColCount: 13, emailCol: 4, firstCol: 1, prefCol: 2, lastCol: 3, programCol: 5, termCol: 6 },
   { role: 'frontline', roleLabel: 'Frontline', sheetName: 'Frontline Applications', dataColCount: 13, emailCol: 4, firstCol: 1, prefCol: 2, lastCol: 3, programCol: 5, termCol: 6 },
-  { role: 'mentor', roleLabel: 'Mentor', sheetName: 'Mentor Applications', dataColCount: 14, emailCol: 1, firstCol: 2, prefCol: 3, lastCol: 4, programCol: 5, termCol: 6 }
+  { role: 'mentor', roleLabel: 'Mentor', sheetName: 'Mentor Applications', dataColCount: 15, emailCol: 1, firstCol: 2, prefCol: 3, lastCol: 4, programCol: 5, termCol: 6 }
 ];
 
 const APPLICATION_LIFECYCLE_HEADERS = [
@@ -174,7 +174,8 @@ function submitVolunteerApplication(params) {
     const sheet = getOrCreateSheet('Mentor Applications', [
       'Timestamp', 'Email', 'First Name', 'Preferred Name', 'Last Name', 'Program',
       'Year/Term', 'Other Languages', 'T-Shirt Size', 'Previously Volunteered',
-      'Tax Experience', 'Case Study Q1', 'Case Study Q2', 'Case Study Q3'
+      'Tax Experience', 'Case Study Q1', 'Case Study Q2', 'Case Study Q3',
+      'Role Preference'
     ]);
     sheet.appendRow([
       new Date(),
@@ -190,7 +191,8 @@ function submitVolunteerApplication(params) {
       (params.taxExperience || '').trim(),
       (params.caseQ1 || '').trim(),
       (params.caseQ2 || '').trim(),
-      (params.caseQ3 || '').trim()
+      (params.caseQ3 || '').trim(),
+      (params.rolePreference || '').trim()
     ]);
 
   } else {

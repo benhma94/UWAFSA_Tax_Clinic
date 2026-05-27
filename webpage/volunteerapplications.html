@@ -85,6 +85,22 @@
         cursor: pointer;
       }
 
+      /* --- Checkbox groups --- */
+      .checkbox-group {
+        display: flex;
+        gap: 20px;
+        margin-top: 6px;
+        flex-wrap: wrap;
+      }
+      .checkbox-group label {
+        font-weight: normal;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+
       /* --- Screening section --- */
       .screening-section {
         background: #f9f9f9;
@@ -862,6 +878,13 @@
               '<option>XXL</option>' +
             '</select>' +
 
+            '<label>What type of mentor role would you prefer? <span class="optional">(Select all that apply)</span></label>' +
+            '<div class="checkbox-group">' +
+              '<label><input type="checkbox" name="mentor-rolePref" value="Senior Filer"> Senior Filer</label>' +
+              '<label><input type="checkbox" name="mentor-rolePref" value="Review"> Review</label>' +
+              '<label><input type="checkbox" name="mentor-rolePref" value="Senior Frontline"> Senior Frontline</label>' +
+            '</div>' +
+
             '<label>Have you previously volunteered for the AFSA Tax Clinic?</label>' +
             '<div class="radio-group">' +
               '<label><input type="radio" name="mentor-prev" value="Yes" onchange="evalMentorPrevVolunteer()"> Yes</label>' +
@@ -918,6 +941,7 @@
       var caseQ1        = document.getElementById('mentor-caseQ1').value.trim();
       var caseQ2        = document.getElementById('mentor-caseQ2').value.trim();
       var caseQ3        = document.getElementById('mentor-caseQ3').value.trim();
+      var rolePrefs     = Array.from(document.querySelectorAll('input[name="mentor-rolePref"]:checked')).map(function(c){ return c.value; });
 
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         showMentorStatus('Please enter a valid email address.', 'error'); return;
@@ -933,6 +957,9 @@
       }
       if (!tshirt) {
         showMentorStatus('Please select your t-shirt size.', 'error'); return;
+      }
+      if (rolePrefs.length === 0) {
+        showMentorStatus('Please select at least one preferred role.', 'error'); return;
       }
       if (!prevSelected) {
         showMentorStatus('Please indicate whether you have previously volunteered for the AFSA Tax Clinic.', 'error'); return;
@@ -965,6 +992,7 @@
         term: term,
         otherLanguages: languages,
         tshirtSize: tshirt,
+        rolePreference: rolePrefs.join(', '),
         previouslyVolunteered: prevSelected.value,
         taxExperience: prevSelected.value === 'No' ? taxExperience : '',
         caseQ1: caseQ1,
