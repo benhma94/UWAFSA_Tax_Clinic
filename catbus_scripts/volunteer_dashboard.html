@@ -1549,6 +1549,25 @@
     return (value || '').replace(/[^a-zA-Z0-9-_\. ]/g, '').trim();
   }
 
+  function maskVolunteerEmail(email) {
+    const value = (email || '').toString().trim();
+    if (!value) return '';
+    const atIdx = value.indexOf('@');
+    if (atIdx <= 0) return value;
+    return value.charAt(0) + '***' + value.substring(atIdx);
+  }
+
+  function maskUfileKey(code) {
+    const value = (code || '').toString().trim();
+    if (!value) return '';
+    if (value.length <= 2) return '*'.repeat(Math.max(2, value.length));
+    if (value.length <= 8) return value.charAt(0) + '*'.repeat(Math.max(2, value.length - 2)) + value.charAt(value.length - 1);
+
+    const visiblePrefix = value.substring(0, Math.max(1, Math.floor((value.length - 8) / 2)));
+    const visibleSuffix = value.substring(value.length - Math.max(1, value.length - visiblePrefix.length - 8));
+    return visiblePrefix + '*'.repeat(8) + visibleSuffix;
+  }
+
   function renderVolunteerProfileSummary() {
     const summary = document.getElementById('profileSummary');
     const nameText = document.getElementById('profileNameText');
@@ -1567,7 +1586,7 @@
     if (currentVolunteerEmail === null) {
       emailText.textContent = 'Loading…';
     } else {
-      emailText.textContent = currentVolunteerEmail || 'Not on file';
+      emailText.textContent = currentVolunteerEmail ? maskVolunteerEmail(currentVolunteerEmail) : 'Not on file';
     }
     if (firstNameInput) firstNameInput.value = currentVolunteerFirstName || '';
     if (lastNameInput) lastNameInput.value = currentVolunteerLastName || '';
@@ -2057,7 +2076,7 @@
     keys.forEach(k => {
       html += `<div style="font-family: monospace; font-size: 1em; padding: 4px 0;">`
         + `<span style="opacity:0.6; font-size:0.85em; margin-right: 8px;">${escapeHtml(String(k.year))}</span>`
-        + `<strong>${escapeHtml(k.code)}</strong></div>`;
+        + `<strong>${escapeHtml(maskUfileKey(k.code))}</strong></div>`;
     });
     html += '</div>';
     el.innerHTML = html;
