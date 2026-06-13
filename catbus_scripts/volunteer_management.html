@@ -226,7 +226,7 @@
       border-left: 3px solid transparent;
     }
 
-    .status.loading { background: #d6eaf8; color: #21618c; border-left-color: #3498db; display: block; }
+    .status.loading { background: #d6eaf8; color: #21618c; display: block; animation: none; width: auto; height: auto; border: none; border-left: 3px solid #3498db; border-radius: 6px; }
     .status.success { background: #e8f8f0; color: #1a6b3a; border-left-color: #27ae60; display: block; }
     .status.error   { background: #fde8e8; color: #a93226; border-left-color: #e74c3c; display: block; }
 
@@ -1029,6 +1029,9 @@
       Permanent record of all past volunteers. Run <strong>Phase 2.5</strong> in Archive &amp; Rollforward to populate this list.
       Use the Blacklist action to flag volunteers who should not be re-admitted.
     </p>
+    <div class="filter-row" style="margin-bottom:10px;">
+      <input type="search" id="alumniSearch" oninput="renderAlumni()" placeholder="Search name or email..." style="padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:0.88rem;min-width:180px;">
+    </div>
     <div id="alumniStatus" class="status" style="display:none"></div>
     <div class="data-table-wrap">
       <table id="alumniTable" class="data-table">
@@ -2164,7 +2167,11 @@
   }
 
   function onAlumniLoaded(data) {
-    alumniData = data || [];
+    alumniData = (data || []).slice().sort(function(a, b) {
+      var nameA = ((a.preferredName || a.firstNameLegal || '') + ' ' + (a.lastName || '')).trim().toLowerCase();
+      var nameB = ((b.preferredName || b.firstNameLegal || '') + ' ' + (b.lastName || '')).trim().toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
     var badge = document.getElementById('alumniCount');
     badge.textContent = alumniData.length;
     badge.style.display = alumniData.length ? '' : 'none';
@@ -2183,6 +2190,16 @@
     var filtered = alumniShowBlacklistedOnly
       ? alumniData.filter(function(a) { return a.blacklisted; })
       : alumniData;
+
+    var searchTerm = (document.getElementById('alumniSearch') || {}).value;
+    searchTerm = searchTerm ? searchTerm.trim().toLowerCase() : '';
+    if (searchTerm) {
+      filtered = filtered.filter(function(a) {
+        var name = ((a.preferredName || a.firstNameLegal || '') + ' ' + (a.lastName || '')).trim().toLowerCase();
+        var email = (a.email || '').toLowerCase();
+        return name.indexOf(searchTerm) !== -1 || email.indexOf(searchTerm) !== -1;
+      });
+    }
 
     var tbody = document.getElementById('alumniBody');
     if (filtered.length === 0) {
