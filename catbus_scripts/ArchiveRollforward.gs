@@ -242,8 +242,9 @@ function archiveVolunteerStats(year) {
   }
 
   // ── G. Upsert each volunteer ───────────────────────────────────────────────
-  let inserted = 0;
-  let updated  = 0;
+  let inserted       = 0;
+  let updated        = 0;
+  let autoBlacklisted = 0;
   const now = new Date();
 
   for (const email of Object.keys(volunteersByEmail)) {
@@ -265,6 +266,11 @@ function archiveVolunteerStats(year) {
         row[cols.PREFERRED_NAME]   = vol.preferredName;
         row[cols.LAST_NAME]        = vol.lastName;
         row[cols.LAST_UPDATED]     = now;
+        if (vol.role.toLowerCase() === 'drop' && !row[cols.BLACKLISTED]) {
+          row[cols.BLACKLISTED]      = true;
+          row[cols.BLACKLIST_REASON] = 'Dropped – ' + year + ' rollforward';
+          autoBlacklisted++;
+        }
         // Pad row to totalCols if needed
         while (row.length < totalCols) row.push('');
         alumniSheet.getRange(rowIdx, 1, 1, totalCols).setValues([row]);
@@ -287,6 +293,12 @@ function archiveVolunteerStats(year) {
       row[cols.LAST_NAME]        = vol.lastName;
       row[cols.LAST_UPDATED]     = now;
 
+      if (vol.role.toLowerCase() === 'drop' && !row[cols.BLACKLISTED]) {
+        row[cols.BLACKLISTED]      = true;
+        row[cols.BLACKLIST_REASON] = 'Dropped – ' + year + ' rollforward';
+        autoBlacklisted++;
+      }
+
       // Pad row to totalCols if needed
       while (row.length < totalCols) row.push('');
       alumniSheet.getRange(rowIdx, 1, 1, totalCols).setValues([row]);
@@ -301,8 +313,10 @@ function archiveVolunteerStats(year) {
       newRow[cols.LAST_NAME]      = vol.lastName;
       newRow[cols.TOTAL_RETURNS]  = returnsThisYear;
       newRow[cols.TOTAL_HOURS]    = hoursThisYear;
-      newRow[cols.BLACKLISTED]    = false;
-      newRow[cols.BLACKLIST_REASON] = '';
+      const isDropped = vol.role.toLowerCase() === 'drop';
+      newRow[cols.BLACKLISTED]      = isDropped;
+      newRow[cols.BLACKLIST_REASON] = isDropped ? 'Dropped – ' + year + ' rollforward' : '';
+      if (isDropped) autoBlacklisted++;
       newRow[cols.LAST_UPDATED]   = now;
       newRow[yearReturnsCol]      = returnsThisYear;
       newRow[yearHoursCol]        = hoursThisYear;
@@ -317,6 +331,7 @@ function archiveVolunteerStats(year) {
     processed: inserted + updated,
     inserted,
     updated,
+    autoBlacklisted,
     unmatched: [...unmatchedNames],
     year
   };

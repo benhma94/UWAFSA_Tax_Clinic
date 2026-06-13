@@ -485,6 +485,9 @@
         .withSuccessHandler(function(result) {
           var msg = 'Done. ' + result.processed + ' volunteer(s) archived '
             + '(' + result.inserted + ' new, ' + result.updated + ' updated).';
+          if (result.autoBlacklisted > 0) {
+            msg += ' ' + result.autoBlacklisted + ' volunteer(s) with role “drop” were automatically blacklisted.';
+          }
           if (result.unmatched && result.unmatched.length > 0) {
             msg += ' <strong>Warning:</strong> ' + result.unmatched.length
               + ' name(s) from SignOut/Tracker could not be matched to an email: '

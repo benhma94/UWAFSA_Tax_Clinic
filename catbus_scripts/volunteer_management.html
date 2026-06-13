@@ -2242,11 +2242,12 @@
         ? '<span class="role-pill blacklisted">Blacklisted</span>'
         : '<span class="role-pill filer" style="background:#d5f5e3;color:#1e6b3a;">Active</span>';
 
+      var emailJson = JSON.stringify(a.email).replace(/"/g, '&quot;');
       var actionBtn = a.blacklisted
         ? '<button class="btn-muted" style="font-size:0.78rem;padding:4px 10px;" onclick="toggleBlacklist(' +
-            JSON.stringify(a.email) + ', true)">Clear</button>'
+            emailJson + ', true)">Clear</button>'
         : '<button class="btn-danger" style="font-size:0.78rem;padding:4px 10px;" onclick="toggleBlacklist(' +
-            JSON.stringify(a.email) + ', false)">Blacklist</button>';
+            emailJson + ', false)">Blacklist</button>';
 
       var reasonCell = a.blacklisted && a.blacklistReason
         ? '<br><span style="font-size:0.78rem;color:#888;">' + esc(a.blacklistReason) + '</span>'
