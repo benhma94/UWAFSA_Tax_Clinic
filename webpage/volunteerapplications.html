@@ -103,8 +103,8 @@
 
       /* --- Screening section --- */
       .screening-section {
-        background: #f9f9f9;
-        border: 1px solid #ddd;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
         border-radius: 6px;
         padding: 16px 20px;
         margin-bottom: 24px;
@@ -112,6 +112,9 @@
       .screening-section h3 {
         margin: 0 0 12px 0;
         font-size: 1rem;
+      }
+      .screening-section > p {
+        color: var(--text-muted) !important;
       }
       .screening-question {
         margin-bottom: 16px;
@@ -123,8 +126,9 @@
       .disqualify-msg {
         margin-top: 6px;
         padding: 8px 12px;
-        background: #fadbd8;
-        color: #922b21;
+        background: var(--status-closed-bg);
+        color: var(--status-closed-text);
+        border: 1px solid var(--status-closed-border);
         border-radius: 4px;
         font-size: 0.95em;
         display: none;
@@ -179,7 +183,7 @@
   <script src="shared.js?v=3"></script>
   <script>
     // Toggle this to open or close all applications
-    var APPLICATIONS_OPEN = false;
+    var APPLICATIONS_OPEN = true;
 
     var APPS_SCRIPT_URL = CATBUS_CONFIG.WEBAPP_URL;
 
@@ -242,7 +246,7 @@
         '<blockquote style="border-left:3px solid #8e0000;margin:8px 0 8px 16px;padding:6px 12px;color:#555;">&ldquo;Co-op made me realize how important communication skills are, especially talking with/ presenting for clients.&rdquo;</blockquote>' +
         '<blockquote style="border-left:3px solid #8e0000;margin:8px 0 8px 16px;padding:6px 12px;color:#555;">&ldquo;Last year Tax Clinic helped me improve my communication skills a lot so a big THANK YOU&rdquo;</blockquote>' +
         '<p>Many of our past volunteers (upper-years and alumni) return to contribute. That\'s how significant the Tax Clinic is to AFSA.</p>' +
-        '<p>However, it\'s also a major commitment. The AFSA Tax Clinic prepares real taxes for real people, both at UW and the K-W community. If we select you for a volunteer role and you drop out, it significantly affects how well prepared we are on the tax clinic dates. As one ofthe largest tax clinic in the region preparing over 1,200 returns, we need to ensure our volunteers are prepared and available for the Tax Clinic. We\'ll take care of preparing you, but we are hurt a lot by people who drop out. To help me ensure that you read this blurb in full please select &lsquo;Catbus&rsquo; for the last question.</p>' +
+        '<p>However, it\'s also a major commitment. The AFSA Tax Clinic prepares real taxes for real people, both at UW and the KW community. If we select you for a volunteer role and you drop out, it significantly affects how well prepared we are on the tax clinic dates. As one of the largest tax clinics in the region preparing over 1,000 returns, we need to ensure our volunteers are prepared and available for the Tax Clinic. To confirm that you read this blurb in full and that you passed the literacy requirements, please select &lsquo;Catbus&rsquo; for the last question.</p>' +
         '<p><strong>The commitment that we ask from you is:</strong></p>' +
         '<p style="margin:4px 0;">1) ASAP after acceptance (approx 1 hour): Register for the CRA CVITP program and for an EFILE number, including filing a tax return for yourself if you haven\'t before (&lt;1 hour).</p>' +
         '<p style="margin:2px 0 2px 2em;">a) Register for CRA CVITP program</p>' +
@@ -258,7 +262,7 @@
         // Screening section
         '<div class="screening-section">' +
           '<h3>Eligibility Screening</h3>' +
-          '<p style="margin:0 0 12px 0;color:#555;font-size:0.95em;">Please answer all questions below. Your application form will appear if you meet the requirements.</p>' +
+          '<p style="margin:0 0 12px 0;color:#555;font-size:0.95em;">Please answer all questions below.</p>' +
 
           screeningQ('filer-q1',
             'Are you an international student who arrived in Canada in 2026 or later?',
@@ -881,7 +885,7 @@
             '<label>What type of mentor role would you prefer? <span class="optional">(Select all that apply)</span></label>' +
             '<div class="checkbox-group">' +
               '<label><input type="checkbox" name="mentor-rolePref" value="Senior Filer"> Senior Filer</label>' +
-              '<label><input type="checkbox" name="mentor-rolePref" value="Review"> Review</label>' +
+              '<label><input type="checkbox" name="mentor-rolePref" value="Reviewer"> Reviewer</label>' +
               '<label><input type="checkbox" name="mentor-rolePref" value="Senior Frontline"> Senior Frontline</label>' +
             '</div>' +
 
