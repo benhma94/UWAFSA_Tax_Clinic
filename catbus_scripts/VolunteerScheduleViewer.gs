@@ -103,8 +103,76 @@ function getAllVolunteerNames() {
       }
     }
 
+    // Merge in alumni display names so past-year volunteers are typeable in the search box.
+    // Wrapped so a missing Volunteer Alumni sheet never breaks the active-volunteer path.
+    try {
+      const lowerSet = {};
+      Object.keys(nameSet).forEach(n => { lowerSet[n.toLowerCase()] = true; });
+      getAlumniData().forEach(a => {
+        const displayName = alumniDisplayName_(a);
+        if (displayName && !lowerSet[displayName.toLowerCase()]) {
+          lowerSet[displayName.toLowerCase()] = true;
+          nameSet[displayName] = true;
+        }
+      });
+    } catch (e) {
+      Logger.log('Warning: Could not merge alumni names into autocomplete: ' + e.message);
+    }
+
     return Object.keys(nameSet).sort();
   }, 'getAllVolunteerNames');
+}
+
+/**
+ * Builds an alumni's display name from their preferred/legal first name and last name.
+ * @param {Object} alumni - An entry from getAlumniData()
+ * @returns {string} e.g. "Jane Doe" (trimmed; '' if no name parts)
+ */
+function alumniDisplayName_(alumni) {
+  const first = (alumni.preferredName || alumni.firstNameLegal || '').trim();
+  const last = (alumni.lastName || '').trim();
+  return (first + ' ' + last).trim();
+}
+
+/**
+ * Gets a single volunteer's historical (prior-year) stats by name, for the volunteer dashboard.
+ * Reuses getAlumniData(); never exposes blacklist status to the volunteer-facing view.
+ *
+ * @param {string} searchTerm - Name (or email) to match, case-insensitive
+ * @returns {Object} { found: false } or
+ *   { found: true, displayName, years: [{year, returns, hours}], totalReturns, totalHours }
+ */
+function getVolunteerHistoricalStats(searchTerm) {
+  return safeExecute(() => {
+    const term = (searchTerm || '').trim().toLowerCase();
+    if (!term) return { found: false };
+
+    const alumni = getAlumniData();
+    if (!alumni.length) return { found: false };
+
+    // Prefer an exact display-name match; otherwise fall back to substring on name or email.
+    let match = alumni.find(a => alumniDisplayName_(a).toLowerCase() === term);
+    if (!match) {
+      match = alumni.find(a => {
+        const displayName = alumniDisplayName_(a).toLowerCase();
+        const email = (a.email || '').toLowerCase();
+        return (displayName && displayName.includes(term)) || (email && email.includes(term));
+      });
+    }
+    if (!match) return { found: false };
+
+    const years = Object.keys(match.years || {})
+      .sort()
+      .map(yr => ({ year: yr, returns: match.years[yr].returns, hours: match.years[yr].hours }));
+
+    return {
+      found: true,
+      displayName: alumniDisplayName_(match),
+      years: years,
+      totalReturns: match.totalReturns,
+      totalHours: match.totalHours
+    };
+  }, 'getVolunteerHistoricalStats');
 }
 
 /**

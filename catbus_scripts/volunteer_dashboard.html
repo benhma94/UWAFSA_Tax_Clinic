@@ -348,6 +348,12 @@
       border: 1px solid var(--internal-services-color);
     }
     body.dark .role-badge.internalservices { background-color: rgba(231, 76, 60, 0.25); }
+    .role-badge.alumni {
+      background-color: rgba(127, 140, 141, 0.15);
+      color: #7f8c8d;
+      border: 1px solid #7f8c8d;
+    }
+    body.dark .role-badge.alumni { background-color: rgba(127, 140, 141, 0.25); color: #b2bec3; border-color: #b2bec3; }
 
     /* ===== Volunteer tag ===== */
     .volunteer-tag {
@@ -852,6 +858,17 @@
         <div id="statsDetailContent"></div>
       </div>
     </div>
+    <div class="section-box" id="priorYearsBox" style="display:none;">
+      <h3>Prior Years</h3>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Year</th><th>Returns</th><th>Hours</th></tr>
+          </thead>
+          <tbody id="priorYearsBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- ===== Availability Tab ===== -->
@@ -1061,6 +1078,9 @@
     document.getElementById('todoProgressChip').textContent = '0 / 0 complete';
     document.getElementById('credentialsSectionBox').style.display = 'none';
     document.getElementById('credentialsEmptyState').style.display = '';
+    document.getElementById('priorYearsBox').style.display = 'none';
+    document.getElementById('priorYearsBody').innerHTML = '';
+    setAlumniFocusMode(false);
     currentVolunteerName = '';
     currentVolunteerRole = '';
     currentVolunteerEmail = '';
@@ -1081,6 +1101,11 @@
     currentVolunteerEmail = '';
     currentVolunteerFirstName = '';
     currentVolunteerLastName = '';
+
+    // Reset any prior alumni lookup so it doesn't leak into this search.
+    setAlumniFocusMode(false);
+    document.getElementById('priorYearsBox').style.display = 'none';
+    document.getElementById('priorYearsBody').innerHTML = '';
 
     // Show volunteer header as loading
     document.getElementById('volHeader').style.display = '';
@@ -1135,6 +1160,33 @@
   let currentVolunteerShifts = [];
 
   function displayScheduleResults(result, searchTerm) {
+    const isActive = !!(result && result.volunteerName);
+
+    if (isActive) {
+      renderActiveVolunteer(result, searchTerm);
+      // Additive: show prior-year history if this returning volunteer also has alumni records.
+      google.script.run
+        .withSuccessHandler(hist => { if (hist && hist.found) renderPriorYears(hist); })
+        .withFailureHandler(err => console.error('Historical stats error:', err))
+        .getVolunteerHistoricalStats(currentVolunteerName);
+      return;
+    }
+
+    // Not in the current schedule — they may be an alumnus, or genuinely not found.
+    google.script.run
+      .withSuccessHandler(hist => {
+        if (hist && hist.found) renderAlumniOnly(hist);
+        else renderActiveVolunteer(result, searchTerm); // existing "not found" empty states
+      })
+      .withFailureHandler(err => {
+        console.error('Historical stats error:', err);
+        renderActiveVolunteer(result, searchTerm);
+      })
+      .getVolunteerHistoricalStats(searchTerm);
+  }
+
+  // Renders the full dashboard for an active (current-schedule) volunteer.
+  function renderActiveVolunteer(result, searchTerm) {
     currentVolunteerName = (result && result.volunteerName) || searchTerm;
     currentVolunteerRole = (result && result.volunteerRole) || '';
     currentVolunteerShifts = (result && Array.isArray(result.shifts)) ? result.shifts : [];
@@ -1162,6 +1214,68 @@
     loadAvailabilityForVolunteer();
     loadVolunteerTodoChecklist();
     loadCredentialStatus();
+  }
+
+  // Renders a focused view for an alumnus who is not in the current schedule:
+  // name + Alumni badge + Prior Years stats only. No blacklist info is ever shown.
+  function renderAlumniOnly(hist) {
+    currentVolunteerName = hist.displayName || '';
+    currentVolunteerRole = '';
+    currentVolunteerShifts = [];
+    const parts = splitProfileName(currentVolunteerName);
+    currentVolunteerFirstName = parts.firstName;
+    currentVolunteerLastName = parts.lastName;
+    currentVolunteerEmail = null;
+
+    document.getElementById('volHeader').style.display = '';
+    document.getElementById('volHeaderName').textContent = currentVolunteerName;
+    document.getElementById('volHeaderBadge').innerHTML = '<span class="role-badge alumni">Alumni</span>';
+    document.getElementById('volHeaderTag').innerHTML = '';
+
+    setAlumniFocusMode(true);
+
+    // Stats tab shows only the Prior Years panel for alumni.
+    document.getElementById('statsEmptyState').style.display = 'none';
+    document.getElementById('statsLoaded').style.display = 'none';
+    renderPriorYears(hist);
+  }
+
+  // Populates and shows the Prior Years table from a getVolunteerHistoricalStats() result.
+  function renderPriorYears(hist) {
+    const box = document.getElementById('priorYearsBox');
+    const body = document.getElementById('priorYearsBody');
+    const years = (hist && Array.isArray(hist.years)) ? hist.years : [];
+
+    if (!years.length) {
+      box.style.display = 'none';
+      body.innerHTML = '';
+      return;
+    }
+
+    const fmtHours = h => (Math.round((Number(h) || 0) * 10) / 10).toString();
+    let html = '';
+    years.forEach(y => {
+      html += `<tr><td>${escapeHtml(String(y.year))}</td><td>${Number(y.returns) || 0}</td><td>${fmtHours(y.hours)}</td></tr>`;
+    });
+    html += `<tr style="font-weight:700;"><td>Total</td><td>${Number(hist.totalReturns) || 0}</td><td>${fmtHours(hist.totalHours)}</td></tr>`;
+    body.innerHTML = html;
+    box.style.display = '';
+  }
+
+  // Toggles "alumni focus" mode: hides the tabs that don't apply to a past-year volunteer
+  // (schedule, availability, to-do, credentials), leaving only My Stats. Uses querySelectorAll
+  // to stay robust against duplicate panel ids in the markup.
+  function setAlumniFocusMode(on) {
+    const hiddenTabs = ['todo', 'availability', 'schedule', 'credentials'];
+    hiddenTabs.forEach(tab => {
+      document.querySelectorAll('.tab-btn[data-tab="' + tab + '"]').forEach(btn => {
+        btn.style.display = on ? 'none' : '';
+      });
+      document.querySelectorAll('[id="tab-' + tab + '"]').forEach(panel => {
+        panel.style.display = on ? 'none' : '';
+      });
+    });
+    if (on) switchTab('stats');
   }
 
   // ── To-Do List ────────────────────────────────────────────────────────────
