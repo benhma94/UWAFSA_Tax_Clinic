@@ -1055,6 +1055,23 @@
     </main>
   </div><!-- .vm-layout -->
 
+<!-- Blacklist action modal -->
+<div id="blacklistModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeBlacklistModal()">
+  <div class="modal-content" style="max-width:400px;text-align:left;">
+    <h3 id="blacklistModalTitle" style="margin:0 0 12px;font-size:1rem;"></h3>
+    <p id="blacklistModalMsg" style="margin:0 0 12px;font-size:0.88rem;color:#555;"></p>
+    <div id="blacklistReasonWrap" style="display:none;margin-bottom:12px;">
+      <label style="font-size:0.82rem;font-weight:700;display:block;margin-bottom:6px;">Reason (required)</label>
+      <textarea id="blacklistReasonInput" rows="3" style="width:100%;box-sizing:border-box;border:1px solid var(--border-light);border-radius:6px;padding:8px;font-size:0.86rem;resize:vertical;" placeholder="Enter blacklist reason..."></textarea>
+      <div id="blacklistReasonError" style="color:#c0392b;font-size:0.8rem;margin-top:4px;display:none;">A reason is required.</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn-muted" onclick="closeBlacklistModal()">Cancel</button>
+      <button id="blacklistModalConfirmBtn" class="btn-danger" onclick="confirmBlacklistAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ── Sidebar Navigation ────────────────────────────────────────
   var VM_SECTIONS = [
@@ -2250,38 +2267,63 @@
     tbody.innerHTML = html;
   }
 
+  var _blacklistModalEmail = '';
+  var _blacklistModalMode  = ''; // 'blacklist' or 'clear'
+
   function toggleBlacklist(email, currentlyBlacklisted) {
-    if (!currentlyBlacklisted) {
-      // Blacklisting: prompt for reason
-      var reason = prompt('Enter blacklist reason for ' + email + ' (required):');
-      if (reason === null) return; // cancelled
-      if (!reason.trim()) {
-        alert('A reason is required.');
-        return;
-      }
+    _blacklistModalEmail = email;
+    _blacklistModalMode  = currentlyBlacklisted ? 'clear' : 'blacklist';
+
+    var title = document.getElementById('blacklistModalTitle');
+    var msg   = document.getElementById('blacklistModalMsg');
+    var wrap  = document.getElementById('blacklistReasonWrap');
+    var btn   = document.getElementById('blacklistModalConfirmBtn');
+    var input = document.getElementById('blacklistReasonInput');
+    var err   = document.getElementById('blacklistReasonError');
+
+    if (_blacklistModalMode === 'blacklist') {
+      title.textContent = 'Blacklist volunteer';
+      msg.textContent   = 'This will flag ' + email + ' and prevent re-admission.';
+      wrap.style.display = '';
+      input.value = '';
+      err.style.display = 'none';
+      btn.textContent = 'Blacklist';
+      btn.className   = 'btn-danger';
+    } else {
+      title.textContent = 'Clear blacklist flag';
+      msg.textContent   = 'Remove the blacklist flag for ' + email + '?';
+      wrap.style.display = 'none';
+      btn.textContent = 'Clear';
+      btn.className   = 'btn-blue';
+    }
+
+    document.getElementById('blacklistModal').style.display = 'flex';
+    if (_blacklistModalMode === 'blacklist') input.focus();
+  }
+
+  function closeBlacklistModal() {
+    document.getElementById('blacklistModal').style.display = 'none';
+  }
+
+  function confirmBlacklistAction() {
+    if (_blacklistModalMode === 'blacklist') {
+      var reason = document.getElementById('blacklistReasonInput').value.trim();
+      var err    = document.getElementById('blacklistReasonError');
+      if (!reason) { err.style.display = ''; return; }
+      err.style.display = 'none';
+      closeBlacklistModal();
       setAlumniStatus('Blacklisting volunteer...', 'loading');
       google.script.run
-        .withSuccessHandler(function() {
-          setAlumniStatus('Volunteer blacklisted.', 'success');
-          loadAlumni();
-        })
-        .withFailureHandler(function(err) {
-          setAlumniStatus('Error: ' + (err.message || String(err)), 'error');
-        })
-        .setVolunteerBlacklist(email, true, reason.trim());
+        .withSuccessHandler(function() { setAlumniStatus('Volunteer blacklisted.', 'success'); loadAlumni(); })
+        .withFailureHandler(function(e) { setAlumniStatus('Error: ' + (e.message || String(e)), 'error'); })
+        .setVolunteerBlacklist(_blacklistModalEmail, true, reason);
     } else {
-      // Clearing blacklist
-      if (!confirm('Clear blacklist flag for ' + email + '?')) return;
+      closeBlacklistModal();
       setAlumniStatus('Clearing blacklist flag...', 'loading');
       google.script.run
-        .withSuccessHandler(function() {
-          setAlumniStatus('Blacklist flag cleared.', 'success');
-          loadAlumni();
-        })
-        .withFailureHandler(function(err) {
-          setAlumniStatus('Error: ' + (err.message || String(err)), 'error');
-        })
-        .setVolunteerBlacklist(email, false, '');
+        .withSuccessHandler(function() { setAlumniStatus('Blacklist flag cleared.', 'success'); loadAlumni(); })
+        .withFailureHandler(function(e) { setAlumniStatus('Error: ' + (e.message || String(e)), 'error'); })
+        .setVolunteerBlacklist(_blacklistModalEmail, false, '');
     }
   }
 
