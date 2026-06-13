@@ -377,6 +377,7 @@ function getVolunteerApplicationWorkflowData() {
   var roleOrder = ['mentor', 'frontline', 'filer'];
   var byRole = {};
   var all = [];
+  var alumniByEmail = getApplicationAlumniReviewIndex_();
   var summary = {
     total: 0,
     pendingReview: 0,
@@ -397,12 +398,17 @@ function getVolunteerApplicationWorkflowData() {
       var displayFirst = app.preferredName || app.firstName || '';
       var displayName = (displayFirst + ' ' + (app.lastName || '')).trim();
       var stage = getVolunteerApplicationStage_(app);
+      var emailKey = (app.email || '').toString().trim().toLowerCase();
+      var alumniRecord = role === 'mentor' && emailKey ? alumniByEmail[emailKey] : null;
       var enriched = Object.assign({}, app, {
         role: role,
         roleLabel: app.roleLabel || role.charAt(0).toUpperCase() + role.slice(1),
         displayName: displayName,
         workflowStage: stage,
-        workflowKey: role + ':' + app.rowIndex
+        workflowKey: role + ':' + app.rowIndex,
+        alumniMatch: !!alumniRecord,
+        alumniBlacklisted: !!(alumniRecord && alumniRecord.blacklisted),
+        alumniBlacklistReason: alumniRecord ? alumniRecord.blacklistReason : ''
       });
 
       byRole[role].push(enriched);
@@ -418,6 +424,39 @@ function getVolunteerApplicationWorkflowData() {
   }
 
   return { byRole: byRole, all: all, summary: summary };
+}
+
+/**
+ * Builds the internal alumni flags used by the application-review workflow.
+ * This data is never returned by the public alumni prefill endpoint.
+ *
+ * @returns {Object<string, {blacklisted: boolean, blacklistReason: string}>}
+ */
+function getApplicationAlumniReviewIndex_() {
+  var result = {};
+
+  try {
+    var ss = getSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG.SHEETS.VOLUNTEER_ALUMNI);
+    if (!sheet || sheet.getLastRow() <= 1) return result;
+
+    var cols = CONFIG.COLUMNS.VOLUNTEER_ALUMNI;
+    var fixedColCount = cols.BLACKLIST_REASON + 1;
+    var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, fixedColCount).getValues();
+
+    for (var i = 0; i < data.length; i++) {
+      var emailKey = (data[i][cols.EMAIL] || '').toString().trim().toLowerCase();
+      if (!emailKey) continue;
+      result[emailKey] = {
+        blacklisted: data[i][cols.BLACKLISTED] === true,
+        blacklistReason: (data[i][cols.BLACKLIST_REASON] || '').toString().trim()
+      };
+    }
+  } catch (err) {
+    Logger.log('getApplicationAlumniReviewIndex_ error: ' + err.message);
+  }
+
+  return result;
 }
 
 /**

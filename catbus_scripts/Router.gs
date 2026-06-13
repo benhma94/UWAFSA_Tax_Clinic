@@ -60,6 +60,17 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (action === 'getAlumniApplicationPrefill') {
+    var alumniPrefill = { found: false };
+    try {
+      alumniPrefill = getAlumniApplicationPrefill(e?.parameter?.email);
+    } catch (err) {
+      Logger.log('getAlumniApplicationPrefill error: ' + err.message);
+    }
+    return ContentService.createTextOutput(JSON.stringify(alumniPrefill))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (action === 'getPublicClinicStatus') {
     try {
       const payload = getPublicClinicStatus();

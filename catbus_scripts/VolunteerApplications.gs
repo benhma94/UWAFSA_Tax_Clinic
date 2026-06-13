@@ -102,6 +102,42 @@ function formatApplicationDateTime_(value) {
 }
 
 /**
+ * Returns the limited alumni identity fields that may be exposed to the public
+ * volunteer application form. Matching is exact and case-insensitive by email.
+ *
+ * @param {string} email
+ * @returns {{found: boolean, firstName?: string, preferredName?: string, lastName?: string}}
+ */
+function getAlumniApplicationPrefill(email) {
+  var emailKey = (email || '').toString().trim().toLowerCase();
+  if (!emailKey || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailKey)) {
+    return { found: false };
+  }
+
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName(CONFIG.SHEETS.VOLUNTEER_ALUMNI);
+  if (!sheet || sheet.getLastRow() <= 1) return { found: false };
+
+  var cols = CONFIG.COLUMNS.VOLUNTEER_ALUMNI;
+  var identityColCount = cols.LAST_NAME + 1;
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, identityColCount).getValues();
+
+  for (var i = 0; i < data.length; i++) {
+    var rowEmail = (data[i][cols.EMAIL] || '').toString().trim().toLowerCase();
+    if (rowEmail !== emailKey) continue;
+
+    return {
+      found: true,
+      firstName: (data[i][cols.FIRST_NAME_LEGAL] || '').toString().trim(),
+      preferredName: (data[i][cols.PREFERRED_NAME] || '').toString().trim(),
+      lastName: (data[i][cols.LAST_NAME] || '').toString().trim()
+    };
+  }
+
+  return { found: false };
+}
+
+/**
  * Saves a volunteer application to the appropriate sheet based on role.
  * Called by doPost() in Router.gs when action=volunteerApplication.
  *

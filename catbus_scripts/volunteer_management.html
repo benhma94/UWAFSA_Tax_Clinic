@@ -402,6 +402,25 @@
       word-break: break-word;
     }
 
+    .review-alumni-warning {
+      display: none;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border: 1px solid #e74c3c;
+      border-left-width: 4px;
+      border-radius: 6px;
+      background: #fde8e8;
+      color: #922b21;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    body.dark .review-alumni-warning {
+      background: rgba(231, 76, 60, 0.18);
+      color: #ffb4ab;
+      border-color: #e57373;
+    }
+
     .review-answer-block {
       border: 1px solid var(--border-light);
       border-radius: 6px;
@@ -781,6 +800,7 @@
             </select>
 
             <div id="reviewDetailPanel" style="display:none;">
+              <div id="reviewAlumniWarning" class="review-alumni-warning" role="alert"></div>
               <div class="review-detail-grid" id="reviewDetailGrid"></div>
               <div id="reviewLongTextBlocks"></div>
               <div id="reviewCaseStudyBlocks"></div>
@@ -1251,6 +1271,7 @@
       var opt = document.createElement('option');
       opt.value = String(app.rowIndex);
       var decisionPrefix = app.status === 'Accept' ? '[A]' : (app.status === 'Reject' ? '[R]' : '[\u00B7]');
+      if (app.alumniBlacklisted) decisionPrefix += ' [BLACKLISTED]';
       opt.textContent = decisionPrefix + ' ' + (app.displayName || ((app.firstName || '') + ' ' + (app.lastName || ''))) + ' \u2014 ' + (app.timestamp || '');
       sel.appendChild(opt);
     }
@@ -1311,6 +1332,7 @@
     grid.innerHTML = '';
     longBlocks.innerHTML = '';
     caseBlocks.innerHTML = '';
+    renderReviewAlumniWarning(app);
 
     var fields;
     if (reviewRole === 'mentor') {
@@ -1359,6 +1381,20 @@
         '<div class="review-detail-value">' + esc(pair[1] || '\u2014') + '</div>';
       grid.appendChild(item);
     });
+  }
+
+  function renderReviewAlumniWarning(app) {
+    var warning = document.getElementById('reviewAlumniWarning');
+    if (!warning) return;
+
+    if (reviewRole === 'mentor' && app && app.alumniBlacklisted) {
+      warning.textContent = 'Blacklisted alumni record: ' +
+        (app.alumniBlacklistReason || 'No reason was recorded.');
+      warning.style.display = 'block';
+    } else {
+      warning.textContent = '';
+      warning.style.display = 'none';
+    }
   }
 
   function reviewAnswerBlock(label, content, isHtml) {
@@ -1433,10 +1469,12 @@
       var disabled = !app.status ? 'disabled' : '';
       var roleClass = (app.roleLabel || '').toLowerCase();
       var decision = app.status || 'Pending';
+      var displayName = app.displayName || '\u2014';
+      if (app.alumniBlacklisted) displayName = '[BLACKLISTED] ' + displayName;
       html += '<tr>' +
         '<td><input type="checkbox" data-key="' + esc(key) + '" data-role="' + esc(app.role) + '" data-row="' + app.rowIndex + '" data-decision="' + esc(app.status || '') + '" ' + checked + ' ' + disabled + ' onchange="toggleWorkflowRow(this)"></td>' +
         '<td><span class="role-pill ' + esc(roleClass) + '">' + esc(app.roleLabel || '') + '</span></td>' +
-        '<td>' + esc(app.displayName || '\u2014') + '</td>' +
+        '<td>' + esc(displayName) + '</td>' +
         '<td style="font-size:0.82rem;">' + esc(app.email || '\u2014') + '</td>' +
         '<td>' + esc(decision) + '</td>' +
         '<td><span class="stage-pill ' + esc(app.workflowStage) + '">' + esc(stageLabel(app.workflowStage)) + '</span></td>' +
