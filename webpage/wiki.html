@@ -272,29 +272,20 @@
         sections: [
           {
             id: 'admin-ops',
-            title: 'Admin',
+            title: 'Sign In / Sign Out Process',
             intro: 'Administrative tasks every volunteer completes at the start and end of each clinic day.',
             steps: [
-              'Arrive 10 minutes before your shift starts.',
-              'Open the CATBUS web app and go to the <strong>Sign In / Sign Out page</strong> (<code>?app=signin</code>). Select your name from the volunteer list, choose your station (e.g., Filer, Mentor, Reception), and click Sign In. This registers you as active for the day.',
-              'If you submitted your availability beforehand, your shift assignment is already in the <strong>Schedule Viewer</strong> (<code>?app=schedule</code>). Check it to confirm your shift slot (e.g., D1B = Day 1, Afternoon).',
-              'If you have not yet submitted availability for an upcoming clinic, complete the <strong>Availability Form</strong> (<code>?app=availability</code>) — the coordinator uses this to build the schedule.',
-              'During the clinic, if you need a break, use the <strong>Break toggle</strong> on your Control Sheet. This removes you from the available-volunteer list so the doorman won\'t assign you a client.',
-              'At the end of your shift, return to the Sign In / Sign Out page and click <strong>Sign Out</strong>. This closes your session, releases your station, and updates attendance records used for metrics.'
-            ],
-            tip: 'If you forget to sign out at the end of a clinic, your session will be automatically cleared the next morning. But it\'s best practice to sign out yourself — stale sessions can affect the volunteer availability list.'
+              'Please arrive on time  for your shift - there\'s no need to arrive early as shift times account for this.',
+              'At the end of your shift, return to the AFSA member for sign out, and they\'ll check you out of the system.'
+            ]
           },
           {
             id: 'front-desk-ops',
             title: 'Front Desk',
             intro: 'The front desk runs the client intake process using the CATBUS Intake Screening Tool.',
             steps: [
-              'Open the <strong>Intake Screening Tool</strong> on the public website. This tool walks you through eligibility questions before a client is entered into the system.',
-              'The tool checks income limits (typically under $50,000), residency status, and complexity flags (self-employment, multiple years, foreign income, rental property, etc.). Ineligible clients are shown a referral message — do not enter them into the intake form.',
-              'For eligible clients, open the <strong>Intake Form</strong> (<code>?app=intake</code>) in CATBUS. Enter household size, filing years needed, any special situations (e.g., needs senior review, high priority), and upload any documents the client has brought.',
-              'CATBUS automatically assigns a <strong>Client ID</strong> (e.g., A001, B002). If the client has a pre-booked priority appointment (format P001), enter that ID — it overrides the auto-generated one.',
-              'Once submitted, the client appears in the <strong>Queue Dashboard</strong> (<code>?app=queue</code>) for the doorman to assign. The elapsed wait time is tracked automatically.',
-              'If a client\'s situation changes after intake (e.g., they mention a new filing year), use the <strong>Edit</strong> function on the Intake Form to update their record before they are assigned to a filer.'
+              'For the most part, you will be usinng the CATBUS Screening Tool to determine client eligibility.'
+              
             ],
             tip: 'The Intake Screening Tool and the CATBUS Intake Form both check eligibility rules from the same config — they stay in sync. If a client seems borderline, check with a mentor before entering them.'
           },
